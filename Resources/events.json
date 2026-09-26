@@ -1,0 +1,80 @@
+{
+  "_meta": {
+    "description": "Event table, owned by Member 2. This starter set covers each category (hazard, discovery, crew, equipment) - expand to ~15-20 total following the same schema, then hand off to Member 1 to wire into the trigger system on Day 12 (Oct 7)."
+  },
+  "events": [
+    {
+      "event_id": "dust_storm",
+      "category": "hazard",
+      "trigger_condition": "random_chance: 8% per sol after sol 3",
+      "effects": { "power_generation_multiplier": 0.6, "duration_sols": 3 },
+      "text": "A dust storm rolls in, cutting solar output for the next few sols.",
+      "choices": null
+    },
+    {
+      "event_id": "solar_particle_event",
+      "category": "hazard",
+      "trigger_condition": "random_chance: 4% per sol",
+      "effects": { "radiation_dose_spike": "high", "duration_sols": 1 },
+      "text": "Sensors detect an incoming solar particle event. Crew must shelter immediately.",
+      "choices": [
+        { "choice_id": "shelter_now", "text": "Shelter in the shielded module", "effects": { "radiation_dose_spike": "low" } },
+        { "choice_id": "keep_working", "text": "Push through to finish current task", "effects": { "radiation_dose_spike": "high", "crew_stress": "+0.1" } }
+      ]
+    },
+    {
+      "event_id": "water_deposit_found",
+      "category": "discovery",
+      "trigger_condition": "rover_discovery_roll: success",
+      "effects": { "water_reserve": "+15" },
+      "text": "The rover's ground-penetrating sensors detect a subsurface water deposit nearby.",
+      "choices": null
+    },
+    {
+      "event_id": "equipment_malfunction",
+      "category": "equipment",
+      "trigger_condition": "random_chance: 6% per sol if structure_age > 10 sols",
+      "effects": { "affected_structure": "random", "output_multiplier": 0.5, "duration_sols": 2 },
+      "text": "A key system is malfunctioning and running below capacity until repaired.",
+      "choices": [
+        { "choice_id": "repair_now", "text": "Divert crew time to repair immediately", "effects": { "crew_stress": "+0.05", "duration_sols": 1 } },
+        { "choice_id": "wait", "text": "Let it run at reduced capacity", "effects": {} }
+      ]
+    },
+    {
+      "event_id": "crew_conflict",
+      "category": "crew",
+      "trigger_condition": "crew_stress_avg > 0.6",
+      "effects": { "crew_stress": "+0.05", "productivity_multiplier": 0.9, "duration_sols": 2 },
+      "text": "Tensions rise under the pressure of outpost life.",
+      "choices": [
+        { "choice_id": "mediate", "text": "Spend a sol mediating", "effects": { "crew_stress": "-0.1" } },
+        { "choice_id": "ignore", "text": "Let them work it out", "effects": {} }
+      ]
+    },
+    {
+      "event_id": "greenhouse_bloom",
+      "category": "discovery",
+      "trigger_condition": "structure_built: greenhouse AND sols_since_built > 5",
+      "effects": { "food_production_multiplier": 1.2, "duration_sols": 4 },
+      "text": "An unexpectedly strong crop cycle boosts food output for a while.",
+      "choices": null
+    },
+    {
+      "event_id": "micrometeorite_strike",
+      "category": "hazard",
+      "trigger_condition": "random_chance: 3% per sol",
+      "effects": { "affected_structure": "random", "structural_damage": true },
+      "text": "A micrometeorite strikes the outpost, damaging a structure.",
+      "choices": null
+    },
+    {
+      "event_id": "resupply_window",
+      "category": "opportunity",
+      "trigger_condition": "sol == 5 OR sol == 15",
+      "effects": { "materials": "+30" },
+      "text": "A scheduled resupply delivery arrives, adding to your materials stockpile.",
+      "choices": null
+    }
+  ]
+}

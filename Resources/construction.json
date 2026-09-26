@@ -1,0 +1,57 @@
+{
+  "_meta": {
+    "description": "Buildable structures and vehicle parameters, owned by Member 2. Costs are placeholder starting balance values - tune during Day 16 (Oct 11) balance pass."
+  },
+  "structures": [
+    {
+      "structure_id": "solar_array",
+      "name": "Solar Array",
+      "build_cost": { "materials": 40, "power": 0 },
+      "effect": "Increases power generation, scaled by site illumination_pct.",
+      "build_time_sols": 2
+    },
+    {
+      "structure_id": "water_extractor",
+      "name": "Water Extractor",
+      "build_cost": { "materials": 60, "power": 10 },
+      "effect": "Increases water production, scaled by site hydrogen_ppm.",
+      "build_time_sols": 3
+    },
+    {
+      "structure_id": "greenhouse",
+      "name": "Greenhouse Module",
+      "build_cost": { "materials": 70, "power": 15 },
+      "effect": "Increases food production; consumes power and water.",
+      "build_time_sols": 3
+    },
+    {
+      "structure_id": "shielding_wall",
+      "name": "Radiation Shielding Wall",
+      "build_cost": { "materials": 50, "power": 0 },
+      "effect": "Reduces crew radiation dose accumulation rate.",
+      "build_time_sols": 2
+    },
+    {
+      "structure_id": "habitat_module",
+      "name": "Habitat Extension",
+      "build_cost": { "materials": 90, "power": 5 },
+      "effect": "Increases crew capacity and reduces base stress accumulation.",
+      "build_time_sols": 4
+    },
+    {
+      "structure_id": "comms_relay",
+      "name": "Comms Relay",
+      "build_cost": { "materials": 30, "power": 5 },
+      "effect": "Unlocks early-warning for solar-particle-event radiation spikes.",
+      "build_time_sols": 1
+    }
+  ],
+  "vehicles": {
+    "rover": {
+      "move_cost_power_per_km": 0.5,
+      "max_distance_per_sol_km": 8,
+      "discovery_chance_pct_per_km": 4,
+      "notes": "discovery_chance rolls against unexplored tiles near the site for water/resource finds."
+    }
+  }
+}

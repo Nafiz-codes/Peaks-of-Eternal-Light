@@ -1,0 +1,39 @@
+{
+  "_meta": {
+    "description": "Named crew, owned by Member 2. Feed into the sim's aggregate crew health number as modifiers, not as a separate parallel health system."
+  },
+  "crew": [
+    {
+      "crew_id": "commander",
+      "name": "TBD",
+      "role": "Commander",
+      "base_stress": 0.2,
+      "base_productivity": 1.1,
+      "notes": "Boosts crew morale recovery slightly; slightly higher baseline stress from responsibility."
+    },
+    {
+      "crew_id": "engineer",
+      "name": "TBD",
+      "role": "Systems Engineer",
+      "base_stress": 0.15,
+      "base_productivity": 1.2,
+      "notes": "Reduces power/construction task costs; specialist bonus for repair events."
+    },
+    {
+      "crew_id": "botanist",
+      "name": "TBD",
+      "role": "Botanist / Life Support",
+      "base_stress": 0.15,
+      "base_productivity": 1.15,
+      "notes": "Reduces food-production variance; specialist bonus for greenhouse events."
+    },
+    {
+      "crew_id": "medic",
+      "name": "TBD",
+      "role": "Medical Officer",
+      "base_stress": 0.1,
+      "base_productivity": 1.0,
+      "notes": "Reduces overall crew stress accumulation rate; specialist bonus for health-crisis events."
+    }
+  ]
+}

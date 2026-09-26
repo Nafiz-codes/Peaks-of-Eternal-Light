@@ -1,0 +1,14 @@
+{
+  "_meta": {
+    "description": "Per-crew-member-per-sol life support consumption rates. Replace all 'value' fields marked verified:false with real figures from the NASA BVAD document (NASA/TP-2015-218570/REV1) before using in the sim.",
+    "how_to_fill": "Open the BVAD PDF (ntrs.nasa.gov/citations/20180001338), find the per-crew-member daily tables for O2, water, food, and CO2, and record the exact page/table number."
+  },
+  "crew_size": 4,
+  "o2_consumption_kg_per_person_per_day": { "value": 0.84, "verified": false, "source": "TBD - BVAD table/page number" },
+  "co2_production_kg_per_person_per_day": { "value": 1.0, "verified": false, "source": "TBD - BVAD table/page number" },
+  "potable_water_consumption_l_per_person_per_day": { "value": 3.6, "verified": false, "source": "TBD - BVAD table/page number" },
+  "hygiene_water_consumption_l_per_person_per_day": { "value": 8.0, "verified": false, "source": "TBD - BVAD table/page number" },
+  "water_recycling_efficiency_pct": { "value": 90, "verified": false, "source": "TBD - BVAD table/page number" },
+  "food_consumption_kg_dry_per_person_per_day": { "value": 0.62, "verified": false, "source": "TBD - BVAD table/page number" },
+  "power_baseline_kw_per_person": { "value": 0.5, "verified": false, "source": "TBD - BVAD table/page number" }
+}

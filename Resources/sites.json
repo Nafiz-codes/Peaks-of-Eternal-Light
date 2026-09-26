@@ -1,0 +1,44 @@
+{
+  "_meta": {
+    "description": "Candidate lunar south-pole outpost sites. Replace all 'value' fields marked verified:false with real readings from LRO QuickMap before using in the sim.",
+    "how_to_fill": "Open quickmap.lroc.asu.edu, switch on the LOLA elevation layer, the WAC polar illumination layer, and the LEND polar hydrogen layer. Read the value at each site's coordinates and record the date."
+  },
+  "sites": [
+    {
+      "site_id": "ridge_a",
+      "name": "Ridge A",
+      "description": "High, near-continuously sunlit ridge near the pole.",
+      "illumination_pct": { "value": 85, "verified": false, "source": "TBD - LRO QuickMap, WAC polar illumination layer", "date_read": "TBD" },
+      "elevation_m": { "value": 1450, "verified": false, "source": "TBD - LRO QuickMap, LOLA DEM layer", "date_read": "TBD" },
+      "slope_deg": { "value": 8, "verified": false, "source": "TBD - LRO QuickMap, LOLA slope layer", "date_read": "TBD" },
+      "hydrogen_ppm": { "value": 90, "verified": false, "source": "TBD - LRO QuickMap, LEND polar hydrogen layer", "date_read": "TBD" }
+    },
+    {
+      "site_id": "shadow_zone",
+      "name": "Shadow Zone",
+      "description": "Permanently or near-permanently shadowed crater floor, water-rich but low light.",
+      "illumination_pct": { "value": 5, "verified": false, "source": "TBD - LRO QuickMap, WAC polar illumination layer", "date_read": "TBD" },
+      "elevation_m": { "value": -2100, "verified": false, "source": "TBD - LRO QuickMap, LOLA DEM layer", "date_read": "TBD" },
+      "slope_deg": { "value": 12, "verified": false, "source": "TBD - LRO QuickMap, LOLA slope layer", "date_read": "TBD" },
+      "hydrogen_ppm": { "value": 380, "verified": false, "source": "TBD - LRO QuickMap, LEND polar hydrogen layer", "date_read": "TBD" }
+    },
+    {
+      "site_id": "crater_rim_b",
+      "name": "Crater Rim B",
+      "description": "Moderate illumination, moderate water, balanced middle option.",
+      "illumination_pct": { "value": 55, "verified": false, "source": "TBD - LRO QuickMap, WAC polar illumination layer", "date_read": "TBD" },
+      "elevation_m": { "value": 200, "verified": false, "source": "TBD - LRO QuickMap, LOLA DEM layer", "date_read": "TBD" },
+      "slope_deg": { "value": 15, "verified": false, "source": "TBD - LRO QuickMap, LOLA slope layer", "date_read": "TBD" },
+      "hydrogen_ppm": { "value": 200, "verified": false, "source": "TBD - LRO QuickMap, LEND polar hydrogen layer", "date_read": "TBD" }
+    },
+    {
+      "site_id": "plateau_d",
+      "name": "Plateau D",
+      "description": "Flat, easy-to-build terrain, average light, low water.",
+      "illumination_pct": { "value": 45, "verified": false, "source": "TBD - LRO QuickMap, WAC polar illumination layer", "date_read": "TBD" },
+      "elevation_m": { "value": 600, "verified": false, "source": "TBD - LRO QuickMap, LOLA DEM layer", "date_read": "TBD" },
+      "slope_deg": { "value": 4, "verified": false, "source": "TBD - LRO QuickMap, LOLA slope layer", "date_read": "TBD" },
+      "hydrogen_ppm": { "value": 60, "verified": false, "source": "TBD - LRO QuickMap, LEND polar hydrogen layer", "date_read": "TBD" }
+    }
+  ]
+}
