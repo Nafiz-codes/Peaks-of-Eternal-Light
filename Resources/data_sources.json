@@ -1,0 +1,69 @@
+{
+  "_meta": {
+    "description": "Authoritative source registry for values used by TRIARCHY. This file is intentionally separate from the five locked gameplay contracts so NASA data can be refreshed without changing their schemas.",
+    "policy": "A numeric value may be marked verified:true in a gameplay contract only when its source_id, product/version, spatial or table reference, units, and retrieval date are recorded here or in the field source text. Derived gameplay modifiers must remain identified as derived.",
+    "refresh_policy": "Check source landing pages before each release and refresh snapshots when a source product version changes. Preserve the prior value and provenance in version control."
+  },
+  "sources": [
+    {
+      "source_id": "nasa_bvad_rev1_2018",
+      "agency": "NASA",
+      "mission_or_program": "Human Systems",
+      "title": "Life Support Baseline Values and Assumptions Document, NASA/TP-2015-218570, Rev1",
+      "url": "https://ntrs.nasa.gov/api/citations/20180001338/downloads/20180001338.pdf?attachment=true",
+      "landing_page": "https://ntrs.nasa.gov/citations/20180001338",
+      "data_kind": "life-support design assumptions",
+      "version_or_coverage": "Revision 1, January 2018",
+      "retrieved_on": "2026-09-26",
+      "used_by": ["bvad_constants.json"]
+    },
+    {
+      "source_id": "nasa_lro_lola_rdr",
+      "agency": "NASA PDS",
+      "mission_or_program": "Lunar Reconnaissance Orbiter / LOLA",
+      "title": "LOLA Reduced Data Records and gridded elevation products",
+      "url": "https://pds-geosciences.wustl.edu/missions/lro/lola.htm",
+      "data_kind": "lunar elevation and terrain",
+      "version_or_coverage": "PDS LRO LOLA archive; consult product label for the selected raster version",
+      "retrieved_on": "2026-09-26",
+      "used_by": ["sites.json"],
+      "measurement_note": "Record latitude, east-positive longitude, raster/product identifier, pixel resolution, and sampling method for every site value. Slope is derived from the selected elevation raster unless a documented LOLA slope product is used."
+    },
+    {
+      "source_id": "nasa_lro_lroc_wac_polar_illumination",
+      "agency": "NASA / Arizona State University",
+      "mission_or_program": "Lunar Reconnaissance Orbiter / LROC WAC",
+      "title": "LROC QuickMap lunar polar illumination layers",
+      "url": "https://quickmap.lroc.asu.edu/",
+      "data_kind": "polar illumination",
+      "version_or_coverage": "Select and record the exact WAC polar illumination layer and its stated time interval",
+      "retrieved_on": "2026-09-26",
+      "used_by": ["sites.json"],
+      "measurement_note": "Illumination percentage must retain the layer name, time interval, coordinates, and sampling method; it is then normalized to a solar-generation gameplay modifier."
+    },
+    {
+      "source_id": "nasa_lro_lend_rdr",
+      "agency": "NASA PDS",
+      "mission_or_program": "Lunar Reconnaissance Orbiter / LEND",
+      "title": "LEND Derived Data Records",
+      "url": "https://pds-geosciences.wustl.edu/missions/lro/lend.htm",
+      "data_kind": "neutron flux and hydrogen-related resource potential",
+      "version_or_coverage": "PDS LRO LEND archive, Release 67 current at retrieval",
+      "retrieved_on": "2026-09-26",
+      "used_by": ["sites.json"],
+      "measurement_note": "LEND measures neutron flux. Any hydrogen abundance or water-potential value must name the derived product and units; it must never be presented as confirmed extractable water."
+    },
+    {
+      "source_id": "nasa_lro_crater",
+      "agency": "NASA PDS",
+      "mission_or_program": "Lunar Reconnaissance Orbiter / CRaTER",
+      "title": "Cosmic Ray Telescope for the Effects of Radiation data archive",
+      "url": "https://pds-ppi.igpp.ucla.edu/mission/LRO/CRaTER",
+      "data_kind": "lunar-orbit radiation environment",
+      "version_or_coverage": "Use a documented CRaTER dose or flux product appropriate to the selected baseline",
+      "retrieved_on": "2026-09-26",
+      "used_by": ["future simulation radiation baseline"],
+      "measurement_note": "CRaTER observations are orbital-environment data. Surface dose in the game is a separately documented derived model, adjusted by shielding and terrain factors."
+    }
+  ]
+}

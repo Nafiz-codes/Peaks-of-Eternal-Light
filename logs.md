@@ -20,6 +20,18 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 
 *(entries go here, oldest first)*
 
+### Day 1 — Sep 26 — Kickoff: review the five existing data-file scaffolds
+- Status: ✅ Done
+- What was completed: Reviewed the locked `sites.json`, `bvad_constants.json`, `crew.json`, `construction.json`, and `events.json` schemas. Added `Resources/data_sources.json` as a source registry and `Resources/README.md` with the refresh/provenance process; the five contracts were not changed.
+- Issues / blockers: Site coordinates and field-level NASA product readings have not yet been selected or recorded, so all current site and BVAD values remain explicitly unverified.
+- Notes for teammates: Use only `verified:true` scientific values in the simulation. Game-balance values in crew, construction, and events remain distinct from NASA source measurements.
+
+### Day 2 — Sep 27 — Project/sim skeleton reading from the scaffold files
+- Status: ✅ Done
+- What was completed: Created the Godot 4.7 project configuration, deterministic `MissionState`, and `MissionSimulator`. The simulator reads all five locked resource contracts, initializes a selected-site mission, advances one sol at a time, and records snapshots. Added a headless contract/state-transition test.
+- Issues / blockers: Resource formulas are intentionally deferred to the next scheduled tasks; site and BVAD source fields remain unverified and therefore are loaded without being treated as validated science inputs.
+- Notes for teammates: UI integration can import `res://src/simulation/mission_simulator.gd`, call `load_contracts()`, then render the `MissionState` returned by `begin_mission()` and `advance_sol()`.
+
 ---
 
 ## Member 2 — Systems & Content Log
