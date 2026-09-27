@@ -55,6 +55,12 @@ Five data files already exist as scaffolds (see repo root) with placeholder valu
 
 ## Daily Logging
 
+### Member 3 progress — Sep 27, 2026
+
+- Day 1 complete: reviewed the five existing scaffolds and recorded provisional visual direction, feasibility and integration gaps in [docs/UI_UX.md](docs/UI_UX.md).
+- Day 2 complete: [four core-screen wireframes](docs/wireframes.html), with bindings and interaction notes in the design handoff. These are design artifacts, not playable Godot UI. Browser visual QA remains pending because the local-file preview was blocked by browser URL policy.
+- Next: Day 3 visual-system review and style lock. Detailed completion entries are in [logs.md](logs.md); later gameplay/integration tasks remain scheduled below.
+
 After finishing each day's task below, log it in **`logs.md`** under your own section before moving to the next day. This is what lets the team (and each person's own AI assistant) see progress at a glance without a meeting. See `logs.md` for the exact format.
 
 ## Day-by-Day Schedule (Sept 26 – Oct 31)
