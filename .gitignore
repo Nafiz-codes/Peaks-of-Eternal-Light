@@ -1,6 +1,6 @@
 # Godot editor and import cache
 .godot/
-
+.agents/
 # Local Godot executable extracted for headless validation
 .tools/
 

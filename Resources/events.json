@@ -4,11 +4,11 @@
   },
   "events": [
     {
-      "event_id": "dust_storm",
+      "event_id": "solar_array_dust_accumulation",
       "category": "hazard",
-      "trigger_condition": "random_chance: 8% per sol after sol 3",
+      "trigger_condition": "random_chance: 8% per sol after sol 3 and rover_or_eva_activity",
       "effects": { "power_generation_multiplier": 0.6, "duration_sols": 3 },
-      "text": "A dust storm rolls in, cutting solar output for the next few sols.",
+      "text": "Lunar dust has accumulated on the solar arrays, reducing the light reaching their cells until the arrays are cleaned or the effect expires.",
       "choices": null
     },
     {
@@ -23,12 +23,15 @@
       ]
     },
     {
-      "event_id": "water_deposit_found",
+      "event_id": "volatile_prospect_detected",
       "category": "discovery",
       "trigger_condition": "rover_discovery_roll: success",
-      "effects": { "water_reserve": "+15" },
-      "text": "The rover's ground-penetrating sensors detect a subsurface water deposit nearby.",
-      "choices": null
+      "effects": { "volatile_prospect_found": true, "requires_follow_up": "prospecting_or_extraction" },
+      "text": "The rover detects a hydrogen-rich volatile prospect. It may contain water ice, but the signal must be investigated before the outpost can plan extraction.",
+      "choices": [
+        { "choice_id": "investigate_prospect", "text": "Schedule a rover prospecting mission", "effects": { "rover_task": "prospecting" } },
+        { "choice_id": "mark_for_later", "text": "Mark the prospect and continue the mission", "effects": { "volatile_prospect_status": "deferred" } }
+      ]
     },
     {
       "event_id": "equipment_malfunction",

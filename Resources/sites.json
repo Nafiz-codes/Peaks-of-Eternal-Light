@@ -1,13 +1,14 @@
 {
   "_meta": {
-    "description": "Candidate lunar south-pole outpost sites. Replace all 'value' fields marked verified:false with real readings from LRO QuickMap before using in the sim.",
-    "how_to_fill": "Open quickmap.lroc.asu.edu, switch on the LOLA elevation layer, the WAC polar illumination layer, and the LEND polar hydrogen layer. Read the value at each site's coordinates and record the date."
+    "description": "Candidate lunar south-pole outpost sites. All numeric values are gameplay placeholders until verified:true with reproducible LRO data. A LEND hydrogen signature indicates resource potential, not confirmed or extractable water ice.",
+    "how_to_fill": "First choose and record each site's latitude/longitude. In QuickMap or the PDS, record the exact product/layer/version, source URL, read date, original value/unit, and sampling/averaging method for LOLA elevation/slope, WAC illumination, and LEND hydrogen. Do not convert LEND data to water yield without a cited transformation."
   },
   "sites": [
     {
       "site_id": "ridge_a",
       "name": "Ridge A",
       "description": "High, near-continuously sunlit ridge near the pole.",
+      "coordinates": { "latitude_deg": null, "longitude_deg": null, "source": "TBD - select a real lunar south-pole location before verification" },
       "illumination_pct": { "value": 85, "verified": false, "source": "TBD - LRO QuickMap, WAC polar illumination layer", "date_read": "TBD" },
       "elevation_m": { "value": 1450, "verified": false, "source": "TBD - LRO QuickMap, LOLA DEM layer", "date_read": "TBD" },
       "slope_deg": { "value": 8, "verified": false, "source": "TBD - LRO QuickMap, LOLA slope layer", "date_read": "TBD" },
@@ -16,7 +17,8 @@
     {
       "site_id": "shadow_zone",
       "name": "Shadow Zone",
-      "description": "Permanently or near-permanently shadowed crater floor, water-rich but low light.",
+      "description": "Candidate permanently or near-permanently shadowed crater floor. The apparent resource advantage is a placeholder until a location-specific LEND reading is recorded.",
+      "coordinates": { "latitude_deg": null, "longitude_deg": null, "source": "TBD - select a real lunar south-pole location before verification" },
       "illumination_pct": { "value": 5, "verified": false, "source": "TBD - LRO QuickMap, WAC polar illumination layer", "date_read": "TBD" },
       "elevation_m": { "value": -2100, "verified": false, "source": "TBD - LRO QuickMap, LOLA DEM layer", "date_read": "TBD" },
       "slope_deg": { "value": 12, "verified": false, "source": "TBD - LRO QuickMap, LOLA slope layer", "date_read": "TBD" },
@@ -26,6 +28,7 @@
       "site_id": "crater_rim_b",
       "name": "Crater Rim B",
       "description": "Moderate illumination, moderate water, balanced middle option.",
+      "coordinates": { "latitude_deg": null, "longitude_deg": null, "source": "TBD - select a real lunar south-pole location before verification" },
       "illumination_pct": { "value": 55, "verified": false, "source": "TBD - LRO QuickMap, WAC polar illumination layer", "date_read": "TBD" },
       "elevation_m": { "value": 200, "verified": false, "source": "TBD - LRO QuickMap, LOLA DEM layer", "date_read": "TBD" },
       "slope_deg": { "value": 15, "verified": false, "source": "TBD - LRO QuickMap, LOLA slope layer", "date_read": "TBD" },
@@ -35,6 +38,7 @@
       "site_id": "plateau_d",
       "name": "Plateau D",
       "description": "Flat, easy-to-build terrain, average light, low water.",
+      "coordinates": { "latitude_deg": null, "longitude_deg": null, "source": "TBD - select a real lunar south-pole location before verification" },
       "illumination_pct": { "value": 45, "verified": false, "source": "TBD - LRO QuickMap, WAC polar illumination layer", "date_read": "TBD" },
       "elevation_m": { "value": 600, "verified": false, "source": "TBD - LRO QuickMap, LOLA DEM layer", "date_read": "TBD" },
       "slope_deg": { "value": 4, "verified": false, "source": "TBD - LRO QuickMap, LOLA slope layer", "date_read": "TBD" },

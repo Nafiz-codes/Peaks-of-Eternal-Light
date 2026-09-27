@@ -14,7 +14,7 @@
       "structure_id": "water_extractor",
       "name": "Water Extractor",
       "build_cost": { "materials": 60, "power": 10 },
-      "effect": "Increases water production, scaled by site hydrogen_ppm.",
+      "effect": "Enables water extraction only after a rover prospect has been investigated. Extraction yield is a separately tuned gameplay value; it must not be calculated directly from LEND hydrogen readings.",
       "build_time_sols": 3
     },
     {
@@ -48,10 +48,10 @@
   ],
   "vehicles": {
     "rover": {
-      "move_cost_power_per_km": 0.5,
-      "max_distance_per_sol_km": 8,
-      "discovery_chance_pct_per_km": 4,
-      "notes": "discovery_chance rolls against unexplored tiles near the site for water/resource finds."
+      "move_cost_power_per_km": 0.55,
+      "max_distance_per_sol_km": 6,
+      "discovery_chance_pct_per_km": 7,
+      "notes": "Power cost is derived from NASA VIPER planning data: 397 W typical direct-drive load / 0.72 km/h top speed = about 0.55 kWh/km (NASA NTRS 2020 VIPER Mission Overview; NASA Science VIPER In Depth, read 2026-09-27). The 6 km per-sol round-trip cap is a gameplay scheduling assumption, not a NASA rover specification; VIPER's separately reported 20 km range is not treated as a one-sol allowance. Discovery probability is also a gameplay balance value, not a NASA measurement: roll independently for each newly explored kilometre (about 35% cumulative chance at 6 km)."
     }
   }
 }

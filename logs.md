@@ -38,6 +38,24 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 
 *(entries go here, oldest first)*
 
+### Day 1 — Sep 26 — Kickoff: review the five existing data-file scaffolds
+- Status: ✅ Done
+- What was completed: Reviewed the locked `sites.json`, `bvad_constants.json`, `crew.json`, `construction.json`, and `events.json` scaffolds from the Systems & Content perspective. Confirmed that the construction/rover, crew, and event-content contracts contain the fields required for the scheduled content work; no Day 1 scaffold was created or structurally changed.
+- Issues / blockers: NASA-derived site and life-support values remain explicitly unverified, so content balance must continue to treat them as provisional until Member 1 validates them.
+- Notes for teammates: `events.json` remains at its eight-event starter set and the existing field names should be preserved when expanding it. Member 2 will use the current rover fields for discovery-oriented content.
+
+### Day 2 — Sep 27 — Review + retune `construction.json`'s `vehicles.rover` block
+- Status: ✅ Done
+- What was completed: Reviewed the rover balance fields in `Resources/construction.json`. Replaced the movement cost with a NASA-VIPER-derived 0.55 kWh/km value (397 W typical direct-drive load divided by 0.72 km/h top speed). Retained the 6 km per-sol round-trip cap and 7% independent discovery roll as explicitly labeled gameplay assumptions; at full range, the discovery chance is roughly 35%.
+- Issues / blockers: Rover actions are content data only at this stage; Member 1's current Day 2 simulator intentionally does not yet execute rover actions or deduct rover power. The values are ready for that future integration and should be balance-tested once the full sol loop exists.
+- Notes for teammates: The NASA provenance and derivation are recorded in the rover `notes` field. Treat `max_distance_per_sol_km` as the total round-trip budget, charge `move_cost_power_per_km` against the actual selected distance, and roll once per previously unexplored kilometre. Do not present the 6 km cap or 7% value as NASA data.
+
+### Day 2 — Sep 27 — NASA-data safety follow-up for content contracts
+- Status: ✅ Done
+- What was completed: Corrected the content contracts so lunar dust is represented as solar-array dust accumulation rather than an atmospheric dust storm, and rover discoveries produce an unverified volatile prospect instead of immediately adding water. Updated water-extractor wording to require investigated prospects and marked all site readings as placeholders pending reproducible coordinates and LRO/PDS provenance.
+- Issues / blockers: The four candidate sites are still fictional labels with no coordinates. Their illumination, terrain, and hydrogen values must remain `verified:false` until Member 1 sources real location-specific data.
+- Notes for teammates: New event effects (`volatile_prospect_found`, `requires_follow_up`, and rover task/status values) are data-only hooks for the later event/action integration. They must not be treated as implemented simulation behavior yet.
+
 ---
 
 ## Member 3 — Presentation & Integration Log
