@@ -98,6 +98,30 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Issues / blockers: Effects and trigger strings remain data contracts; the simulator does not yet parse or resolve them. All chances, multipliers, and material rewards are editable gameplay-balance values that need tuning after integration.
 - Notes for teammates: Batch 2 on Day 6 should add roughly 2–6 further events to reach the 15–20 target. Member 1 should map the new effect keys to deterministic behavior during the scheduled event-system handoff; no UI should infer an effect from event text.
 
+### Day 6 — Oct 1 — Continue expanding `events.json` (batch 2, completed early Sep 29)
+- Status: ✅ Done
+- What was completed: Added five events to complete the table at 19 events: communications blackout, greenhouse nutrient imbalance, radiation-shelter drill, prospect confirmation, and solar-array alignment. These give the comms relay, greenhouse, rover prospecting, radiation response, and solar-array systems authored choices to support later integration.
+- Issues / blockers: Event trigger/effect strings are not yet parsed by the simulator. Their values are deliberately editable content balance, not scientific measurements or implemented behavior.
+- Notes for teammates: The prospect-confirmation event preserves the NASA-data distinction between a hydrogen signal and a confirmed extraction candidate. Member 1 should determine authoritative state names and effect application when wiring triggers.
+
+### Day 7 — Oct 2 — Test & Integration #1
+- Status: ⚠️ Partial
+- What was completed: Member 2's event and content contracts are prepared for the shared test: `events.json` contains 19 validated events, while crew and construction content remains in the agreed JSON contracts.
+- Issues / blockers: The shared headless multi-sol integration test has not been run or recorded by all members. Construction, rover, crew-modifier, and event-effect behavior is not yet wired into the simulator, so Member 2 cannot independently verify the intended end-to-end content interfaces.
+- Notes for teammates: Complete this entry only after Member 1 runs the headless multi-sol test and the team confirms the current runtime state/event interfaces. Do not mark this shared integration day as passed from JSON validation alone.
+
+### Day 8 — Oct 3 — Finish `events.json` expansion (completed early Sep 29)
+- Status: ✅ Done
+- What was completed: Completed the 15–20-event target at 19 unique events and reviewed timing against the 7–10-sol mission scope. Retuned the equipment-malfunction trigger to structures aged at least three sols and the greenhouse bloom trigger to two sols after construction, so both can occur during a normal mission. Updated the headless simulator contract test to expect 19 events; it passes in Godot 4.7.2.
+- Issues / blockers: The event system remains content-complete but not simulator-integrated. Trigger probabilities and reward/penalty values require playtest tuning after deterministic effects exist.
+- Notes for teammates: All events retain the locked fields: `event_id`, `category`, `trigger_condition`, `effects`, `text`, and `choices`. Do not parse narrative text for mechanics; consume only the data fields.
+
+### Day 9 — Oct 4 — Write mission briefing and tutorial/onboarding copy (completed early Sep 29)
+- Status: ✅ Done
+- What was completed: Added `Resources/mission_copy.json` with static mission briefing, NASA-data caveat text, six tutorial steps, and reusable HUD labels. Copy uses presentation-layer tokens such as `[MISSION_LENGTH]` and leaves resource values/outcomes to the authoritative simulation.
+- Issues / blockers: Mission report language remains correctly deferred to Day 10, after Member 1 defines win/lose outcomes. UI loading and display of this new content file is also a later integration task.
+- Notes for teammates: Keep the briefing's verified-data and resource-potential wording intact when presenting NASA-derived site information. Replace bracketed tokens only with simulation-provided values; do not hard-code mission length or invent outcome data.
+
 ---
 
 ## Member 3 — Presentation & Integration Log

@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "description": "Event table, owned by Member 2. Batch 1 contains 14 events across hazard, discovery, crew, equipment, and opportunity categories. Trigger rates and numeric effects are editable gameplay-balance values; expand to ~15-20 total before handoff to Member 1 for trigger-system integration."
+    "description": "Event table, owned by Member 2. The completed table contains 19 events across hazard, discovery, crew, equipment, and opportunity categories. Trigger rates and numeric effects are editable gameplay-balance values for the 7–10-sol mission; Member 1 owns deterministic trigger-system integration."
   },
   "events": [
     {
@@ -36,7 +36,7 @@
     {
       "event_id": "equipment_malfunction",
       "category": "equipment",
-      "trigger_condition": "random_chance: 6% per sol if structure_age > 10 sols",
+      "trigger_condition": "random_chance: 6% per sol if structure_age >= 3 sols",
       "effects": { "affected_structure": "random", "output_multiplier": 0.5, "duration_sols": 2 },
       "text": "A key system is malfunctioning and running below capacity until repaired.",
       "choices": [
@@ -58,7 +58,7 @@
     {
       "event_id": "greenhouse_bloom",
       "category": "discovery",
-      "trigger_condition": "structure_built: greenhouse AND sols_since_built > 5",
+      "trigger_condition": "structure_built: greenhouse AND sols_since_built >= 2",
       "effects": { "food_production_multiplier": 1.2, "duration_sols": 4 },
       "text": "An unexpectedly strong crop cycle boosts food output for a while.",
       "choices": null
@@ -135,6 +135,61 @@
       "choices": [
         { "choice_id": "adopt_new_schedule", "text": "Adopt the improved schedule", "effects": { "crew_stress": "-0.03" } },
         { "choice_id": "keep_current_routine", "text": "Keep the current routine", "effects": {} }
+      ]
+    },
+    {
+      "event_id": "comms_blackout",
+      "category": "hazard",
+      "trigger_condition": "structure_not_built: comms_relay AND random_chance: 7% per sol",
+      "effects": { "event_warning_disabled": true, "duration_sols": 1 },
+      "text": "Terrain and antenna alignment interrupt the outpost's communications window. Without a relay, the next hazard may arrive with less warning.",
+      "choices": [
+        { "choice_id": "repoint_antenna", "text": "Assign crew time to repoint the antenna", "effects": { "crew_stress": "+0.03", "event_warning_disabled": false } },
+        { "choice_id": "wait_for_window", "text": "Wait for the next communications window", "effects": {} }
+      ]
+    },
+    {
+      "event_id": "greenhouse_nutrient_imbalance",
+      "category": "equipment",
+      "trigger_condition": "structure_built: greenhouse AND random_chance: 7% per sol",
+      "effects": { "food_production_multiplier": 0.6, "duration_sols": 2 },
+      "text": "The greenhouse nutrient mix has drifted out of balance. The crop can be stabilized with extra power, or the team can accept lower yields briefly.",
+      "choices": [
+        { "choice_id": "recalibrate_nutrients", "text": "Recalibrate the nutrient system", "effects": { "power_cost_kwh": 8, "food_production_multiplier": 1.0, "duration_sols": 0 } },
+        { "choice_id": "accept_lower_yield", "text": "Accept reduced yield until the next sol", "effects": { "crew_stress": "+0.02" } }
+      ]
+    },
+    {
+      "event_id": "radiation_shelter_drill",
+      "category": "crew",
+      "trigger_condition": "sol >= 2 AND random_chance: 9% per sol",
+      "effects": { "shelter_response_bonus": 0.15, "duration_sols": 3 },
+      "text": "The crew requests a short radiation-shelter drill. It costs time now, but could make the next emergency response more effective.",
+      "choices": [
+        { "choice_id": "run_drill", "text": "Run the shelter drill", "effects": { "crew_stress": "+0.01", "shelter_response_bonus": 0.2 } },
+        { "choice_id": "defer_drill", "text": "Defer the drill to preserve operations", "effects": { "crew_stress": "+0.02" } }
+      ]
+    },
+    {
+      "event_id": "prospect_confirmation",
+      "category": "discovery",
+      "trigger_condition": "volatile_prospect_found: true AND rover_action: prospecting",
+      "effects": { "volatile_prospect_status": "investigated", "extraction_candidate_unlocked": true },
+      "text": "Follow-up measurements refine the volatile prospect. The site is now an extraction candidate, not a guaranteed water source.",
+      "choices": [
+        { "choice_id": "flag_extraction_candidate", "text": "Flag the site for future extraction", "effects": { "volatile_prospect_status": "extraction_candidate" } },
+        { "choice_id": "continue_sampling", "text": "Continue sampling before committing", "effects": { "rover_task": "prospecting", "crew_stress": "+0.01" } }
+      ]
+    },
+    {
+      "event_id": "solar_array_alignment",
+      "category": "opportunity",
+      "trigger_condition": "structure_built: solar_array AND site_illumination_pct >= 50 AND random_chance: 10% per sol",
+      "effects": { "power_generation_multiplier": 1.1, "duration_sols": 2 },
+      "text": "A favorable Sun angle creates an opportunity to realign the solar array. The adjustment improves generation, but it takes crew attention away from other work.",
+      "choices": [
+        { "choice_id": "realign_array", "text": "Realign the solar array", "effects": { "crew_stress": "+0.02", "power_generation_multiplier": 1.15 } },
+        { "choice_id": "keep_current_alignment", "text": "Keep the current alignment", "effects": {} }
       ]
     },
     {

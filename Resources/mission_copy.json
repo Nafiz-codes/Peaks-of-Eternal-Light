@@ -1,0 +1,53 @@
+{
+  "_meta": {
+    "description": "Authored mission briefing and tutorial copy, owned by Member 2. This is static, editable game content with no AI/runtime dependency. Replace bracketed runtime tokens only in the presentation layer; the simulation remains authoritative for values and outcomes."
+  },
+  "mission_briefing": {
+    "title": "PEAKS OF ETERNAL LIGHT",
+    "subtitle": "Lunar Outpost Mission Trainer",
+    "opening": "Commander, establish a lunar outpost and sustain your crew through a short operational mission. Every sol, power, life support, terrain, and human decisions must stay in balance.",
+    "primary_objective": "Keep the crew operational through Sol [MISSION_LENGTH].",
+    "site_choice_prompt": "Select a landing site. Compare illumination, terrain, and hydrogen-resource potential before you commit.",
+    "science_notice": "Site readings come from NASA-derived data where marked verified. Hydrogen signals indicate resource potential, not guaranteed extractable water.",
+    "success_note": "A mission is not won by one full meter. It is won by making trade-offs early enough to recover from them."
+  },
+  "tutorial_steps": [
+    {
+      "step_id": "choose_site",
+      "title": "1. Choose a site",
+      "body": "High illumination helps solar generation. Terrain and hydrogen-resource potential create different opportunities and risks. Inspect the source status before treating a reading as certain."
+    },
+    {
+      "step_id": "read_reserves",
+      "title": "2. Read the reserves",
+      "body": "Energy is stored in kWh. Water, oxygen, and food are survival reserves. A warning means you should change the plan before a reserve is depleted."
+    },
+    {
+      "step_id": "build_with_intent",
+      "title": "3. Build with intent",
+      "body": "Structures consume materials, construction energy, and time. Build for the mission's current constraint instead of trying to build everything at once."
+    },
+    {
+      "step_id": "use_rover",
+      "title": "4. Use the rover carefully",
+      "body": "Rover travel costs power and can uncover prospects. A hydrogen-rich signal is only the beginning: investigate it before planning extraction."
+    },
+    {
+      "step_id": "resolve_events",
+      "title": "5. Resolve events",
+      "body": "Events present trade-offs, not trivia. Read each option, choose deliberately, and expect the consequence to affect later sols."
+    },
+    {
+      "step_id": "advance_sol",
+      "title": "6. Run the sol",
+      "body": "Advance one sol to apply the mission model. Watch the changed reserves and active events, then adapt before running the next sol."
+    }
+  ],
+  "hud_copy": {
+    "run_sol_label": "RUN THE SOL",
+    "build_label": "BUILD INFRASTRUCTURE",
+    "rover_label": "ROVER OPERATIONS",
+    "event_queue_label": "MISSION ACTIVITY",
+    "pending_outcome": "Mission outcome pending authoritative simulation result."
+  }
+}

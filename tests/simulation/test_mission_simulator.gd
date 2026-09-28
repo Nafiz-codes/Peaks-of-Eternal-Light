@@ -8,7 +8,7 @@ func _init() -> void:
 	_assert(simulator.call("load_contracts") == OK, "All five resource contracts should load.")
 	_assert(simulator.get("sites").size() == 4, "The starter site contract should expose four sites.")
 	_assert(simulator.get("crew").size() == 4, "The starter crew contract should expose four members.")
-	_assert(simulator.get("events").size() == 14, "The expanded event contract should expose fourteen events.")
+	_assert(simulator.get("events").size() == 19, "The completed event contract should expose nineteen events.")
 	for site in simulator.get("sites"):
 		_assert(site.get("illumination_pct", {}).get("verified", false), "Every selected site has verified illumination data.")
 		_assert(site.get("elevation_m", {}).get("verified", false), "Every selected site has verified elevation data.")
