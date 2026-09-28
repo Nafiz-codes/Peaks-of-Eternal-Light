@@ -18,6 +18,18 @@
       "used_by": ["bvad_constants.json"]
     },
     {
+      "source_id": "nasa_iss_eclss_water_recovery_2025",
+      "agency": "NASA",
+      "mission_or_program": "International Space Station / Environmental Control and Life Support System",
+      "title": "Environmental Control and Life Support Systems (ECLSS)",
+      "url": "https://www.nasa.gov/reference/environmental-control-and-life-support-systems-eclss/",
+      "data_kind": "operational water-recovery fraction",
+      "version_or_coverage": "NASA reference page updated 2025-04-04: Water Recovery System recovers and recycles about 90 percent of station water",
+      "retrieved_on": "2026-09-29",
+      "used_by": ["bvad_constants.json"],
+      "measurement_note": "The simulator applies this ISS operational figure as a whole-loop water-recovery proxy. It does not claim that an unbuilt lunar outpost uses the same hardware, recovery streams, or reliability."
+    },
+    {
       "source_id": "nasa_lro_lola_rdr",
       "agency": "NASA PDS",
       "mission_or_program": "Lunar Reconnaissance Orbiter / LOLA",

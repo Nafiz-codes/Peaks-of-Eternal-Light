@@ -56,6 +56,24 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Issues / blockers: CRaTER characterizes the lunar radiation environment but does not yield a location-level surface dose for these points. The 0.90 mSv/sol baseline is therefore a NASA lunar-surface model, and terrain shielding remains an explicit gameplay derivation rather than a measured radiation map.
 - Notes for teammates: All four site records are now `verified:true` for their locked fields. The three non-Ridge-A sites produce substantially less solar power from their observed illumination; water-resource systems must not treat the shared 140 ppmw regional estimate as a site-specific extraction yield.
 
+### Day 7 — Oct 2 — Test & Integration #1 (Member 1 result)
+- Status: ✅ Done ahead of schedule on Sep 29
+- What was completed: Extended the headless simulation test into four end-to-end ten-sol runs, one per verified site. Each run confirms the selected-site identity, one-sol clock advance, authoritative returned state, stable `power`/`radiation`/`life_support` tick interface, snapshot history, non-negative reserves, positive radiation accumulation, documented radiation model status, and completion exactly on Sol 10. The test passed in Godot 4.7.2.
+- Issues / blockers: Construction, rover, crew-modifier, and event-effect contracts are loaded but not yet executed by the simulation. They cannot be included in this Member 1 runtime result until their scheduled integration work.
+- Notes for teammates: The shared Day 7 entry remains pending Member 2 and Member 3 checks. Presentation code can continue to consume the existing tick/state fields; event and action interfaces still need to be defined before live controls are enabled.
+
+### Day 8 — Oct 3 — BVAD life-support data
+- Status: ✅ Done ahead of schedule on Sep 29
+- What was completed: Replaced provisional O₂, CO₂, potable-water, and dry-food values with documented NASA BVAD values and recorded exact table/page references. Added NASA's ISS ECLSS 90% water-recovery figure as an explicitly labeled whole-loop proxy. Updated life-support tick metadata and expectations in the Godot test.
+- Issues / blockers: BVAD states that hygiene loads are mission dependent, so the separate hygiene field remains zero and `verified:false` rather than adding an unsupported draw. The per-person power baseline remains a separate gameplay model choice pending a selected lunar architecture; it is not represented as NASA data.
+- Notes for teammates: UI should display the life-support tick model status when explaining values. Do not describe the ISS water-recovery proxy as a prediction for a lunar-outpost system.
+
+### Day 9 — Oct 4 — Win/lose evaluation logic
+- Status: ✅ Done ahead of schedule on Sep 29
+- What was completed: Added an authoritative `mission_outcome` to `MissionState` and every sol result. The mission succeeds only when it reaches its final sol without a prior failure. Oxygen, water, and food depletion produce named failures immediately; an empty battery becomes a failure only after two consecutive depleted sols, preserving a one-sol recovery window. Tests cover success, depleted water, sustained power depletion, and every verified site's ten-sol baseline.
+- Issues / blockers: Current actions cannot build power or change reserves, so three low-illumination sites correctly end in sustained-power failure in the baseline run. That is a useful simulation result, but later construction, rover, and event effects must supply recovery choices before those sites are player-ready.
+- Notes for teammates: Consume `tick.outcome` or `state.mission_outcome`, including `status`, `failure_reason`, `failure_sol`, and `primary_objective`. These are the authoritative inputs for Member 2's report branches and Member 3's report screen; do not infer victory from the sol counter alone.
+
 ---
 
 ## Member 2 — Systems & Content Log

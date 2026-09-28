@@ -73,6 +73,7 @@ func begin_mission(selected_site_id: String, mission_length: int = 10) -> Varian
 	state.materials = INITIAL_MATERIALS
 	state.terrain_shielding_factor = _terrain_shielding_factor(_find_site(selected_site_id))
 	state.life_support_status = _life_support_status(state, 0.0, 0.0, 0.0)
+	state.mission_outcome = _evaluate_mission_outcome(state)
 	state.history.append(state.snapshot())
 	return state
 
@@ -103,6 +104,8 @@ func advance_sol(state: Variant) -> Dictionary:
 	state.food_consumed_kg = life_support_tick.food_consumed_kg
 	state.food_kg = maxf(0.0, state.food_kg - state.food_consumed_kg)
 	state.life_support_status = _life_support_status(state, -state.water_balance_l, state.oxygen_consumed_kg, state.food_consumed_kg)
+	state.consecutive_power_depleted_sols = state.consecutive_power_depleted_sols + 1 if state.power_kwh <= 0.0 else 0
+	state.mission_outcome = _evaluate_mission_outcome(state)
 	state.history.append(state.snapshot())
 	return {
 		"state": state,
@@ -114,7 +117,39 @@ func advance_sol(state: Variant) -> Dictionary:
 			"model_status": "nasa_lunar_surface_gcr_baseline_with_terrain_proxy"
 		},
 		"life_support": life_support_tick,
-		"active_events": state.active_events.duplicate(true)
+		"active_events": state.active_events.duplicate(true),
+		"outcome": state.mission_outcome.duplicate(true)
+	}
+
+
+func _evaluate_mission_outcome(state: Variant) -> Dictionary:
+	var existing_outcome: Dictionary = state.mission_outcome
+	var failure_reason := str(existing_outcome.get("failure_reason", ""))
+	if failure_reason.is_empty():
+		if state.oxygen_kg <= 0.0:
+			failure_reason = "oxygen_depleted"
+		elif state.water_l <= 0.0:
+			failure_reason = "water_depleted"
+		elif state.food_kg <= 0.0:
+			failure_reason = "food_depleted"
+		elif state.consecutive_power_depleted_sols >= 2:
+			failure_reason = "sustained_power_depletion"
+
+	var failure_sol := int(existing_outcome.get("failure_sol", 0))
+	if not failure_reason.is_empty() and failure_sol == 0:
+		failure_sol = state.sol
+	var mission_finished: bool = state.sol >= state.mission_length_sols
+	var status := "in_progress"
+	if not failure_reason.is_empty():
+		status = "failure"
+	elif mission_finished:
+		status = "success"
+	return {
+		"status": status,
+		"mission_finished": mission_finished,
+		"failure_reason": failure_reason,
+		"failure_sol": failure_sol,
+		"primary_objective": "Sustain the crew through Sol %d." % state.mission_length_sols
 	}
 
 
@@ -148,7 +183,7 @@ func _calculate_life_support(state: Variant) -> Dictionary:
 		"water_balance_l": water_recovered_l - water_consumed_l,
 		"oxygen_consumed_kg": oxygen_consumed_kg,
 		"food_consumed_kg": food_consumed_kg,
-		"model_status": "unverified_contract_inputs"
+		"model_status": "nasa_bvad_consumption_with_iss_eclss_recovery_proxy"
 	}
 
 

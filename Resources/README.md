@@ -1,6 +1,6 @@
 # TRIARCHY resource data
 
-The JSON contracts in this folder drive the game. `sites.json` and `bvad_constants.json` are deliberately not ready for scientific use while a field has `"verified": false`.
+The JSON contracts in this folder drive the game. A field remains outside the NASA-backed model while it has `"verified": false`; `sites.json` is fully verified, while `bvad_constants.json` records which remaining model choices still need a mission-specific NASA source.
 
 ## Updating source-backed values
 

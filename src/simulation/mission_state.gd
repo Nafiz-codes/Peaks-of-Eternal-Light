@@ -27,6 +27,8 @@ var terrain_shielding_factor: float = 0.0
 var materials: float = 0.0
 var active_events: Array[Dictionary] = []
 var history: Array[Dictionary] = []
+var consecutive_power_depleted_sols: int = 0
+var mission_outcome: Dictionary = {}
 
 
 func snapshot() -> Dictionary:
@@ -52,5 +54,7 @@ func snapshot() -> Dictionary:
 		"radiation_this_sol_msv": radiation_this_sol_msv,
 		"terrain_shielding_factor": terrain_shielding_factor,
 		"materials": materials,
-		"active_events": active_events.duplicate(true)
+		"active_events": active_events.duplicate(true),
+		"consecutive_power_depleted_sols": consecutive_power_depleted_sols,
+		"mission_outcome": mission_outcome.duplicate(true)
 	}

@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "description": "Per-crew-member-per-sol life support consumption rates. Replace all 'value' fields marked verified:false with real figures from the NASA BVAD document (NASA/TP-2015-218570/REV1) before using in the sim.",
-    "how_to_fill": "Open the BVAD PDF (ntrs.nasa.gov/citations/20180001338), find the per-crew-member daily tables for O2, water, food, and CO2, and record the exact page/table number."
+    "description": "Per-crew-member-per-sol life-support inputs. Values marked verified:true are NASA BVAD nominal values; fields marked verified:false are deliberately retained gameplay assumptions until a mission-specific NASA source and derivation are selected.",
+    "how_to_fill": "Use NASA/TP-2015-218570/REV1. Table 3-33 (PDF p. 76; printed p. 63) supplies nominal O2, CO2, food mass, and potable-water values. Table 4-57 (PDF p. 135; printed p. 122) supplies the nominal dry-food mass used by this contract."
   },
   "crew_size": 4,
-  "o2_consumption_kg_per_person_per_day": { "value": 0.84, "verified": false, "source": "TBD - BVAD table/page number" },
-  "co2_production_kg_per_person_per_day": { "value": 1.0, "verified": false, "source": "TBD - BVAD table/page number" },
-  "potable_water_consumption_l_per_person_per_day": { "value": 3.6, "verified": false, "source": "TBD - BVAD table/page number" },
-  "hygiene_water_consumption_l_per_person_per_day": { "value": 8.0, "verified": false, "source": "TBD - BVAD table/page number" },
-  "water_recycling_efficiency_pct": { "value": 90, "verified": false, "source": "TBD - BVAD table/page number" },
-  "food_consumption_kg_dry_per_person_per_day": { "value": 0.62, "verified": false, "source": "TBD - BVAD table/page number" },
-  "power_baseline_kw_per_person": { "value": 0.5, "verified": false, "source": "TBD - BVAD table/page number" }
+  "o2_consumption_kg_per_person_per_day": { "value": 0.816, "verified": true, "source": "NASA/TP-2015-218570/REV1, Table 3-33, PDF p. 76 (printed p. 63): nominal O2 consumed, kg/CM-d." },
+  "co2_production_kg_per_person_per_day": { "value": 1.04, "verified": true, "source": "NASA/TP-2015-218570/REV1, Table 3-33, PDF p. 76 (printed p. 63): nominal carbon dioxide load, kg/CM-d." },
+  "potable_water_consumption_l_per_person_per_day": { "value": 2.5, "verified": true, "source": "NASA/TP-2015-218570/REV1, Table 3-33, PDF p. 76 (printed p. 63): nominal potable water consumed, 2.5 kg/CM-d; modeled as 2.5 L/CM-d." },
+  "hygiene_water_consumption_l_per_person_per_day": { "value": 0.0, "verified": false, "source": "No fixed BVAD nominal value selected: hygiene loads are mission dependent. Kept at zero so the model does not add an unsupported separate draw to the Table 3-33 potable-water baseline." },
+  "water_recycling_efficiency_pct": { "value": 90, "verified": true, "source": "NASA Environmental Control and Life Support Systems reference, updated 2025-04-04: ISS Water Recovery System recovers and recycles about 90 percent of station water. Applied here as a whole-loop proxy, not as a lunar-outpost hardware prediction." },
+  "food_consumption_kg_dry_per_person_per_day": { "value": 0.617, "verified": true, "source": "NASA/TP-2015-218570/REV1, Table 4-57, PDF p. 135 (printed p. 122): nominal IVA food dry mass, kg/CM-d." },
+  "power_baseline_kw_per_person": { "value": 0.5, "verified": false, "source": "Gameplay assumption pending a mission-specific NASA power-system architecture and allocation." }
 }

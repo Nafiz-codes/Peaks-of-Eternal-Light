@@ -11,7 +11,7 @@ At the time of this Day 1–2 review, the repository already had a Godot 4.7 pro
 | Existing contract | Presentation use | Finding / later dependency |
 |---|---|---|
 | `Resources/sites.json` | Four selectable sites, names, illumination, elevation, slope, hydrogen and field provenance | All scientific fields are unverified; no coordinates, radiation score, or construction difficulty score exists. Use schematic markers and unavailable labels, not a geographic map or invented scores. Site descriptions are draft content, not verified observations. |
-| `Resources/bvad_constants.json` | Crew count; eventual contextual life-support explanations | Rates remain unverified. UI must not calculate consumption or turn reserves into “days remaining.” |
+| `Resources/bvad_constants.json` | Crew count; contextual life-support explanations | O₂, CO₂, potable water, dry food, and the ISS water-recovery proxy are NASA sourced. Hygiene water and baseline power remain explicitly unverified model choices. UI must not calculate consumption or turn reserves into “days remaining.” |
 | `Resources/crew.json` | Roles and eventual names | Four roles; names are `TBD`. Display roles as fallback. Base stress/productivity are balance inputs, not live health. |
 | `Resources/construction.json` | Future structure cards and rover information | Six structures with costs, effect text and build times; rover parameters exist. No runtime queue, placement, rover position or action API yet. |
 | `Resources/events.json` | Event body, category, choices, no-choice notification | Eight events; `choices` can be null. Effects are mixed types and trigger conditions are strings. Presentation must never execute or parse them into simulation rules. |

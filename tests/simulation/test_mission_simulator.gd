@@ -28,15 +28,18 @@ func _init() -> void:
 	_assert(state.get("radiation_this_sol_msv") > 0.0, "Every sol adds a positive radiation dose.")
 	_assert(is_equal_approx(state.get("radiation_this_sol_msv"), 0.873391), "Radiation uses the NASA lunar-surface baseline and terrain proxy.")
 	_assert(state.get("terrain_shielding_factor") > 0.0, "Terrain fields produce a shielding factor.")
-	_assert(is_equal_approx(state.get("water_consumed_l"), 46.4), "Water use includes potable and hygiene consumption for all crew.")
-	_assert(is_equal_approx(state.get("water_recovered_l"), 41.76), "Water recovery uses the contract recycling rate.")
-	_assert(is_equal_approx(state.get("water_l"), 395.36), "The reserve reflects water use and recovery.")
-	_assert(is_equal_approx(state.get("oxygen_consumed_kg"), 3.36), "Oxygen use follows the per-crew daily contract value.")
-	_assert(is_equal_approx(state.get("food_consumed_kg"), 2.48), "Food use follows the per-crew daily contract value.")
+	_assert(is_equal_approx(state.get("water_consumed_l"), 10.0), "Water use follows the verified BVAD nominal potable-water value for all crew.")
+	_assert(is_equal_approx(state.get("water_recovered_l"), 9.0), "Water recovery uses the explicitly provisional contract recycling rate.")
+	_assert(is_equal_approx(state.get("water_l"), 399.0), "The reserve reflects water use and recovery.")
+	_assert(is_equal_approx(state.get("oxygen_consumed_kg"), 3.264), "Oxygen use follows the verified BVAD nominal daily value.")
+	_assert(is_equal_approx(state.get("food_consumed_kg"), 2.468), "Food use follows the verified BVAD nominal dry-food value.")
+	_assert(first_tick.get("life_support").get("model_status") == "nasa_bvad_consumption_with_iss_eclss_recovery_proxy", "Life-support output identifies the NASA BVAD inputs and ISS ECLSS recovery proxy.")
 	_assert(state.get("life_support_status").get("oxygen") == "nominal", "Life support status is available to presentation code.")
+	_assert(first_tick.get("outcome").get("status") == "in_progress", "A mission remains in progress while its objective is unfinished.")
 
 	var second_tick: Dictionary = simulator.call("advance_sol", state)
 	_assert(second_tick.get("completed", false), "A two-sol mission completes after its second tick.")
+	_assert(second_tick.get("outcome").get("status") == "success", "A mission that reaches its final sol with reserves succeeds.")
 	_assert(state.get("history").size() == 3, "History includes the initial state and each completed tick.")
 
 	var low_oxygen_state: Object = simulator.call("begin_mission", "ridge_a", 1)
@@ -44,8 +47,47 @@ func _init() -> void:
 	simulator.call("advance_sol", low_oxygen_state)
 	_assert(low_oxygen_state.get("life_support_status").get("oxygen") == "critical", "Low oxygen produces a critical life-support warning.")
 
+	var water_failure_state: Object = simulator.call("begin_mission", "ridge_a", 2)
+	water_failure_state.set("water_l", 0.0)
+	var water_failure_tick: Dictionary = simulator.call("advance_sol", water_failure_state)
+	_assert(water_failure_tick.get("outcome").get("status") == "failure", "A depleted water reserve fails the mission.")
+	_assert(water_failure_tick.get("outcome").get("failure_reason") == "water_depleted", "The outcome records why the mission failed.")
+
+	var power_failure_state: Object = simulator.call("begin_mission", "shadow_zone", 5)
+	for _tick in range(4):
+		simulator.call("advance_sol", power_failure_state)
+	_assert(power_failure_state.get("mission_outcome").get("status") == "failure", "Two consecutive sols with an empty battery fail the mission.")
+	_assert(power_failure_state.get("mission_outcome").get("failure_reason") == "sustained_power_depletion", "The outcome distinguishes sustained power loss from a warning.")
+
+	for site in simulator.get("sites"):
+		_run_full_mission(simulator, str(site.get("site_id", "")))
+
 	print("MissionSimulator tests passed.")
 	quit(0)
+
+
+func _run_full_mission(simulator: Object, site_id: String) -> void:
+	const MISSION_LENGTH := 10
+	var state: Object = simulator.call("begin_mission", site_id, MISSION_LENGTH)
+	_assert(state.get("site_id") == site_id, "A mission preserves its selected site identifier.")
+	_assert(state.get("history").size() == 1, "A new mission records one initial snapshot.")
+
+	for expected_sol in range(1, MISSION_LENGTH + 1):
+		var tick: Dictionary = simulator.call("advance_sol", state)
+		_assert(state.get("sol") == expected_sol, "%s advances exactly one sol per tick." % site_id)
+		_assert(tick.get("state") == state, "%s returns the authoritative state object." % site_id)
+		_assert(tick.has("power") and tick.has("radiation") and tick.has("life_support") and tick.has("outcome"), "%s keeps the shared tick interface available." % site_id)
+		_assert(tick.get("radiation").get("model_status") == "nasa_lunar_surface_gcr_baseline_with_terrain_proxy", "%s retains the documented radiation model status." % site_id)
+		_assert(state.get("history").size() == expected_sol + 1, "%s records every sol in its history." % site_id)
+		_assert(state.get("power_kwh") >= 0.0 and state.get("water_l") >= 0.0, "%s never creates negative reserves." % site_id)
+		_assert(state.get("oxygen_kg") >= 0.0 and state.get("food_kg") >= 0.0, "%s never creates negative life-support reserves." % site_id)
+		_assert(state.get("radiation_this_sol_msv") > 0.0 and state.get("radiation_msv") > 0.0, "%s accumulates a positive lunar radiation dose." % site_id)
+		_assert(tick.get("completed", false) == (expected_sol == MISSION_LENGTH), "%s reports completion only on its final sol." % site_id)
+
+	if site_id == "ridge_a":
+		_assert(state.get("mission_outcome").get("status") == "success", "Ridge A can complete the current ten-sol baseline mission.")
+	else:
+		_assert(state.get("mission_outcome").get("status") == "failure", "%s exposes a power-management failure in the current baseline mission." % site_id)
 
 
 func _assert(condition: bool, message: String) -> void:
