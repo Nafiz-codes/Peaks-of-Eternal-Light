@@ -1,28 +1,28 @@
 {
   "_meta": {
-    "description": "Candidate lunar south-pole outpost sites. All numeric values are gameplay placeholders until verified:true with reproducible LRO data. A LEND hydrogen signature indicates resource potential, not confirmed or extractable water ice.",
+    "description": "Candidate lunar south-pole outpost sites. Values marked verified:true are reproducible NASA product samples; unverified values are gameplay placeholders. A LEND hydrogen signature indicates resource potential, not confirmed or extractable water ice.",
     "how_to_fill": "First choose and record each site's latitude/longitude. In QuickMap or the PDS, record the exact product/layer/version, source URL, read date, original value/unit, and sampling/averaging method for LOLA elevation/slope, WAC illumination, and LEND hydrogen. Do not convert LEND data to water yield without a cited transformation."
   },
   "sites": [
     {
       "site_id": "ridge_a",
       "name": "Ridge A",
-      "description": "High, near-continuously sunlit ridge near the pole.",
-      "coordinates": { "latitude_deg": null, "longitude_deg": null, "source": "TBD - select a real lunar south-pole location before verification" },
-      "illumination_pct": { "value": 85, "verified": false, "source": "TBD - LRO QuickMap, WAC polar illumination layer", "date_read": "TBD" },
-      "elevation_m": { "value": 1450, "verified": false, "source": "TBD - LRO QuickMap, LOLA DEM layer", "date_read": "TBD" },
-      "slope_deg": { "value": 8, "verified": false, "source": "TBD - LRO QuickMap, LOLA slope layer", "date_read": "TBD" },
-      "hydrogen_ppm": { "value": 90, "verified": false, "source": "TBD - LRO QuickMap, LEND polar hydrogen layer", "date_read": "TBD" }
+      "description": "Game label for a sampled point in NASA LOLA's Connecting Ridge landing-site dataset. Hydrogen is a LEND regional model estimate for the >88° polar band, not a landing-point assay.",
+      "coordinates": { "latitude_deg": -89.301667, "longitude_deg": 235.97224, "source": "Derived from the shared south-polar stereographic coordinate X=-17,550 m, Y=-11,850 m; planetocentric latitude, east-positive longitude" },
+      "illumination_pct": { "value": 66.9799, "verified": true, "source": "NASA PDS LRO/LROC WAC_POLE_ILL_PCT_SOUTH_100M v2.0, urn:nasa:pds:lro-l-lroc-5-rdr:lrolrc_2001_data:bdr.wac_pole.wac_pole_ill_pct_south.wac_pole_ill_pct_south_100m; column 782, line 725", "date_read": "2026-09-28" },
+      "elevation_m": { "value": 1096.978, "verified": true, "source": "NASA GSFC PGDA LOLA 5 m Connecting Ridge LDEM, Site01_final_adj_5mpp_surf.tif; X=-17,550 m, Y=-11,850 m; pixel column 290, row 1570", "date_read": "2026-09-28" },
+      "slope_deg": { "value": 11.08685, "verified": true, "source": "NASA GSFC PGDA LOLA 5 m Connecting Ridge slope map, Site01_final_adj_5mpp_slp.tif; X=-17,550 m, Y=-11,850 m; pixel column 290, row 1570", "date_read": "2026-09-28" },
+      "hydrogen_ppm": { "value": 140.0, "verified": true, "source": "NASA NTRS 20180004020, LEND regional model: ~140 ppmw H above 88° latitude (0.13 ± 0.02 wt% WEH). Supporting NASA PDS LEND_RDR_ALDS_20090915 map cell centered -89.25°, 235.75°: CSETN relative rate 5.22 ± 0.26; regional model is used because the locked field requires ppm and this product stores count rates.", "date_read": "2026-09-28" }
     },
     {
       "site_id": "shadow_zone",
       "name": "Shadow Zone",
-      "description": "Candidate permanently or near-permanently shadowed crater floor. The apparent resource advantage is a placeholder until a location-specific LEND reading is recorded.",
-      "coordinates": { "latitude_deg": null, "longitude_deg": null, "source": "TBD - select a real lunar south-pole location before verification" },
-      "illumination_pct": { "value": 5, "verified": false, "source": "TBD - LRO QuickMap, WAC polar illumination layer", "date_read": "TBD" },
-      "elevation_m": { "value": -2100, "verified": false, "source": "TBD - LRO QuickMap, LOLA DEM layer", "date_read": "TBD" },
-      "slope_deg": { "value": 12, "verified": false, "source": "TBD - LRO QuickMap, LOLA slope layer", "date_read": "TBD" },
-      "hydrogen_ppm": { "value": 380, "verified": false, "source": "TBD - LRO QuickMap, LEND polar hydrogen layer", "date_read": "TBD" }
+      "description": "Game label for a zero-illumination point within NASA LOLA's Shackleton Rim landing-site dataset. Hydrogen is a LEND regional model estimate for the >88° polar band, not a landing-point assay.",
+      "coordinates": { "latitude_deg": -89.830541, "longitude_deg": 280.653903, "source": "Derived from the shared south-polar stereographic coordinate X=-5,050 m, Y=950 m; planetocentric latitude, east-positive longitude" },
+      "illumination_pct": { "value": 0.0, "verified": true, "source": "NASA PDS LRO/LROC WAC_POLE_ILL_PCT_SOUTH_100M v2.0, urn:nasa:pds:lro-l-lroc-5-rdr:lrolrc_2001_data:bdr.wac_pole.wac_pole_ill_pct_south.wac_pole_ill_pct_south_100m; column 657, line 597", "date_read": "2026-09-28" },
+      "elevation_m": { "value": -108.75, "verified": true, "source": "NASA GSFC PGDA LOLA 5 m Shackleton Rim LDEM, Site04_final_adj_5mpp_surf.tif; X=-5,050 m, Y=950 m; pixel column 790, row 10", "date_read": "2026-09-28" },
+      "slope_deg": { "value": 2.208771, "verified": true, "source": "NASA GSFC PGDA LOLA 5 m Shackleton Rim slope map, Site04_final_adj_5mpp_slp.tif; X=-5,050 m, Y=950 m; pixel column 790, row 10", "date_read": "2026-09-28" },
+      "hydrogen_ppm": { "value": 140.0, "verified": true, "source": "NASA NTRS 20180004020, LEND regional model: ~140 ppmw H above 88° latitude (0.13 ± 0.02 wt% WEH). Supporting NASA PDS LEND_RDR_ALDS_20090915 map cell centered -89.75°, 280.75°: CSETN relative rate 4.80 ± 0.39; regional model is used because the locked field requires ppm and this product stores count rates.", "date_read": "2026-09-28" }
     },
     {
       "site_id": "crater_rim_b",

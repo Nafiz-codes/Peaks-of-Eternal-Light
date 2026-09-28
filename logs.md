@@ -32,6 +32,24 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Issues / blockers: Resource formulas are intentionally deferred to the next scheduled tasks; site and BVAD source fields remain unverified and therefore are loaded without being treated as validated science inputs.
 - Notes for teammates: UI integration can import `res://src/simulation/mission_simulator.gd`, call `load_contracts()`, then render the `MissionState` returned by `begin_mission()` and `advance_sol()`.
 
+### Day 3 — Sep 28 — Core tick loop: power and radiation formulas
+- Status: ✅ Done
+- What was completed: Added deterministic solar generation from each site's illumination field, crew baseline power consumption from `bvad_constants.json`, battery-reserve updates, active-event generation multipliers, and cumulative radiation. Terrain shielding is derived from each site's elevation and slope fields. The tick returns power and radiation detail for presentation consumers; tests cover the Ridge A resource calculation and radiation update.
+- Issues / blockers: The site fields remain unverified placeholders and the radiation baseline is explicitly a provisional gameplay calibration until the scheduled CRaTER source pass. Neither is presented as a NASA measurement.
+- Notes for teammates: `advance_sol()` now returns `power` and `radiation` dictionaries alongside the state. The UI can safely display `power_generated_kwh`, `power_consumed_kwh`, `power_balance_kwh`, `radiation_this_sol_msv`, and `terrain_shielding_factor` from `MissionState` when live binding begins.
+
+### Day 4 — Sep 29 — Core tick loop: water, food, and O2 threshold logic
+- Status: ✅ Done ahead of schedule on Sep 28
+- What was completed: Added per-sol water consumption and recovery, oxygen consumption, food consumption, and life-support resource statuses (`nominal`, `warning`, `critical`, `depleted`). The state and tick result now expose consumption/recovery details for UI integration. Tests cover ordinary resource flow and a critical oxygen reserve.
+- Issues / blockers: The BVAD fields are still `verified:false`; this logic is structurally complete but must be recalibrated when Member 1 records exact NASA BVAD table/page sources.
+- Notes for teammates: Read `life_support_status` from `MissionState` or the `life_support` result returned by `advance_sol()`. No construction production or event effects are included yet; those belong to later scheduled integration work.
+
+### Day 5 — Sep 30 — NASA site data for sites 1 and 2
+- Status: ✅ Done
+- What was completed: Replaced fictional coordinates, illumination, elevation, slope, and hydrogen placeholders for Ridge A and Shadow Zone with reproducible NASA values. Illumination comes from NASA PDS LRO/LROC WAC's percentage-based south-pole product; terrain comes from NASA GSFC PGDA 5 m LOLA Connecting Ridge and Shackleton Rim datasets. Sampled NASA PDS LEND's south-polar averaged-count product (`LEND_RDR_ALDS_20090915`) at the two corresponding 0.5° cells, and recorded the CSETN rate/error in each field's provenance. Filled `hydrogen_ppm` with NASA's LEND regional estimate of approximately 140 ppmw H for terrain above 88° latitude.
+- Issues / blockers: LEND's archived product stores neutron count rates rather than direct ppm values. The 140 ppmw estimate is a cited regional LEND model result and does not resolve differences between the two map cells; it must not be described as a direct landing-point assay or confirmed ice.
+- Notes for teammates: Ridge A has verified light and terrain values at Connecting Ridge; Shadow Zone has verified light and terrain values inside the Shackleton Rim dataset. Their current hydrogen entries are scientifically sourced regional resource-potential estimates, so game systems must not create artificial site differences from the identical 140 ppmw value.
+
 ---
 
 ## Member 2 — Systems & Content Log

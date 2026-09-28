@@ -22,24 +22,24 @@
       "agency": "NASA PDS",
       "mission_or_program": "Lunar Reconnaissance Orbiter / LOLA",
       "title": "LOLA Reduced Data Records and gridded elevation products",
-      "url": "https://pds-geosciences.wustl.edu/missions/lro/lola.htm",
+      "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/",
       "data_kind": "lunar elevation and terrain",
-      "version_or_coverage": "PDS LRO LOLA archive; consult product label for the selected raster version",
+      "version_or_coverage": "NASA GSFC PGDA 5 m south-pole landing-site products; Connecting Ridge (Site01) and Shackleton Rim (Site04) sampled on 2026-09-28",
       "retrieved_on": "2026-09-26",
       "used_by": ["sites.json"],
-      "measurement_note": "Record latitude, east-positive longitude, raster/product identifier, pixel resolution, and sampling method for every site value. Slope is derived from the selected elevation raster unless a documented LOLA slope product is used."
+      "measurement_note": "Record latitude, east-positive longitude, raster/product identifier, pixel resolution, and sampling method for every site value. Ridge A and Shadow Zone use 5 m documented elevation and slope products at shared X/Y coordinates."
     },
     {
       "source_id": "nasa_lro_lroc_wac_polar_illumination",
       "agency": "NASA / Arizona State University",
       "mission_or_program": "Lunar Reconnaissance Orbiter / LROC WAC",
       "title": "LROC QuickMap lunar polar illumination layers",
-      "url": "https://quickmap.lroc.asu.edu/",
+      "url": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/BDR/WAC_POLE/WAC_POLE_ILL_PCT_SOUTH/WAC_POLE_ILL_PCT_SOUTH_100M.IMG",
       "data_kind": "polar illumination",
-      "version_or_coverage": "Select and record the exact WAC polar illumination layer and its stated time interval",
+      "version_or_coverage": "WAC_POLE_ILL_PCT_SOUTH_100M, PDS4 v2.0; 88–90°S, 100 m/pixel; percentage of observations illuminated during the source map period",
       "retrieved_on": "2026-09-26",
       "used_by": ["sites.json"],
-      "measurement_note": "Illumination percentage must retain the layer name, time interval, coordinates, and sampling method; it is then normalized to a solar-generation gameplay modifier."
+      "measurement_note": "Illumination percentage must retain the layer name, time interval, coordinates, and sampling method; it is then normalized to a solar-generation gameplay modifier. Ridge A and Shadow Zone have recorded sampled values; remaining sites have not."
     },
     {
       "source_id": "nasa_lro_lend_rdr",
@@ -48,10 +48,22 @@
       "title": "LEND Derived Data Records",
       "url": "https://pds-geosciences.wustl.edu/missions/lro/lend.htm",
       "data_kind": "neutron flux and hydrogen-related resource potential",
-      "version_or_coverage": "PDS LRO LEND archive, Release 67 current at retrieval",
-      "retrieved_on": "2026-09-26",
+      "version_or_coverage": "PDS LRO LEND archive, Release 67 current at retrieval; LEND_RDR_ALDS_20090915, 2009-09-15 through 2011-12-11, 0.5° × 0.5° south-polar cells",
+      "retrieved_on": "2026-09-28",
       "used_by": ["sites.json"],
-      "measurement_note": "LEND measures neutron flux. Any hydrogen abundance or water-potential value must name the derived product and units; it must never be presented as confirmed extractable water."
+      "measurement_note": "LEND_RDR_ALDS_20090915 stores CSETN relative count rates and statistical errors, not hydrogen ppm. The two site entries retain their sampled map-cell rates in field provenance and use the separately cited NASA LEND regional model for >88° latitude: approximately 140 ppmw H (0.13 ± 0.02 wt% WEH). This is regional evidence, never confirmed extractable water or a direct landing-point assay."
+    },
+    {
+      "source_id": "nasa_lend_polar_hydrogen_2018",
+      "agency": "NASA",
+      "mission_or_program": "Lunar Reconnaissance Orbiter / LEND",
+      "title": "Background and Lunar Neutron Populations Detected by LEND and Average Concentration of Near-Surface Hydrogen near the Moon's Poles",
+      "url": "https://ntrs.nasa.gov/citations/20180004020",
+      "data_kind": "LEND model-derived regional hydrogen abundance",
+      "version_or_coverage": "Livengood et al., Planetary and Space Science 162 (2018); approximately 140 ppmw H above 88° north or south latitude, 0.13 ± 0.02 wt% WEH",
+      "retrieved_on": "2026-09-28",
+      "used_by": ["sites.json"],
+      "measurement_note": "Both selected sites are south of 88°. This result does not resolve differences between their individual 0.5° LEND cells."
     },
     {
       "source_id": "nasa_lro_crater",
