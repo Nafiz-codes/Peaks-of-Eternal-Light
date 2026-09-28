@@ -10,8 +10,14 @@ config_version=5
 
 [application]
 
-config/name="TRIARCHY"
+config/name="Peaks of Eternal Light"
+run/main_scene="res://scenes/mission_dashboard.tscn"
 config/features=PackedStringArray("4.7")
+
+[display]
+
+window/size/viewport_width=1360
+window/size/viewport_height=820
 
 [rendering]
 

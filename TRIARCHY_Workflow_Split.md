@@ -1,5 +1,7 @@
 # Triarchy — Workflow Split (3 Teammates)
 
+**Game title:** Peaks of Eternal Light · **Team:** TRIARCHY
+
 **Timeline:** Sept 26 – Oct 31 (~5 weeks) · Local qualifier the day before the main Nov 14–15 event
 
 Each teammate owns a **distinct domain end-to-end**, not a slice of the same task. Work meets at defined interfaces (below), so nobody is blocked waiting on someone else's half of the same feature.
@@ -59,7 +61,9 @@ Five data files already exist as scaffolds (see repo root) with placeholder valu
 
 - Day 1 complete: reviewed the five existing scaffolds and recorded provisional visual direction, feasibility and integration gaps in [docs/UI_UX.md](docs/UI_UX.md).
 - Day 2 complete: [four core-screen wireframes](docs/wireframes.html), with bindings and interaction notes in the design handoff. These are design artifacts, not playable Godot UI. Browser visual QA remains pending because the local-file preview was blocked by browser URL policy.
-- Next: Day 3 visual-system review and style lock. Detailed completion entries are in [logs.md](logs.md); later gameplay/integration tasks remain scheduled below.
+- Day 3 visual system is implemented and documented in [docs/UI_UX.md](docs/UI_UX.md). The actual Godot dashboard was rendered at desktop and narrow widths; the older HTML wireframe still could not be opened in the browser because of URL policy.
+- Day 4 static dashboard shell is now the Godot main scene at `scenes/mission_dashboard.tscn`. It uses explicit setup examples and disabled gameplay controls. Test results and exact completion dates are in [logs.md](logs.md); live-data integration remains scheduled for Day 8.
+- Title decision: the game is **Peaks of Eternal Light**, with **TRIARCHY** retained as the team credit. The Godot window, dashboard, wireframes, and project specification use this title.
 
 After finishing each day's task below, log it in **`logs.md`** under your own section before moving to the next day. This is what lets the team (and each person's own AI assistant) see progress at a glance without a meeting. See `logs.md` for the exact format.
 

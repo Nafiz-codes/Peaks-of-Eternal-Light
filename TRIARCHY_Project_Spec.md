@@ -4,6 +4,8 @@
 
 **TRIARCHY** is an interactive space-themed STEM simulation/game built for the NASA Space Apps Challenge challenge **“Build a Junior Astronaut Mission Trainer.”**
 
+**Peaks of Eternal Light** is the game title. **TRIARCHY** is the team name.
+
 The player becomes the commander of a lunar outpost and must keep a crew alive while expanding the settlement. The game turns real mission-engineering trade-offs into an accessible, visually compelling experience.
 
 The core idea is:
@@ -140,7 +142,7 @@ The initial version should focus on the **Moon**, preferably the **lunar south-p
 - Radiation considerations
 - Solar-power opportunities
 
-The player operates an outpost for approximately **30 lunar sols**.
+The initial playable mission runs for **7–10 sols**, as set by the hackathon scope and the day-by-day workflow.
 
 The exact duration can be tuned during playtesting.
 
@@ -901,11 +903,11 @@ Suggested major screens:
 
 ## 1. Title Screen
 
-TRIARCHY
+Peaks of Eternal Light
 
 Subtitle:
 
-**Junior Astronaut Mission Trainer**
+**Junior Astronaut Mission Trainer · by TRIARCHY**
 
 Button:
 
@@ -946,7 +948,7 @@ Major regions:
 
 ```text
 ┌─────────────────────────────────────────────┐
-│ TRIARCHY             SOL 17 / 30            │
+│ TRIARCHY             SOL 03 / 10            │
 ├─────────────────────────────────────────────┤
 │                                             │
 │           LUNAR OUTPOST VIEW                │
@@ -1368,7 +1370,7 @@ At minimum, test:
 
 # TRIARCHY
 
-**TRIARCHY is the team name, not the name of the game.** The game should have its own distinct title, which will be selected during the branding phase.
+**TRIARCHY is the team name, not the name of the game.** The selected game title is **Peaks of Eternal Light**.
 
 The game logo/title should feel like a sophisticated space-mission experience rather than a generic AI-generated startup.
 
@@ -1398,7 +1400,7 @@ The logo should be usable in:
 
 The project should be presented as:
 
-> **TRIARCHY is a NASA-data-driven lunar mission simulator designed to help young learners experience the engineering trade-offs behind sustaining a human outpost beyond Earth.**
+> **Peaks of Eternal Light is a NASA-data-driven lunar mission simulator by TRIARCHY, designed to help young learners experience the engineering trade-offs behind sustaining a human outpost beyond Earth.**
 
 Short pitch:
 
@@ -1462,7 +1464,6 @@ The project is ready for submission when:
 - [ ] Core simulation has tests.
 - [ ] UI is polished.
 - [ ] Game is playable without AI.
-- [ ] AI, if included, is optional.
 - [ ] README explains the project.
 - [ ] Demo/presentation is ready.
 - [ ] No major known bugs remain.

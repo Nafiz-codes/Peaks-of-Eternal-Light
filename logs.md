@@ -74,6 +74,24 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Issues / blockers: Browser URL policy blocked the local-file preview, so rendered layout, narrow-screen and keyboard checks remain unverified. This does not block producing the wireframes; perform those checks before Day 3 style lock. No gameplay or Godot shell implementation is claimed.
 - Notes for teammates: The board uses scaffold balance examples and schematic terrain; scientific values stay unverified and outcome metrics unavailable. Day 3 styling and Day 4–6 Godot shells remain future tasks. No simulation tests were rerun because runtime code and data were unchanged.
 
+### Day 3 — Sep 28, 2026 — Lock presentation style
+- Status: ✅ Done for the Godot visual system; HTML wireframe browser QA remains open
+- What was completed: Locked the nine-color mission-control palette, Godot typography scale, panel treatment, spacing, labeled geometric icon approach, and schematic outpost direction in `docs/UI_UX.md`. Implemented these choices in the actual Godot dashboard and inspected rendered screenshots at 1360×820, 720×900, and 520×900. The resource cards and panels reflow at narrow widths without horizontal clipping.
+- Issues / blockers: The browser URL policy again refused the local HTML wireframe, so its rendered and keyboard behavior could not be verified. The style decision uses direct review of the Godot implementation; the archived wireframe board's browser check is still pending.
+- Notes for teammates: This locks Member 3's first-pass presentation system, not the game title or team-wide branding approval. Continue to label unverified NASA measurements and unavailable gameplay state.
+
+### Day 4 — Sep 28, 2026 (scheduled Sep 29) — Static mission dashboard shell
+- Status: ✅ Done ahead of schedule
+- What was completed: Added `scenes/mission_dashboard.tscn` as the Godot main scene, `src/ui/mission_dashboard.gd` for the dashboard panels and responsive layout, and `src/ui/outpost_preview.gd` for drawn schematic terrain/habitat/solar/rover art. Six resource cards use the simulator's initial setup values as clearly labeled examples. Crew, mission activity, warning, and science-copy regions are present; build, rover and run controls are disabled. Added `tests/ui/test_mission_dashboard.gd`.
+- Issues / blockers: No live simulation binding is included in this scheduled static shell. Godot reported `user://` cache/log and certificate-store warnings in the restricted test environment; the scene still rendered and tests passed.
+- Notes for teammates: Godot 4.7.2 loaded the project, the main scene ran for five headless frames, and the UI shell and existing simulator tests passed. Desktop and narrow OpenGL captures were inspected. Day 8 should bind the dashboard to `MissionState` and authoritative action results; do not infer live health, thresholds, or science verification from this example.
+
+### Title decision — Sep 28, 2026 — Peaks of Eternal Light
+- Status: ✅ Done
+- What was completed: Applied the user-selected game title **Peaks of Eternal Light** to the Godot project/window name, dashboard heading, four wireframe headers, project specification, workflow, and design handoff. Kept **TRIARCHY** as the team credit and updated the dashboard shell test to assert the title.
+- Issues / blockers: None for the title change.
+- Notes for teammates: Use **Peaks of Eternal Light** in future game and demo materials; use **TRIARCHY** for team attribution. “Lunar outpost” remains a description of the mission setting, not the product name.
+
 ---
 
 ## Shared Test & Integration Notes
