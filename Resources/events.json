@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "description": "Event table, owned by Member 2. This starter set covers each category (hazard, discovery, crew, equipment) - expand to ~15-20 total following the same schema, then hand off to Member 1 to wire into the trigger system on Day 12 (Oct 7)."
+    "description": "Event table, owned by Member 2. Batch 1 contains 14 events across hazard, discovery, crew, equipment, and opportunity categories. Trigger rates and numeric effects are editable gameplay-balance values; expand to ~15-20 total before handoff to Member 1 for trigger-system integration."
   },
   "events": [
     {
@@ -72,9 +72,75 @@
       "choices": null
     },
     {
+      "event_id": "water_recycler_clog",
+      "category": "equipment",
+      "trigger_condition": "random_chance: 6% per sol after sol 2",
+      "effects": { "water_recovery_multiplier": 0.65, "duration_sols": 2 },
+      "text": "A filter in the water-recovery loop is clogging faster than expected. The crew can spend time restoring the system or accept reduced recovery temporarily.",
+      "choices": [
+        { "choice_id": "service_recycler", "text": "Assign the engineer to service the recycler", "effects": { "crew_stress": "+0.03", "water_recovery_multiplier": 1.0, "duration_sols": 0 } },
+        { "choice_id": "ration_water", "text": "Ration water until the next maintenance window", "effects": { "crew_stress": "+0.05" } }
+      ]
+    },
+    {
+      "event_id": "rover_mobility_hazard",
+      "category": "equipment",
+      "trigger_condition": "rover_action: traverse AND random_chance: 10% per action",
+      "effects": { "rover_range_multiplier": 0.5, "duration_sols": 1 },
+      "text": "The rover finds a patch of soft regolith and loses traction. Continuing risks wasting power, while retreating leaves the route unexplored.",
+      "choices": [
+        { "choice_id": "recover_carefully", "text": "Use a careful recovery route", "effects": { "rover_power_multiplier": 1.25, "rover_range_multiplier": 1.0 } },
+        { "choice_id": "return_to_base", "text": "Return to base and remap the route", "effects": { "rover_task": "return", "volatile_prospect_status": "unexplored" } }
+      ]
+    },
+    {
+      "event_id": "battery_thermal_alert",
+      "category": "equipment",
+      "trigger_condition": "power_reserve_pct < 35 AND random_chance: 8% per sol",
+      "effects": { "battery_available_capacity_multiplier": 0.8, "duration_sols": 2 },
+      "text": "Battery temperature control is drawing extra reserve power. The outpost can protect the battery or keep all systems running at higher risk.",
+      "choices": [
+        { "choice_id": "conserve_power", "text": "Enter a one-sol conservation mode", "effects": { "power_consumption_multiplier": 0.8, "crew_stress": "+0.04" } },
+        { "choice_id": "maintain_operations", "text": "Maintain normal operations", "effects": { "battery_available_capacity_multiplier": 0.7 } }
+      ]
+    },
+    {
+      "event_id": "regolith_stockpile",
+      "category": "opportunity",
+      "trigger_condition": "rover_action: survey AND structure_not_built: shielding_wall",
+      "effects": { "shielding_wall_material_discount": 20 },
+      "text": "A rover survey identifies a nearby regolith deposit suitable for shielding fill. Hauling it now could make radiation protection cheaper later.",
+      "choices": [
+        { "choice_id": "stockpile_regolith", "text": "Stockpile the regolith near the habitat", "effects": { "rover_task": "haul_regolith", "crew_stress": "+0.02" } },
+        { "choice_id": "continue_survey", "text": "Keep the rover on its current survey", "effects": {} }
+      ]
+    },
+    {
+      "event_id": "extended_illumination_window",
+      "category": "opportunity",
+      "trigger_condition": "site_illumination_pct >= 50 AND random_chance: 12% per sol",
+      "effects": { "power_generation_multiplier": 1.2, "duration_sols": 1 },
+      "text": "The local terrain is receiving an unusually favorable illumination window. The outpost can bank energy or use the surplus for a demanding task.",
+      "choices": [
+        { "choice_id": "charge_reserves", "text": "Prioritize battery charging", "effects": { "battery_charge_bonus_kwh": 10 } },
+        { "choice_id": "run_high_draw_task", "text": "Use the surplus for deferred operations", "effects": { "materials": "+8", "crew_stress": "+0.02" } }
+      ]
+    },
+    {
+      "event_id": "crew_process_improvement",
+      "category": "crew",
+      "trigger_condition": "sol >= 4 AND crew_stress_avg < 0.45 AND random_chance: 10% per sol",
+      "effects": { "productivity_multiplier": 1.1, "duration_sols": 2 },
+      "text": "A quiet review of the outpost routine produces a better shift handoff. For a short time, the crew can complete work with less friction.",
+      "choices": [
+        { "choice_id": "adopt_new_schedule", "text": "Adopt the improved schedule", "effects": { "crew_stress": "-0.03" } },
+        { "choice_id": "keep_current_routine", "text": "Keep the current routine", "effects": {} }
+      ]
+    },
+    {
       "event_id": "resupply_window",
       "category": "opportunity",
-      "trigger_condition": "sol == 5 OR sol == 15",
+      "trigger_condition": "sol == 5",
       "effects": { "materials": "+30" },
       "text": "A scheduled resupply delivery arrives, adding to your materials stockpile.",
       "choices": null

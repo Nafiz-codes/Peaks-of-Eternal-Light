@@ -1,39 +1,39 @@
 {
   "_meta": {
-    "description": "Named crew, owned by Member 2. Feed into the sim's aggregate crew health number as modifiers, not as a separate parallel health system."
+    "description": "Named crew, owned by Member 2. Names and modifier values are editable gameplay content. Feed the combined modifiers into the simulation's aggregate crew health/stress/productivity state; do not create a separate per-person health system."
   },
   "crew": [
     {
       "crew_id": "commander",
-      "name": "TBD",
-      "role": "Commander",
-      "base_stress": 0.2,
-      "base_productivity": 1.1,
-      "notes": "Boosts crew morale recovery slightly; slightly higher baseline stress from responsibility."
+      "name": "Leila Navarro",
+      "role": "Mission Commander",
+      "base_stress": 0.18,
+      "base_productivity": 1.08,
+      "notes": "Operations lead. Apply as a modest aggregate morale-recovery bonus after a resolved event; her responsibility keeps the team's baseline stress slightly above the crew average."
     },
     {
       "crew_id": "engineer",
-      "name": "TBD",
+      "name": "Devon Okoye",
       "role": "Systems Engineer",
-      "base_stress": 0.15,
-      "base_productivity": 1.2,
-      "notes": "Reduces power/construction task costs; specialist bonus for repair events."
+      "base_stress": 0.14,
+      "base_productivity": 1.18,
+      "notes": "Power and maintenance specialist. Apply a targeted aggregate productivity bonus to repair and construction actions; do not reduce passive resource consumption."
     },
     {
       "crew_id": "botanist",
-      "name": "TBD",
-      "role": "Botanist / Life Support",
-      "base_stress": 0.15,
-      "base_productivity": 1.15,
-      "notes": "Reduces food-production variance; specialist bonus for greenhouse events."
+      "name": "Dr. Jia Chen",
+      "role": "Life Support Botanist",
+      "base_stress": 0.16,
+      "base_productivity": 1.12,
+      "notes": "Crop and life-support specialist. Apply a targeted aggregate productivity bonus to greenhouse actions and lower food-output variance once that system is implemented."
     },
     {
       "crew_id": "medic",
-      "name": "TBD",
+      "name": "Dr. Amara Sethi",
       "role": "Medical Officer",
-      "base_stress": 0.1,
-      "base_productivity": 1.0,
-      "notes": "Reduces overall crew stress accumulation rate; specialist bonus for health-crisis events."
+      "base_stress": 0.12,
+      "base_productivity": 1.05,
+      "notes": "Crew-care specialist. Apply a modest aggregate stress-mitigation bonus during health or radiation events; this is not a second health pool."
     }
   ]
 }

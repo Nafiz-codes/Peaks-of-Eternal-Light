@@ -1,48 +1,48 @@
 {
   "_meta": {
-    "description": "Buildable structures and vehicle parameters, owned by Member 2. Costs are placeholder starting balance values - tune during Day 16 (Oct 11) balance pass."
+    "description": "Buildable structures and vehicle parameters, owned by Member 2. Costs, build times, and output figures are editable gameplay-balance values, not NASA measurements; revisit them during the Day 16 balance pass. build_cost.power is the one-time construction energy demand."
   },
   "structures": [
     {
       "structure_id": "solar_array",
       "name": "Solar Array",
-      "build_cost": { "materials": 40, "power": 0 },
-      "effect": "Increases power generation, scaled by site illumination_pct.",
+      "build_cost": { "materials": 35, "power": 8 },
+      "effect": "Gameplay effect: adds 18 kWh of potential generation per sol before the selected site's illumination modifier. Intended as the affordable early power investment.",
       "build_time_sols": 2
     },
     {
       "structure_id": "water_extractor",
       "name": "Water Extractor",
-      "build_cost": { "materials": 60, "power": 10 },
-      "effect": "Enables water extraction only after a rover prospect has been investigated. Extraction yield is a separately tuned gameplay value; it must not be calculated directly from LEND hydrogen readings.",
+      "build_cost": { "materials": 65, "power": 15 },
+      "effect": "Gameplay effect: after a rover prospect has been investigated, adds up to 16 L of water recovery per sol. Output must be separately tuned and must not be calculated directly from LEND hydrogen readings.",
       "build_time_sols": 3
     },
     {
       "structure_id": "greenhouse",
       "name": "Greenhouse Module",
-      "build_cost": { "materials": 70, "power": 15 },
-      "effect": "Increases food production; consumes power and water.",
+      "build_cost": { "materials": 80, "power": 18 },
+      "effect": "Gameplay effect: produces 1.2 kg dry food per sol while consuming 6 kWh and 4 L water per sol. Intended to offset, but not completely erase, the four-person food draw.",
       "build_time_sols": 3
     },
     {
       "structure_id": "shielding_wall",
       "name": "Radiation Shielding Wall",
-      "build_cost": { "materials": 50, "power": 0 },
-      "effect": "Reduces crew radiation dose accumulation rate.",
+      "build_cost": { "materials": 55, "power": 6 },
+      "effect": "Gameplay effect: reduces the crew's unshielded radiation dose by 25%. This stacks with terrain shielding only when the simulation integration defines the combination rule.",
       "build_time_sols": 2
     },
     {
       "structure_id": "habitat_module",
       "name": "Habitat Extension",
-      "build_cost": { "materials": 90, "power": 5 },
-      "effect": "Increases crew capacity and reduces base stress accumulation.",
+      "build_cost": { "materials": 100, "power": 12 },
+      "effect": "Gameplay effect: adds two crew-capacity slots and reduces aggregate crew-stress gain by 15%. It is deliberately a late, expensive resilience upgrade.",
       "build_time_sols": 4
     },
     {
       "structure_id": "comms_relay",
       "name": "Comms Relay",
-      "build_cost": { "materials": 30, "power": 5 },
-      "effect": "Unlocks early-warning for solar-particle-event radiation spikes.",
+      "build_cost": { "materials": 25, "power": 5 },
+      "effect": "Gameplay effect: unlocks one-sol advance warning for solar-particle events, allowing a shelter choice before the radiation effect is applied.",
       "build_time_sols": 1
     }
   ],

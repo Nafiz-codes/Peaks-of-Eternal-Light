@@ -74,6 +74,24 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Issues / blockers: The four candidate sites are still fictional labels with no coordinates. Their illumination, terrain, and hydrogen values must remain `verified:false` until Member 1 sources real location-specific data.
 - Notes for teammates: New event effects (`volatile_prospect_found`, `requires_follow_up`, and rover task/status values) are data-only hooks for the later event/action integration. They must not be treated as implemented simulation behavior yet.
 
+### Day 3 — Sep 28 — Review + retune `construction.json` structures
+- Status: ✅ Done
+- What was completed: Retuned all six structure blocks while preserving the locked schema. Defined editable material costs, one-time construction-power costs, build times, and explicit intended gameplay effects: solar generation, prospect-gated water recovery, greenhouse food/power/water trade-off, radiation shielding, habitat resilience, and communications warning. The starting 180 materials now forces an early strategy choice rather than allowing every high-value structure at once.
+- Issues / blockers: The current simulator loads construction data but does not yet execute build costs, timers, or effects. Output figures are balance assumptions, not NASA measurements, and require integration and Day 16 playtest tuning.
+- Notes for teammates: Treat `build_cost.power` as a one-time construction energy demand. Parse or map the stated effect values only when the build-system action contract is introduced; do not add calculations to the UI. The effects intentionally state their pending interaction rules where simulation ownership is required.
+
+### Day 4 — Sep 29 — Fill crew names/roles and tune stress/productivity modifiers
+- Status: ✅ Done
+- What was completed: Finalized the four-person fictional crew roster: Leila Navarro (Mission Commander), Devon Okoye (Systems Engineer), Dr. Jia Chen (Life Support Botanist), and Dr. Amara Sethi (Medical Officer). Retuned base stress/productivity values and clarified each specialty as an aggregate modifier hook for later repair, construction, greenhouse, health, and radiation-event integration.
+- Issues / blockers: The simulation currently loads the crew contract but does not yet apply these modifiers. Exact modifier strengths require playtesting once event and action systems exist.
+- Notes for teammates: Keep one authoritative aggregate crew-health/stress state. `base_stress` and `base_productivity` are editable gameplay values; interpret role notes as contextual modifiers, never as per-person health bars or passive life-support-consumption changes.
+
+### Day 5 — Sep 30 — Expand `events.json` toward 15–20 events (batch 1, completed early Sep 29)
+- Status: ✅ Done
+- What was completed: Expanded the event table from 8 to 14 events. Batch 1 adds water-recycler maintenance, rover mobility, battery thermal, regolith-shielding, favorable illumination, and crew-process events. Retuned the resupply window to the scoped 7–10-sol mission by removing its unreachable Sol 15 condition.
+- Issues / blockers: Effects and trigger strings remain data contracts; the simulator does not yet parse or resolve them. All chances, multipliers, and material rewards are editable gameplay-balance values that need tuning after integration.
+- Notes for teammates: Batch 2 on Day 6 should add roughly 2–6 further events to reach the 15–20 target. Member 1 should map the new effect keys to deterministic behavior during the scheduled event-system handoff; no UI should infer an effect from event text.
+
 ---
 
 ## Member 3 — Presentation & Integration Log
