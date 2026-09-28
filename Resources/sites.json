@@ -27,22 +27,22 @@
     {
       "site_id": "crater_rim_b",
       "name": "Crater Rim B",
-      "description": "Moderate illumination, moderate water, balanced middle option.",
-      "coordinates": { "latitude_deg": null, "longitude_deg": null, "source": "TBD - select a real lunar south-pole location before verification" },
-      "illumination_pct": { "value": 55, "verified": false, "source": "TBD - LRO QuickMap, WAC polar illumination layer", "date_read": "TBD" },
-      "elevation_m": { "value": 200, "verified": false, "source": "TBD - LRO QuickMap, LOLA DEM layer", "date_read": "TBD" },
-      "slope_deg": { "value": 15, "verified": false, "source": "TBD - LRO QuickMap, LOLA slope layer", "date_read": "TBD" },
-      "hydrogen_ppm": { "value": 200, "verified": false, "source": "TBD - LRO QuickMap, LEND polar hydrogen layer", "date_read": "TBD" }
+      "description": "Game label for a sampled point in NASA LOLA's Peak near Shackleton landing-site dataset. Hydrogen is a LEND regional model estimate for the >88° polar band, not a landing-point assay.",
+      "coordinates": { "latitude_deg": -88.810965, "longitude_deg": 123.690068, "source": "Derived from NASA LOLA Site07 south-polar stereographic coordinate X=30,000 m, Y=-20,000 m; planetocentric latitude, east-positive longitude" },
+      "illumination_pct": { "value": 10.042735, "verified": true, "source": "NASA PDS LRO/LROC WAC_POLE_ILL_PCT_SOUTH_100M v2.0, urn:nasa:pds:lro-l-lroc-5-rdr:lrolrc_2001_data:bdr.wac_pole.wac_pole_ill_pct_south.wac_pole_ill_pct_south_100m; column 306, line 806", "date_read": "2026-09-29" },
+      "elevation_m": { "value": 1645.548828, "verified": true, "source": "NASA GSFC PGDA LOLA 5 m Peak near Shackleton LDEM, Site07_final_adj_5mpp_surf.tif; X=30,000 m, Y=-20,000 m; pixel column 1600, row 1600", "date_read": "2026-09-29" },
+      "slope_deg": { "value": 5.008989, "verified": true, "source": "NASA GSFC PGDA LOLA 5 m Peak near Shackleton slope map, Site07_final_adj_5mpp_slp.tif; X=30,000 m, Y=-20,000 m; pixel column 1600, row 1600", "date_read": "2026-09-29" },
+      "hydrogen_ppm": { "value": 140.0, "verified": true, "source": "NASA NTRS 20180004020, LEND regional model: ~140 ppmw H above 88° latitude (0.13 ± 0.02 wt% WEH). This site lies at 88.81°S; the regional model is used because the locked field requires ppm and the archived LEND map stores count rates.", "date_read": "2026-09-29" }
     },
     {
       "site_id": "plateau_d",
       "name": "Plateau D",
-      "description": "Flat, easy-to-build terrain, average light, low water.",
-      "coordinates": { "latitude_deg": null, "longitude_deg": null, "source": "TBD - select a real lunar south-pole location before verification" },
-      "illumination_pct": { "value": 45, "verified": false, "source": "TBD - LRO QuickMap, WAC polar illumination layer", "date_read": "TBD" },
-      "elevation_m": { "value": 600, "verified": false, "source": "TBD - LRO QuickMap, LOLA DEM layer", "date_read": "TBD" },
-      "slope_deg": { "value": 4, "verified": false, "source": "TBD - LRO QuickMap, LOLA slope layer", "date_read": "TBD" },
-      "hydrogen_ppm": { "value": 60, "verified": false, "source": "TBD - LRO QuickMap, LEND polar hydrogen layer", "date_read": "TBD" }
+      "description": "Game label for a sampled point in NASA LOLA's de Gerlache Rim landing-site dataset. Hydrogen is a LEND regional model estimate for the >88° polar band, not a landing-point assay.",
+      "coordinates": { "latitude_deg": -88.68336, "longitude_deg": 292.0679, "source": "Derived from NASA LOLA Site11 south-polar stereographic coordinate X=-37,000 m, Y=15,000 m; planetocentric latitude, east-positive longitude" },
+      "illumination_pct": { "value": 18.299946, "verified": true, "source": "NASA PDS LRO/LROC WAC_POLE_ILL_PCT_SOUTH_100M v2.0, urn:nasa:pds:lro-l-lroc-5-rdr:lrolrc_2001_data:bdr.wac_pole.wac_pole_ill_pct_south.wac_pole_ill_pct_south_100m; column 976, line 456", "date_read": "2026-09-29" },
+      "elevation_m": { "value": 1793.664429, "verified": true, "source": "NASA GSFC PGDA LOLA 5 m de Gerlache Rim LDEM, Site11_final_adj_5mpp_surf.tif; X=-37,000 m, Y=15,000 m; pixel column 1600, row 1600", "date_read": "2026-09-29" },
+      "slope_deg": { "value": 1.276869, "verified": true, "source": "NASA GSFC PGDA LOLA 5 m de Gerlache Rim slope map, Site11_final_adj_5mpp_slp.tif; X=-37,000 m, Y=15,000 m; pixel column 1600, row 1600", "date_read": "2026-09-29" },
+      "hydrogen_ppm": { "value": 140.0, "verified": true, "source": "NASA NTRS 20180004020, LEND regional model: ~140 ppmw H above 88° latitude (0.13 ± 0.02 wt% WEH). This site lies at 88.68°S; the regional model is used because the locked field requires ppm and the archived LEND map stores count rates.", "date_read": "2026-09-29" }
     }
   ]
 }

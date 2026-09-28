@@ -18,9 +18,16 @@ const INITIAL_FOOD_KG := 30.0
 const INITIAL_MATERIALS := 180.0
 const BATTERY_CAPACITY_KWH := 180.0
 
-## Gameplay calibration, pending Member 1's CRaTER source pass on Day 6.
-## This is deliberately not represented as a NASA measurement.
-const PROVISIONAL_SURFACE_RADIATION_MSV_PER_SOL := 0.25
+## NASA NESC Table 8.4-2: unshielded lunar-surface GCR effective dose during
+## the 2009 solar minimum. CRaTER supplies the observational radiation context;
+## this site-independent modeled value is not a geographic CRaTER reading.
+const LUNAR_SURFACE_GCR_MSV_PER_SOL := 0.90
+## Terrain has no direct local dose measurement in the selected products. These
+## documented gameplay weights turn LOLA topography into a bounded sky-view proxy.
+const TERRAIN_DEPTH_REFERENCE_M := 2500.0
+const TERRAIN_SLOPE_REFERENCE_DEG := 30.0
+const TERRAIN_DEPTH_WEIGHT := 0.12
+const TERRAIN_SLOPE_WEIGHT := 0.08
 const BASE_SOLAR_GENERATION_KWH_PER_SOL := 65.0
 
 var sites: Array[Dictionary] = []
@@ -83,7 +90,7 @@ func advance_sol(state: Variant) -> Dictionary:
 	state.power_kwh = clampf(state.power_kwh + state.power_balance_kwh, 0.0, BATTERY_CAPACITY_KWH)
 
 	state.terrain_shielding_factor = _terrain_shielding_factor(site)
-	state.radiation_this_sol_msv = PROVISIONAL_SURFACE_RADIATION_MSV_PER_SOL * (1.0 - state.terrain_shielding_factor)
+	state.radiation_this_sol_msv = LUNAR_SURFACE_GCR_MSV_PER_SOL * (1.0 - state.terrain_shielding_factor)
 	state.radiation_msv += state.radiation_this_sol_msv
 
 	var life_support_tick: Dictionary = _calculate_life_support(state)
@@ -104,7 +111,7 @@ func advance_sol(state: Variant) -> Dictionary:
 		"radiation": {
 			"dose_this_sol_msv": state.radiation_this_sol_msv,
 			"terrain_shielding_factor": state.terrain_shielding_factor,
-			"model_status": "provisional_gameplay_calibration"
+			"model_status": "nasa_lunar_surface_gcr_baseline_with_terrain_proxy"
 		},
 		"life_support": life_support_tick,
 		"active_events": state.active_events.duplicate(true)
@@ -167,12 +174,12 @@ func _resource_status(available: float, daily_draw: float) -> String:
 
 
 func _terrain_shielding_factor(site: Dictionary) -> float:
-	## Terrain is a low-strength proxy for local shielding. It is calculated from
-	## LOLA-compatible elevation/slope fields and will be recalibrated when their
-	## source values and the CRaTER baseline are verified.
-	var depth_below_datum_fraction := clampf(-_field_value(site, "elevation_m") / 2500.0, 0.0, 1.0)
-	var slope_fraction := clampf(_field_value(site, "slope_deg") / 30.0, 0.0, 1.0)
-	return clampf(depth_below_datum_fraction * 0.12 + slope_fraction * 0.08, 0.0, 0.20)
+	## Derived gameplay proxy: topographic depression and slope can reduce sky view,
+	## but LOLA elevation/slope are not radiation measurements. The 0.20 cap keeps
+	## terrain secondary to built shielding and recorded radiation events.
+	var depth_below_datum_fraction := clampf(-_field_value(site, "elevation_m") / TERRAIN_DEPTH_REFERENCE_M, 0.0, 1.0)
+	var slope_fraction := clampf(_field_value(site, "slope_deg") / TERRAIN_SLOPE_REFERENCE_DEG, 0.0, 1.0)
+	return clampf(depth_below_datum_fraction * TERRAIN_DEPTH_WEIGHT + slope_fraction * TERRAIN_SLOPE_WEIGHT, 0.0, TERRAIN_DEPTH_WEIGHT + TERRAIN_SLOPE_WEIGHT)
 
 
 func _active_power_generation_multiplier(active_events: Array) -> float:

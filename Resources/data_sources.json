@@ -24,10 +24,10 @@
       "title": "LOLA Reduced Data Records and gridded elevation products",
       "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/",
       "data_kind": "lunar elevation and terrain",
-      "version_or_coverage": "NASA GSFC PGDA 5 m south-pole landing-site products; Connecting Ridge (Site01) and Shackleton Rim (Site04) sampled on 2026-09-28",
-      "retrieved_on": "2026-09-26",
+      "version_or_coverage": "NASA GSFC PGDA 5 m south-pole landing-site products; Connecting Ridge (Site01), Shackleton Rim (Site04), Peak near Shackleton (Site07), and de Gerlache Rim (Site11) sampled on 2026-09-28/29",
+      "retrieved_on": "2026-09-29",
       "used_by": ["sites.json"],
-      "measurement_note": "Record latitude, east-positive longitude, raster/product identifier, pixel resolution, and sampling method for every site value. Ridge A and Shadow Zone use 5 m documented elevation and slope products at shared X/Y coordinates."
+      "measurement_note": "Record latitude, east-positive longitude, raster/product identifier, pixel resolution, and sampling method for every site value. All four game sites use 5 m documented elevation and slope products at shared X/Y coordinates."
     },
     {
       "source_id": "nasa_lro_lroc_wac_polar_illumination",
@@ -39,7 +39,7 @@
       "version_or_coverage": "WAC_POLE_ILL_PCT_SOUTH_100M, PDS4 v2.0; 88–90°S, 100 m/pixel; percentage of observations illuminated during the source map period",
       "retrieved_on": "2026-09-26",
       "used_by": ["sites.json"],
-      "measurement_note": "Illumination percentage must retain the layer name, time interval, coordinates, and sampling method; it is then normalized to a solar-generation gameplay modifier. Ridge A and Shadow Zone have recorded sampled values; remaining sites have not."
+      "measurement_note": "Illumination percentage must retain the layer name, time interval, coordinates, and sampling method; it is then normalized to a solar-generation gameplay modifier. All four game sites have recorded samples."
     },
     {
       "source_id": "nasa_lro_lend_rdr",
@@ -63,19 +63,31 @@
       "version_or_coverage": "Livengood et al., Planetary and Space Science 162 (2018); approximately 140 ppmw H above 88° north or south latitude, 0.13 ± 0.02 wt% WEH",
       "retrieved_on": "2026-09-28",
       "used_by": ["sites.json"],
-      "measurement_note": "Both selected sites are south of 88°. This result does not resolve differences between their individual 0.5° LEND cells."
+      "measurement_note": "All four selected sites are south of 88°. This result does not resolve differences between their individual 0.5° LEND cells."
     },
     {
       "source_id": "nasa_lro_crater",
       "agency": "NASA PDS",
       "mission_or_program": "Lunar Reconnaissance Orbiter / CRaTER",
-      "title": "Cosmic Ray Telescope for the Effects of Radiation data archive",
-      "url": "https://pds-ppi.igpp.ucla.edu/mission/LRO/CRaTER",
-      "data_kind": "lunar-orbit radiation environment",
-      "version_or_coverage": "Use a documented CRaTER dose or flux product appropriate to the selected baseline",
-      "retrieved_on": "2026-09-26",
-      "used_by": ["future simulation radiation baseline"],
-      "measurement_note": "CRaTER observations are orbital-environment data. Surface dose in the game is a separately documented derived model, adjusted by shielding and terrain factors."
+      "title": "Cosmic Ray Telescope for the Effects of Radiation data archive and lunar-surface radiation publications",
+      "url": "https://science.nasa.gov/mission/lro/science-and-data/",
+      "data_kind": "lunar-orbit radiation environment and CRaTER-informed lunar-surface context",
+      "version_or_coverage": "CRaTER measures galactic and solar cosmic radiation behind tissue-equivalent plastic; site-independent baseline uses the separately cited NASA lunar-surface GCR model",
+      "retrieved_on": "2026-09-29",
+      "used_by": ["mission_simulator.gd radiation baseline"],
+      "measurement_note": "CRaTER observations characterize the lunar radiation environment and biological response. They are not a geographic surface-dose raster, so the simulator uses a documented, site-independent NASA lunar-surface GCR baseline before applying its explicit terrain gameplay proxy."
+    },
+    {
+      "source_id": "nasa_lunar_surface_gcr_model_2022",
+      "agency": "NASA",
+      "mission_or_program": "NASA Engineering and Safety Center",
+      "title": "NASA Human System Risk Board Review and Risk Mitigation Plan: Risk of Space Radiation Cancer",
+      "url": "https://ntrs.nasa.gov/api/citations/20220002905/downloads/NESC-RP-20-01589_NASA-TM-20220002905final.pdf",
+      "data_kind": "modeled lunar-surface GCR effective dose",
+      "version_or_coverage": "Table 8.4-2, solar-minimum, no-shielding lunar surface: 0.90 mSv/day; BON2020 2009 solar-minimum environment",
+      "retrieved_on": "2026-09-29",
+      "used_by": ["mission_simulator.gd radiation baseline"],
+      "measurement_note": "This is the source of the simulator's 0.90 mSv/sol GCR baseline. It is a site-independent modeled effective dose, not an observed dose at one of the four landing points."
     }
   ]
 }

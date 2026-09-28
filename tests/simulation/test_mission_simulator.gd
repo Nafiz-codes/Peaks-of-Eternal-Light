@@ -8,7 +8,12 @@ func _init() -> void:
 	_assert(simulator.call("load_contracts") == OK, "All five resource contracts should load.")
 	_assert(simulator.get("sites").size() == 4, "The starter site contract should expose four sites.")
 	_assert(simulator.get("crew").size() == 4, "The starter crew contract should expose four members.")
-	_assert(simulator.get("events").size() == 8, "The starter event contract should expose eight events.")
+	_assert(simulator.get("events").size() == 14, "The expanded event contract should expose fourteen events.")
+	for site in simulator.get("sites"):
+		_assert(site.get("illumination_pct", {}).get("verified", false), "Every selected site has verified illumination data.")
+		_assert(site.get("elevation_m", {}).get("verified", false), "Every selected site has verified elevation data.")
+		_assert(site.get("slope_deg", {}).get("verified", false), "Every selected site has verified slope data.")
+		_assert(site.get("hydrogen_ppm", {}).get("verified", false), "Every selected site has a verified regional LEND hydrogen estimate.")
 
 	var state: Object = simulator.call("begin_mission", "ridge_a", 2)
 	_assert(state.get("sol") == 0, "A new mission starts at sol zero.")
@@ -21,6 +26,7 @@ func _init() -> void:
 	_assert(is_equal_approx(state.get("power_consumed_kwh"), 48.0), "Baseline power consumption uses crew size and the contract value.")
 	_assert(is_equal_approx(state.get("power_kwh"), 115.536935), "The battery reserve receives the sol power balance.")
 	_assert(state.get("radiation_this_sol_msv") > 0.0, "Every sol adds a positive radiation dose.")
+	_assert(is_equal_approx(state.get("radiation_this_sol_msv"), 0.873391), "Radiation uses the NASA lunar-surface baseline and terrain proxy.")
 	_assert(state.get("terrain_shielding_factor") > 0.0, "Terrain fields produce a shielding factor.")
 	_assert(is_equal_approx(state.get("water_consumed_l"), 46.4), "Water use includes potable and hygiene consumption for all crew.")
 	_assert(is_equal_approx(state.get("water_recovered_l"), 41.76), "Water recovery uses the contract recycling rate.")

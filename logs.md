@@ -50,6 +50,12 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Issues / blockers: LEND's archived product stores neutron count rates rather than direct ppm values. The 140 ppmw estimate is a cited regional LEND model result and does not resolve differences between the two map cells; it must not be described as a direct landing-point assay or confirmed ice.
 - Notes for teammates: Ridge A has verified light and terrain values at Connecting Ridge; Shadow Zone has verified light and terrain values inside the Shackleton Rim dataset. Their current hydrogen entries are scientifically sourced regional resource-potential estimates, so game systems must not create artificial site differences from the identical 140 ppmw value.
 
+### Day 6 — Oct 1 — NASA site data for sites 3 and 4; CRaTER baseline and terrain-shielding derivation
+- Status: ✅ Done ahead of schedule on Sep 29
+- What was completed: Replaced all remaining site placeholders with reproducible NASA samples. Crater Rim B maps to a Site07 Peak near Shackleton point and Plateau D maps to a Site11 de Gerlache Rim point; both now have coordinates, WAC illumination, LOLA elevation/slope, and the documented LEND regional hydrogen estimate. Replaced the provisional 0.25 mSv/sol radiation calibration with NASA's 0.90 mSv/day unshielded lunar-surface solar-minimum GCR model. Documented the bounded LOLA elevation/slope terrain proxy in `docs/radiation_model.md`.
+- Issues / blockers: CRaTER characterizes the lunar radiation environment but does not yield a location-level surface dose for these points. The 0.90 mSv/sol baseline is therefore a NASA lunar-surface model, and terrain shielding remains an explicit gameplay derivation rather than a measured radiation map.
+- Notes for teammates: All four site records are now `verified:true` for their locked fields. The three non-Ridge-A sites produce substantially less solar power from their observed illumination; water-resource systems must not treat the shared 140 ppmw regional estimate as a site-specific extraction yield.
+
 ---
 
 ## Member 2 — Systems & Content Log
