@@ -178,6 +178,38 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 
 ---
 
+### Day 5 — Sep 29, 2026 (scheduled Sep 30) — Site-selection UI shell
+- Status: ✅ Done ahead of schedule
+- What was completed: Added a Godot site-selection screen using the locked visual system, four site cards, selected-state text, measurement details, source disclosure, keyboard focus, and an explicit start action. It is now the first screen in the existing main scene.
+- Issues / blockers: No accurate geographic map is claimed; the UI uses a selectable list and coordinates from the data contract.
+- Notes for teammates: Final binding was completed with Day 9 below. The HTML wireframe remains a historical design artifact; Godot screens received direct rendered review.
+
+### Day 6 — Sep 29, 2026 (scheduled Oct 1) — Event and report screen shells
+- Status: ✅ Done ahead of schedule
+- What was completed: Added the reusable event-preview scene with choice/confirmation and acknowledgement variants, independently scrolling body, explicit selection text, modal keyboard focus and restoration. Added report layouts for no attached mission, success and failure; existing authoritative outcomes, reserves and history populate the report when available. Restart requires confirmation.
+- Issues / blockers: Event previews never execute effects. Member 1's resolver and Member 2's report guidance are later handoffs; independence, objective and survival percentages remain unavailable.
+- Notes for teammates: The preview uses the existing solar-particle and greenhouse-notification content. It does not change event contracts or claim that triggers are implemented.
+
+### Day 7 — Sep 29, 2026 (scheduled Oct 2) — Test & Integration #1 (Member 3 result)
+- Status: ✅ Member 3 checks passed; all-member sign-off remains unrecorded
+- What was completed: Ran Member 1's existing simulator suite and expanded the UI integration suite. All four site flows matched a separate simulator after every tick, including each displayed reserve, history, successful completion and early failure. Tested invalid IDs, incomplete/unverified fields, missing-data retry, duplicate action guards, new-mission state, event preview isolation, active-event blocking, modal Tab focus and focus restoration. Inspected desktop/narrow Godot renders and long event text.
+- Issues / blockers: The environment prints a Windows certificate-store warning, but the offline tests and OpenGL rendering pass. Construction/rover/event-resolution actions remain later runtime work. This entry does not replace Member 2's partial log or claim teammate approval.
+- Notes for teammates: See the shared Day 7 note below and the current contract mapping in `docs/UI_UX.md`. No simulator or Resources data file was changed by Member 3.
+
+### Day 8 — Sep 29, 2026 (scheduled Oct 3) — Bind dashboard to authoritative state
+- Status: ✅ Done ahead of schedule
+- What was completed: Replaced fixed examples with `begin_mission()` and `advance_sol()` results. The UI displays six live reserves, named crew, life-support statuses and last-sol details. Run-the-sol guards prevent duplicate updates, turns after outcomes, and progression during active events or an event preview. The report reads `mission_outcome` rather than inferring success from the sol counter.
+- Issues / blockers: Live crew health, build/rover actions, and event resolution remain unavailable. Low-illumination sites have no recovery actions in the current baseline and correctly fail before Sol 10.
+- Notes for teammates: All formulas, thresholds and outcome decisions remain in Member 1's simulation. Member 2's authored briefing and science notice are read from `mission_copy.json`; optional copy failures use fallback text.
+
+### Day 9 — Sep 29, 2026 (scheduled Oct 4) — Bind site selection to current site data
+- Status: ✅ Done ahead of schedule
+- What was completed: Bound the four site cards and details to `sites.json`, including names, coordinates, measurements, individual verification flags, source strings and reading dates. Selected IDs are passed to mission initialization. Removed the blanket unverified-site and unnamed-crew assumptions from live presentation, and documented the regional hydrogen estimate and modeled radiation distinction.
+- Issues / blockers: Source verification is not a claim of mission safety or balanced gameplay. Unverified model choices remain labeled separately.
+- Notes for teammates: The JSON schemas, verified values, crew roster and event table are consumed unchanged. Workflow progress and the UI handoff now reflect the current implementation; earlier dated log entries remain historical.
+
+---
+
 ## Shared Test & Integration Notes
 
 *(one combined entry per 🔗 day — what was tested, what passed, what needs fixing before the next block of days starts)*
@@ -186,3 +218,9 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Reviewed all five existing scaffolds against the four planned screens; sufficient for wireframing. Existing runtime fields cover the clock and reserve readouts.
 - Later integration needs: live crew health, event resolution, rover/build state, mission outcome and report metrics. Scientific values and coordinates are not ready for a factual site map. See `docs/UI_UX.md` for details and content concerns.
 - Member 1's kickoff review is recorded above. Member 2's review and any joint acceptance remain unrecorded; this is not a shared integration-test pass.
+
+### Day 7 — Test & Integration #1 (Member 3 contribution, Sep 29, 2026)
+- Member 1's existing regression test passed again. Member 3's UI integration test passed with zero failures across all four sites and the current 19-event/named-crew contracts.
+- The UI stops on `mission_outcome.status == failure` even if the tick's `completed` flag is false. Ridge A reaches success on Sol 10; the other baseline sites fail on sustained power depletion. No UI balance adjustment was made to conceal that result.
+- Site selection → mission initialization → live reserves → terminal report → confirmed restart works. Event previews apply no effects and leave state unchanged; any future active event blocks turns until a resolver exists.
+- Member 2's partial Day 7 entry predates this presentation check. It remains their entry to confirm; no all-member meeting or sign-off is claimed. Outstanding later interfaces are deterministic event resolution, build/rover actions and runtime state, live crew status, and advanced report metrics/authored guidance.

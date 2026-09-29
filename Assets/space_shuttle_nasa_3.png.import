@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://deptwlg41fmjf"
-path="res://.godot/imported/space_shuttle_nasa_3.png-03c6b9becd228b6a12d3a598488f79a6.ctex"
+path.s3tc="res://.godot/imported/space_shuttle_nasa_3.png-03c6b9becd228b6a12d3a598488f79a6.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "817a578adb750142fe5e05f18d01e154"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://Assets/space_shuttle_nasa_3.png"
-dest_files=["res://.godot/imported/space_shuttle_nasa_3.png-03c6b9becd228b6a12d3a598488f79a6.ctex"]
+dest_files=["res://.godot/imported/space_shuttle_nasa_3.png-03c6b9becd228b6a12d3a598488f79a6.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +41,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

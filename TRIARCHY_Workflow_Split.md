@@ -47,23 +47,28 @@ Owns everything the player sees and the final assembled product.
 
 ## Interfaces (what connects the three tracks)
 
-Five data files already exist as scaffolds (see repo root) with placeholder values and the agreed schema — the contracts below are locked in, not still to be designed:
+The five shared contracts live under `Resources/`. Their fields are established; current content and runtime additions are recorded in `logs.md` and `docs/UI_UX.md`:
 
 1. **Sim state contract** (Member 1 → Member 3): a single object/struct representing "current mission state" (resources, sol number, crew status, active events) that the UI reads every tick — this is generated at runtime by Member 1's code, not a file anyone hand-authors
-2. **Event/content contract** (Member 2 → Member 1 & 3): `events.json` — schema is set (8 starter events), Member 2 expands it to ~15–20 following the same fields
-3. **Site data contract** (Member 1 → Member 2 & 3): `sites.json` — schema is set, values are placeholders (`verified: false`) until Member 1 fills them in from real QuickMap readings
-4. **Life-support constants** (Member 1 internal): `bvad_constants.json` — same placeholder status, to be filled from the real BVAD document
-5. **Crew & construction contracts** (Member 2 → Member 1 & 3): `crew.json` and `construction.json` — starter content exists, Member 2 tunes names/costs/balance
+2. **Event/content contract** (Member 2 → Member 1 & 3): `events.json` — now 19 events using the agreed fields; runtime trigger/effect resolution remains pending
+3. **Site data contract** (Member 1 → Member 2 & 3): `sites.json` — four sourced sites with coordinates and per-field verification/provenance; hydrogen is a regional estimate, not extraction yield
+4. **Life-support constants** (Member 1 internal): `bvad_constants.json` — sourced consumption values and an ISS recovery proxy, with remaining unverified model choices labeled individually
+5. **Crew & construction contracts** (Member 2 → Member 1 & 3): `crew.json` and `construction.json` — named crew and retuned balance data; runtime modifiers/actions remain pending
+
+Member 2 also supplies `Resources/mission_copy.json`. Member 3 reads its briefing and science notice; it does not change simulation rules. The live dashboard reads Member 1's `life_support_status` and `mission_outcome` rather than deriving warnings or success.
 
 ## Daily Logging
 
-### Member 3 progress — Sep 27, 2026
+### Member 3 progress — Sep 29, 2026
 
 - Day 1 complete: reviewed the five existing scaffolds and recorded provisional visual direction, feasibility and integration gaps in [docs/UI_UX.md](docs/UI_UX.md).
 - Day 2 complete: [four core-screen wireframes](docs/wireframes.html), with bindings and interaction notes in the design handoff. These are design artifacts, not playable Godot UI. Browser visual QA remains pending because the local-file preview was blocked by browser URL policy.
 - Day 3 visual system is implemented and documented in [docs/UI_UX.md](docs/UI_UX.md). The actual Godot dashboard was rendered at desktop and narrow widths; the older HTML wireframe still could not be opened in the browser because of URL policy.
-- Day 4 static dashboard shell is now the Godot main scene at `scenes/mission_dashboard.tscn`. It uses explicit setup examples and disabled gameplay controls. Test results and exact completion dates are in [logs.md](logs.md); live-data integration remains scheduled for Day 8.
+- Day 4 delivered the static dashboard shell at `scenes/mission_dashboard.tscn`; Days 8–9 have since extended that entry scene into the live site-selection/dashboard/report flow. Test results and actual completion dates are in [logs.md](logs.md).
 - Title decision: the game is **Peaks of Eternal Light**, with **TRIARCHY** retained as the team credit. The Godot window, dashboard, wireframes, and project specification use this title.
+- Days 5–6 complete: site-selection, event-preview and report interfaces now run in Godot with shared styling, keyboard focus and scrolling. The original HTML board remains a historical design artifact with its browser QA still open.
+- Day 7 Member 3 checks passed: UI and headless simulator tests verify all four site flows, authoritative values, early failure/final success, restart, modal focus, and load recovery. This is Member 3's recorded result, not a claim of all-member sign-off.
+- Days 8–9 complete: the dashboard advances the real simulator; site selection loads current data, verification and provenance. The main scene now opens on site selection. Outcomes open a report with actual reserves/history; advanced report metrics and event effects remain later work.
 
 After finishing each day's task below, log it in **`logs.md`** under your own section before moving to the next day. This is what lets the team (and each person's own AI assistant) see progress at a glance without a meeting. See `logs.md` for the exact format.
 

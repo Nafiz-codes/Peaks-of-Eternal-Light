@@ -1,5 +1,7 @@
 # Member 3 — Presentation design handoff
 
+**Current status — Sep 29, 2026:** Member 3's Days 5–9 are implemented. The project opens on site selection, starts Member 1's simulator, displays its live state, and opens a report on terminal outcomes. Event dialogs are isolated previews until Member 1 supplies a resolver. See **Days 5–9** below for current interfaces and verification. Day 1–4 sections are historical snapshots; their placeholder counts and unavailable-data notes describe those earlier dates.
+
 ## Feasibility review — 2026-09-27
 
 Day 1 and Day 2 are feasible now. Their deliverables are a review of the existing contracts, provisional art direction, and four core-screen wireframes. They do not require finished simulation formulas, verified NASA measurements, or a playable UI. All four existing Markdown files were reviewed: the project specification, workflow split, daily logs, and resource README. The workflow's daily schedule governs this work.
@@ -116,3 +118,53 @@ Run locally with Godot 4.7 by opening `project.godot` and pressing **F6** on the
 ## Title update — Sep 28, 2026
 
 The player selected **Peaks of Eternal Light** as the game title. Godot's project/window name, dashboard heading, and all four wireframe headers use that title. **TRIARCHY** remains the team name and credit. The previous “Lunar Outpost” heading was a working title only; ordinary references to a lunar outpost as the mission setting remain descriptive.
+
+## Days 5–9 — Integrated presentation (Sep 29, 2026)
+
+### What now runs
+
+The existing `scenes/mission_dashboard.tscn` entry scene now hosts site selection → live dashboard → report. `src/ui/mission_dashboard.gd` owns navigation and rendering; shared labels, focus outlines, buttons and panels are in `src/ui/ui_style.gd`. `scenes/event_preview.tscn` and `src/ui/event_preview.gd` provide a separate modal shell. All screens use the approved **Peaks of Eternal Light / by TRIARCHY** identity. The original HTML board remains historical and has not been browser-verified.
+
+- **Day 5:** Four selectable site cards, explicit selected text, site detail panel, source disclosures, missing/unverified field labels, and confirmation through “Establish outpost.” A list of sites is used instead of an unsupported geographic map.
+- **Day 6:** Choice-event and no-choice notification previews, scrollable text, a fixed confirmation row, an explicit selected-choice label, exclusive modal focus and focus restoration. Previews never change mission state. The report supports no attached mission, success, and early failure; actual outcomes and history are shown when available. Advanced report metrics and authored outcome guidance remain pending their later handoffs.
+- **Day 7:** Presentation-side integration tests and Member 1's existing headless regression suite passed. Shared sign-off is not inferred from this result; Member 2's recorded partial entry is preserved.
+- **Day 8:** Six live reserve readings, crew roster, authoritative life-support statuses, last-sol energy/water/radiation details, and a working “Run the sol” action. Duplicate callbacks during a turn are blocked. Active events pause turns pending a resolver. Failure or success opens the report and further turns are refused.
+- **Day 9:** Site cards/details read the current four `sites.json` records. Confirming a site passes its `site_id` into `begin_mission()`. The UI displays each field's verification, source and reading date, plus coordinates where present. Invalid IDs and missing/non-numeric required values cannot start a mission.
+
+### Synchronization with the other members
+
+| Owner/source | Current presentation use | Boundary |
+|---|---|---|
+| Member 1: `load_contracts()` | Checked before offering mission start; load errors show a retry screen | No simulator method runs on an invalid selection |
+| Member 1: `begin_mission(site_id, 10)` | Initial state, selected site, clock and crew count | The ten-sol configuration is passed once; subsequent displays use state fields |
+| Member 1: `advance_sol(state)` | Render `tick.state`; retain `tick.life_support.model_status` for explanations | No resource calculations in UI |
+| Member 1: `life_support_status` | Nominal/warning/critical/depleted labels | No presentation-owned thresholds |
+| Member 1: `mission_outcome` | Status, reason and failure sol; stop immediately on failure even when `completed` is false | `completed` alone is never treated as success |
+| Member 1: `history` | Labeled textual resource-history table | No invented percentages, independence, objectives or survival metrics |
+| Member 1: site provenance and radiation model | Per-field source disclosures and model notes | The shared hydrogen value is regional; terrain shielding is a gameplay proxy, not a local CRaTER measurement |
+| Member 2: `crew.json` | Names and roles, with role fallback | Stress/productivity inputs are not live health |
+| Member 2: `mission_copy.json` | Opening, objective token substitution, science notice | The six-step tutorial flow remains later work; absent/malformed optional copy uses fallback text |
+| Member 2: `events.json` | Two representative modal previews, one choice event and one notification | No trigger parsing, effect execution, or claim that a live event resolved |
+| Member 2: construction/rover content | Controls remain visibly unavailable | Await authoritative action and runtime-state contracts |
+
+The data contracts and simulator were not modified by Member 3's implementation. Current baseline behavior is preserved: Ridge A reaches success at Sol 10; the three lower-illumination sites fail from sustained battery depletion without recovery actions. The site screen explains the development limitation before mission start. Sourced fields retain their source labels, while unverified power/hygiene choices and the ISS water-recovery proxy are explained separately. Do not describe source verification as proof of a safe or balanced mission.
+
+### Interaction and test results
+
+At 1360×900 the site cards and dashboard body use two columns, with six resource cards in one row. At 520×900 the content stacks and resources use two columns. The intermediate resource layout uses three columns below 1220 px. Screens scroll vertically; event text scrolls independently of the confirmation controls. Buttons have visible amber keyboard-focus borders. Restart from a completed report requires confirmation and clears the previous state/history before a new selection.
+
+Verified in Godot 4.7.2:
+
+- Existing simulation regression suite passed.
+- UI integration suite passed with zero failures: all four selection-to-outcome flows; every displayed reserve matched a separate reference simulator after every tick; duplicate start/turn guards; stopping at early failure/final success; missing/unverified data; disabled start for incomplete records; load-error recovery; restart confirmation; no-mission report; event preview isolation and acknowledgement; active-event blocking; keyboard Tab staying in the modal and return focus.
+- OpenGL screenshots inspected for site selection, dashboard, event modal, success report and early-failure report at desktop and narrow widths. Long event text scrolls while confirmation stays visible. No horizontal clipping was seen in the inspected layouts.
+- The sandbox emitted a Windows certificate-store warning. It did not prevent the offline tests or rendering; no network is required by these screens.
+
+Repeat the automated checks from the repository root with Godot 4.7:
+
+```powershell
+godot --headless --path . --script res://tests/simulation/test_mission_simulator.gd
+godot --headless --path . --script res://tests/ui/test_mission_dashboard.gd
+```
+
+Open `project.godot` and press F5 to review the flow. Choose a site, scroll to its detail panel, select **Establish outpost**, then use **Run the sol**. **Interface previews** at the bottom open event shells and an empty report without simulating event effects. Live event decisions, construction/rover actions, report narrative/advanced metrics, final art and animation remain later scheduled work.
