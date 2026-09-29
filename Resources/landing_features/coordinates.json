@@ -1,0 +1,30 @@
+{
+  "projection_wkt": "GEOGCS[\"UNK\",DATUM[\"Unknown datum\",SPHEROID[\"Unknown ellipsoid\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.017453292519943295]]",
+  "latitude_convention": "Positive means north; no sign correction applied.",
+  "features": [
+    {
+      "name": "Crater Rim B",
+      "latitude_deg": 88.811,
+      "longitude_deg": 123.6901,
+      "source_feature_id": "5a2wY"
+    },
+    {
+      "name": "Ridge A",
+      "latitude_deg": 89.3017,
+      "longitude_deg": 235.9722,
+      "source_feature_id": "SQlwv"
+    },
+    {
+      "name": "Shadow Zone",
+      "latitude_deg": 89.8305,
+      "longitude_deg": 280.6539,
+      "source_feature_id": "MTA-l"
+    },
+    {
+      "name": "Plateau D",
+      "latitude_deg": 88.6834,
+      "longitude_deg": 292.0679,
+      "source_feature_id": "fRFxr"
+    }
+  ]
+}

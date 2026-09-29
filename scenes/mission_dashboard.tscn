@@ -1,12 +1,14 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://cet82n80spe4o"]
 
-[ext_resource type="Script" path="res://src/ui/mission_dashboard.gd" id="1"]
+[ext_resource type="Script" uid="uid://cefh7vuu81tu5" path="res://src/ui/mission_dashboard.gd" id="1"]
 
-[node name="MissionDashboard" type="Control"]
+[node name="MissionDashboard" type="Control" unique_id=180648301]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 2.0
+offset_right = 2.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1")
