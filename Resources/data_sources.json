@@ -30,6 +30,18 @@
       "measurement_note": "The simulator applies this ISS operational figure as a whole-loop water-recovery proxy. It does not claim that an unbuilt lunar outpost uses the same hardware, recovery streams, or reliability."
     },
     {
+      "source_id": "nasa_moon_surface_gravity",
+      "agency": "NASA",
+      "mission_or_program": "NASA Solar System Exploration",
+      "title": "Moon Fact Sheet",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html",
+      "data_kind": "lunar surface gravity",
+      "version_or_coverage": "Moon surface gravity: 1.62 m/s²",
+      "retrieved_on": "2026-09-29",
+      "used_by": ["src/world/lunar_astronaut.gd"],
+      "measurement_note": "The character controller uses 1.62 m/s² for downward acceleration. Walking speed and jump velocity are gameplay controls, not NASA measurements."
+    },
+    {
       "source_id": "nasa_lro_lola_rdr",
       "agency": "NASA PDS",
       "mission_or_program": "Lunar Reconnaissance Orbiter / LOLA",

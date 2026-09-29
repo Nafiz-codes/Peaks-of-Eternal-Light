@@ -74,6 +74,18 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Issues / blockers: Current actions cannot build power or change reserves, so three low-illumination sites correctly end in sustained-power failure in the baseline run. That is a useful simulation result, but later construction, rover, and event effects must supply recovery choices before those sites are player-ready.
 - Notes for teammates: Consume `tick.outcome` or `state.mission_outcome`, including `status`, `failure_reason`, `failure_sol`, and `primary_objective`. These are the authoritative inputs for Member 2's report branches and Member 3's report screen; do not infer victory from the sol counter alone.
 
+### Early 3D playable-scene handoff — Sep 29
+- Status: ✅ Done
+- What was completed: Replaced the static player placeholder with the supplied animated astronaut GLB, connected its idle and moon-walk clips, aligned the visual root against the imported toe-bone pose so boot soles meet the lunar surface, and wired mouse-look yaw to WASD movement direction. Space jump was already implemented; tuned it to a 1.5 m apex and 2.7 s airtime under 1.62 m/s² lunar gravity. Added focused outpost assertions and verified both the outpost and landing-selector headless checks on Godot 4.7.2.
+- Issues / blockers: Visual tuning in a live rendered play session remains open. Interactions in the 3D scene currently report stable identifiers; they do not change simulation reserves yet.
+- Notes for teammates: The GLB is under `Assets/animated_astronaut/source/`. Mouse controls facing; WASD follows that facing, Space jumps, E requests a nearby station interaction, and Esc releases the pointer.
+
+### Day 10 — Oct 5 — Event trigger/effect hooks (schema only, no content)
+- Status: ✅ Done ahead of schedule on Sep 29
+- What was completed: Added `Resources/event_runtime.schema.json` to define the normalized event contract: typed trigger kinds and conditions, effect operations with optional sol durations, and choice effect arrays. This is an interface/schema deliverable only; no event content or simulation behavior was added.
+- Issues / blockers: Member 2's existing `events.json` remains unchanged and uses legacy free-text `trigger_condition` strings and keyed effect objects. A later integration step must map that authored content into this schema before trigger evaluation or effect application can run.
+- Notes for teammates: Keep authored text, IDs, and balance values in `events.json`. The runtime must own deterministic trigger evaluation, active-effect lifetime, and effect application; UI code should consume resulting event state rather than interpret trigger/effect data.
+
 ---
 
 ## Member 2 — Systems & Content Log

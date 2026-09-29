@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://triarchy.invalid/schemas/event_runtime.schema.json",
+  "title": "Triarchy event runtime contract",
+  "description": "Normalized trigger and effect hook shape for simulation integration. This schema defines interfaces only; it contains no event content and does not change Resources/events.json.",
+  "type": "object",
+  "required": ["event_id", "category", "trigger", "effects", "choices"],
+  "properties": {
+    "event_id": { "type": "string", "minLength": 1 },
+    "category": { "type": "string", "minLength": 1 },
+    "trigger": { "$ref": "#/$defs/trigger" },
+    "effects": { "$ref": "#/$defs/effects" },
+    "choices": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["choice_id", "effects"],
+            "properties": {
+              "choice_id": { "type": "string", "minLength": 1 },
+              "effects": { "$ref": "#/$defs/effects" }
+            },
+            "additionalProperties": true
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "trigger": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["sol", "state", "random_chance", "action"] },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["field", "operator", "value"],
+            "properties": {
+              "field": { "type": "string", "minLength": 1 },
+              "operator": { "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "in", "not_in"] },
+              "value": {}
+            },
+            "additionalProperties": false
+          }
+        },
+        "chance_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "after_sol": { "type": "integer", "minimum": 0 },
+        "action_id": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "effects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["effect_id", "target", "operation", "value"],
+        "properties": {
+          "effect_id": { "type": "string", "minLength": 1 },
+          "target": { "type": "string", "minLength": 1 },
+          "operation": { "enum": ["set", "add", "multiply", "enable", "disable"] },
+          "value": {},
+          "duration_sols": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": true
+}

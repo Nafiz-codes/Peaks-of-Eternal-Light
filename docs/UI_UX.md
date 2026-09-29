@@ -68,6 +68,25 @@ Open [the local wireframe board](wireframes.html) in a browser. It is a self-con
 
 The intended gameplay path is site selection → dashboard → event decision → dashboard → report → new mission. The wireframe board links demonstrate navigation only. Later integration calls `load_contracts()` and checks its error before `begin_mission(site_id, mission_length)`. `advance_sol(state)` returns a dictionary containing `state`, `completed` and `active_events`; render its state rather than treating that dictionary as `MissionState`. Reading `history` requires the state object; `snapshot()` does not include history. Resource formulas and event effects stay in the simulation.
 
+### Required 3D world handoff
+
+The dashboard is a `CanvasLayer` HUD over a Godot 3D lunar-outpost scene, not the entire game world. Member 3 owns a `Node3D` scene with lunar terrain, directional lighting, an inspectable camera, and placed astronaut, rover, habitat, and solar-array models.
+
+| World element | Authoritative input | 3D behavior |
+|---|---|---|
+| Terrain and site marker | Selected `site_id` and `sites.json` coordinates/terrain fields | Load the matching site composition and label it with verified-data status; terrain remains a visual interpretation of the sourced data. |
+| Solar array | `power_generated_kwh`, `power_balance_kwh`, active event effects | Change panel orientation, emissive/readout state, or alert treatment only after a simulation tick reports the value. |
+| Rover | Future authoritative rover action/state contract | Keep the rover visibly parked until the simulation exposes a route/action result; do not animate progress from UI input alone. |
+| Habitat, shielding, and construction | Future authoritative construction state contract | Show construction or shielding only after the simulation exposes its completed state. Use clear placeholders before then. |
+| Astronaut | NASA lunar gravity plus future crew/event state supplied by the simulation and content contracts | The `CharacterBody3D` controller walks and jumps using 1.62 m/s² lunar gravity. The Golden Visor model remains static until an animated character asset is selected; do not imply health or an EVA outcome without authoritative runtime state. |
+| Hazards and opportunities | `active_events` and resolved event outcome | Use environmental cues and markers after the event is active; choices and effects remain simulation-owned. |
+
+The HUD reads the same authoritative values and never performs world or resource calculations. The minimum visual loop is select site → inspect 3D outpost → run a sol → see the HUD and world update from the returned tick.
+
+The first player loop is third-person exploration: walk with `W`/`A`/`S`/`D`, jump with Space, look with the mouse, and interact using `E` at the labeled energy, water, food, and crew stations. An interaction currently records only its stable identifier; Member 1 connects that identifier to an authoritative simulation action before it can alter any reserve.
+
+`lunar_landing_selector.tscn` projects the four sourced south-pole latitude/longitude records into a local south-polar stereographic map and lets the player click a marker. It represents the actual selected locations, while the terrain mesh remains a visual placeholder until a LOLA elevation tile is prepared for runtime use.
+
 ### Interaction and fallback specifications
 
 - Site selection: one selected item at a time, detail panel updates before explicit confirmation. A load failure offers retry and blocks start; a missing source field shows “Unavailable.” A clearly labeled dummy-data development flow is separate from a validated release mission.

@@ -835,19 +835,19 @@ The simulation engine should ideally be independent of the UI.
 
 ## Presentation Layer
 
-React/game UI/3D visualization.
+The playable presentation is a Godot 4.7 3D lunar-outpost world with a mission-control HUD. The HUD supports the world; it does not replace it with a static dashboard.
 
 ```text
 MissionState
     ↓
-UI
-    ├── Lunar Map
-    ├── Resource Dashboard
-    ├── Construction UI
-    ├── Event Dialog
-    ├── Crew Panel
-    └── Mission Report
+Godot presentation
+    ├── Node3D lunar terrain, lighting, and orbit camera
+    ├── 3D outpost: habitat, solar array, rover, and astronaut
+    ├── State-driven world feedback: power, events, construction, rover, and shelter
+    └── CanvasLayer HUD: dashboard, site selection, event dialog, and mission report
 ```
+
+The minimum 3D scene must let the player inspect the selected site and see the outpost change as the mission advances. Imported models may remain static when no verified animation is available; the game does not require a full character controller or physics simulation.
 
 ## No AI Layer
 
@@ -1033,11 +1033,13 @@ The MVP should include:
 - 7–10-sol simulation
 - Win/lose conditions
 - Mission report
+- 3D lunar terrain, lighting, and player-controlled camera
+- 3D habitat, solar array, rover, and astronaut representation
+- 3D world feedback driven by authoritative simulation state
 - Strong visual presentation
 
 ### Nice to Have
 
-- 3D lunar terrain
 - Animated rover
 - Advanced crew personalities
 - Sound effects

@@ -37,6 +37,7 @@ Owns everything that gives the sim texture, meaning, and stakes.
 Owns everything the player sees and the final assembled product.
 
 - Visual direction and asset production: mission control dashboard, site selection screen, event modals, report screen — per the crest/no-generic-AI-look direction already set for branding
+- Build and maintain the Godot 3D lunar-outpost world: terrain, lighting, camera, imported models, and simulation-driven visual feedback
 - Implement the UI layer consuming Member 1's sim state and Member 2's content, via the shared data contract
 - Animation/juice: resource meters, rover movement, transitions — polish pass once core screens work
 - Own final integration: wiring sim + content + UI into one running build, catching interface mismatches early rather than at the end
@@ -56,6 +57,8 @@ The five shared contracts live under `Resources/`. Their fields are established;
 5. **Crew & construction contracts** (Member 2 → Member 1 & 3): `crew.json` and `construction.json` — named crew and retuned balance data; runtime modifiers/actions remain pending
 
 Member 2 also supplies `Resources/mission_copy.json`. Member 3 reads its briefing and science notice; it does not change simulation rules. The live dashboard reads Member 1's `life_support_status` and `mission_outcome` rather than deriving warnings or success.
+
+6. **3D presentation contract** (Member 1 & 2 → Member 3): Member 3 owns the 3D world and imported assets. Member 1 remains authoritative for mission state and action outcomes; Member 2 supplies authored event/content identifiers. The world may visually represent only state and actions that these contracts expose. It must not calculate resources, invent construction completion, or imply an event outcome before the simulation returns one.
 
 ## Daily Logging
 
@@ -85,19 +88,19 @@ Legend: 🎨 = design work happens this day · 🔗 = shared Test & Integration 
 | 5 | Sep 30 | Fill in real values for sites 1 & 2 in `sites.json` (replace `verified:false` placeholders) | 🎨 Expand `events.json` from 8 starter events toward ~15–20 (batch 1) | Build static UI shell for site-selection screen |
 | 6 | Oct 1 | Fill in sites 3 & 4 in `sites.json` + CRaTER baseline + terrain-shielding derivation | 🎨 Continue expanding `events.json` (batch 2) | Build static UI shell for event modal + report screen |
 | **7** | **Oct 2** | 🔗 **Test & Integration #1** — headless sim runs multiple sols on dummy data without crashing; confirm interfaces still match what was agreed Day 1 |
-| 8 | Oct 3 | Fill in real values in `bvad_constants.json`; wire into resource math | Finish `events.json` expansion (~15–20 events total) | Wire dashboard UI to Member 1's dummy sim-state contract |
-| 9 | Oct 4 | Win/lose evaluation logic | Write mission briefing + tutorial/onboarding copy | Wire site-selection screen to `sites.json` schema (dummy values OK for now) |
-| 10 | Oct 5 | Event trigger/effect hooks (schema only, no content) | Write end-of-mission report language (all outcome branches) | Wire event modal to event schema (dummy event OK for now) |
-| 11 | Oct 6 | Finalize and freeze `sites.json` with real Day 5–6 data; flip `verified` to `true` | Review own event text against Member 1's real radiation/resource numbers for plausibility | 🎨 Icon/asset pass: resource meters, rover icon, site markers |
-| 12 | Oct 7 | Mission report backend (real numbers feeding the report screen) | Start slotting real events into Member 1's trigger system | 🎨 Animation pass: meter fills, screen transitions |
-| 13 | Oct 8 | Buffer/bug-fix; unit-test sim edge cases (zero power, zero food, etc.) | Finish slotting all events into trigger system | Polish static screens with real assets from Day 11–12 |
+| 8 | Oct 3 | Fill in real values in `bvad_constants.json`; wire into resource math | Finish `events.json` expansion (~15–20 events total) | Build the 3D world foundation: lunar terrain, lighting, orbit camera, and HUD-to-world scene boundary |
+| 9 | Oct 4 | Win/lose evaluation logic | Write mission briefing + tutorial/onboarding copy | Import and place the astronaut, rover, habitat, and solar-array assets; wire site selection to the 3D scene |
+| 10 | Oct 5 | Event trigger/effect hooks (schema only, no content) | Write end-of-mission report language (all outcome branches) | Wire event modal and authoritative sim state to 3D world feedback; use placeholders for runtime systems not yet exposed |
+| 11 | Oct 6 | Finalize and freeze `sites.json` with real Day 5–6 data; flip `verified` to `true` | Review own event text against Member 1's real radiation/resource numbers for plausibility | 🎨 3D terrain/material/asset pass: site-specific terrain, rover, habitat, solar arrays, and readable world markers |
+| 12 | Oct 7 | Mission report backend (real numbers feeding the report screen) | Start slotting real events into Member 1's trigger system | 🎨 Animate world feedback: solar output, alerts, camera transitions, and event cues |
+| 13 | Oct 8 | Buffer/bug-fix; unit-test sim edge cases (zero power, zero food, etc.) | Finish slotting all events into trigger system | Polish the playable 3D outpost scene with real assets and HUD integration |
 | **14** | **Oct 9** | 🔗 **Test & Integration #2** — full sim runs on real site data + real BVAD numbers + real (not dummy) events, end to end |
 | 15 | Oct 10 | Support Member 2 on event/trigger integration issues from Day 14 | Fix event/trigger issues found Day 14; content tuning pass | Fix UI issues found Day 14; wire remaining screens to real data |
-| 16 | Oct 11 | Resource-balance tuning from first playtest feedback | Difficulty-curve pass: which events fire when | Rover movement UI/animation |
-| 17 | Oct 12 | Radiation/shielding edge-case tuning | Crew stress/productivity tuning against real sim | Construction system UI |
+| 16 | Oct 11 | Resource-balance tuning from first playtest feedback | Difficulty-curve pass: which events fire when | Rover movement and animation in the 3D outpost world |
+| 17 | Oct 12 | Radiation/shielding edge-case tuning | Crew stress/productivity tuning against real sim | Construction placement and shielding visuals in the 3D outpost world |
 | 18 | Oct 13 | Buffer/bug-fix | Buffer/content polish | Buffer/bug-fix |
 | 19 | Oct 14 | Support Member 3 on sim-state contract questions | Review all in-game text for consistency/tone | 🎨 Report screen visual polish |
-| 20 | Oct 15 | Buffer — own module regression testing | Buffer — playtest own content solo | Integrate rover + construction UI into main dashboard |
+| 20 | Oct 15 | Buffer — own module regression testing | Buffer — playtest own content solo | Complete rover, construction, and event feedback in the 3D outpost world and HUD |
 | **21** | **Oct 16** | 🔗 **Test & Integration #3 — Vertical Slice**: full playthrough, start to finish, on the real build |
 | 22 | Oct 17 | Balance pass from vertical-slice feedback | Event/difficulty pass from vertical-slice feedback | UI/UX fixes from vertical-slice feedback |
 | 23 | Oct 18 | Add difficulty scaling if time allows | Add 1–2 more events if time allows | 🎨 Polish pass: consistent spacing/typography across all screens |

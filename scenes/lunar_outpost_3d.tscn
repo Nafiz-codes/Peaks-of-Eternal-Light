@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cptcplavblh3o"]
+
+[ext_resource type="Script" uid="uid://c3knii17qwluw" path="res://src/world/lunar_outpost.gd" id="1_world"]
+
+[node name="LunarOutpost" type="Node3D" unique_id=981660543]
+script = ExtResource("1_world")

@@ -14,6 +14,10 @@ config/name="Peaks of Eternal Light"
 run/main_scene="res://scenes/mission_dashboard.tscn"
 config/features=PackedStringArray("4.7")
 
+[autoload]
+
+MissionSession="*res://src/runtime/mission_session.gd"
+
 [display]
 
 window/size/viewport_width=1360
