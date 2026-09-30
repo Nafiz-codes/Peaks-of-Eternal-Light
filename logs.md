@@ -92,6 +92,12 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Issues / blockers: Member 2's existing `events.json` remains unchanged and uses legacy free-text `trigger_condition` strings and keyed effect objects. A later integration step must map that authored content into this schema before trigger evaluation or effect application can run.
 - Notes for teammates: Keep authored text, IDs, and balance values in `events.json`. The runtime must own deterministic trigger evaluation, active-effect lifetime, and effect application; UI code should consume resulting event state rather than interpret trigger/effect data.
 
+### Day 11 — Sep 30 (completed ahead of Oct 6) — Freeze the current site-data snapshot
+- Status: ✅ Done
+- What was completed: Added a revision and freeze scope to `Resources/sites.json`; recorded NASA coordinate provenance and convention for all four geographically separated sites; linked each elevation/slope sample to the global LOLA source registry record; linked unavailable hydrogen fields to the LEND coverage source. Updated the workflow and current presentation handoff to reflect the frozen field statuses.
+- Issues / blockers: None for the revised Day 11 deliverable. Measured local/time-averaged illumination and applicable point hydrogen values are outside the cited products' coverage, so they are intentionally not numeric verified readings.
+- Notes for teammates: Day 11 acceptance is to freeze source-backed coordinates and terrain samples while preserving accurate model/coverage status—not to mark every field verified. Coordinates, global LOLA elevation and slope samples are frozen as revision `2026-09-30`; LOLA resolution is too coarse to represent a landing-pad survey. If suitable illumination or hydrogen data are selected later, publish a new revision and retain this snapshot in version control.
+
 ---
 
 ## Member 2 — Systems & Content Log

@@ -92,8 +92,10 @@
       "data_kind": "LEND model-derived regional hydrogen abundance",
       "version_or_coverage": "Livengood et al., Planetary and Space Science 162 (2018); approximately 140 ppmw H above 88° north or south latitude, 0.13 ± 0.02 wt% WEH",
       "retrieved_on": "2026-09-28",
-      "used_by": [],
-      "measurement_note": "Historical source record for the prior south-polar site set. The cited >88° regional result does not cover any of the current four landing coordinates."
+      "used_by": [
+        "sites.json hydrogen_ppm coverage status"
+      ],
+      "measurement_note": "Coverage evidence only: the cited approximately 140 ppmw regional result applies above 88° north or south latitude and does not cover any of the current four landing coordinates. It supports marking these point values unavailable, not assigning a hydrogen value."
     },
     {
       "source_id": "nasa_lro_crater",
@@ -137,6 +139,54 @@
         "sites.json"
       ],
       "measurement_note": "Elevation is the LDEM_4 containing-pixel DN × 0.5 m relative to the 1,737.4 km reference sphere. Slope is sampled directly from the LDSM_16 containing pixel and converted by DN × 0.0015 + 45 degrees. The LDSM measurement baseline is 240 m; neither global raster is a local landing-pad survey."
+    },
+    {
+      "source_id": "nasa_apollo11_landing_coordinates",
+      "agency": "NASA",
+      "mission_or_program": "Apollo 11",
+      "title": "Apollo Landing Sites chart",
+      "url": "https://www.nasa.gov/wp-content/uploads/2023/10/south-pole.pdf",
+      "data_kind": "landing-site coordinates",
+      "version_or_coverage": "Apollo 11 / Mare Tranquillitatis; 0.67416°N, 23.47314°E",
+      "retrieved_on": "2026-09-30",
+      "used_by": ["sites.json coordinates.ridge_a"],
+      "measurement_note": "NASA-published landing-site coordinate; stored in planetocentric latitude and east longitude."
+    },
+    {
+      "source_id": "nasa_aristarchus_candidate_2021",
+      "agency": "NASA",
+      "mission_or_program": "Lunar Geophysical Network study",
+      "title": "LOLA data for traversability and terrain selection (TRN Workshop)",
+      "url": "https://ntrs.nasa.gov/api/citations/20210010668/downloads/Barker_TRNworkshopLOLADEMsMarch2021v1EM.pdf",
+      "data_kind": "candidate-site coordinates",
+      "version_or_coverage": "PKT site south of Aristarchus Plateau; 20.7°N, 47.4°W, converted to 312.6°E",
+      "retrieved_on": "2026-09-30",
+      "used_by": ["sites.json coordinates.shadow_zone"],
+      "measurement_note": "The west longitude is normalized to the contract's 0–360° east-positive convention."
+    },
+    {
+      "source_id": "nasa_tycho_feature_coordinates",
+      "agency": "NASA",
+      "mission_or_program": "NASA Science Solar System Exploration",
+      "title": "Moon—Tycho",
+      "url": "https://science.nasa.gov/3d-resources/moon-tycho/",
+      "data_kind": "lunar feature coordinates",
+      "version_or_coverage": "Tycho Crater center; 43.37°S, 348.68°E",
+      "retrieved_on": "2026-09-30",
+      "used_by": ["sites.json coordinates.crater_rim_b"],
+      "measurement_note": "NASA Science feature-center coordinate; selection denotes the crater feature location, not a certified landing pad."
+    },
+    {
+      "source_id": "nasa_tsiolkovskiy_feature_coordinates",
+      "agency": "NASA",
+      "mission_or_program": "Apollo 13 lunar observation",
+      "title": "Crater Tsiolkovsky from Apollo 13",
+      "url": "https://science.nasa.gov/resource/crater-tsiolkovsky-from-apollo-13/",
+      "data_kind": "approximate lunar feature coordinates",
+      "version_or_coverage": "Tsiolkovskiy Crater; approximately 20.5°S, 128.5°E",
+      "retrieved_on": "2026-09-30",
+      "used_by": ["sites.json coordinates.plateau_d"],
+      "measurement_note": "Approximate feature-center coordinate from NASA Science; it is not a surveyed landing point."
     }
   ]
 }

@@ -52,7 +52,7 @@ The five shared contracts live under `Resources/`. Their fields are established;
 
 1. **Sim state contract** (Member 1 → Member 3): a single object/struct representing "current mission state" (resources, sol number, crew status, active events) that the UI reads every tick — this is generated at runtime by Member 1's code, not a file anyone hand-authors
 2. **Event/content contract** (Member 2 → Member 1 & 3): `events.json` — now 19 events using the agreed fields; runtime trigger/effect resolution remains pending
-3. **Site data contract** (Member 1 → Member 2 & 3): `sites.json` — four sourced sites with coordinates and per-field verification/provenance; hydrogen is a regional estimate, not extraction yield
+3. **Site data contract** (Member 1 → Member 2 & 3): `sites.json` — four geographically separated, NASA-referenced coordinates; global LOLA elevation/slope samples are verified with pixel-level provenance; illumination is a disclosed model; polar LEND hydrogen is unavailable at these nonpolar coordinates
 4. **Life-support constants** (Member 1 internal): `bvad_constants.json` — sourced consumption values and an ISS recovery proxy, with remaining unverified model choices labeled individually
 5. **Crew & construction contracts** (Member 2 → Member 1 & 3): `crew.json` and `construction.json` — named crew and retuned balance data; runtime modifiers/actions remain pending
 
@@ -91,7 +91,7 @@ Legend: 🎨 = design work happens this day · 🔗 = shared Test & Integration 
 | 8 | Oct 3 | Fill in real values in `bvad_constants.json`; wire into resource math | Finish `events.json` expansion (~15–20 events total) | Build the 3D world foundation: lunar terrain, lighting, orbit camera, and HUD-to-world scene boundary |
 | 9 | Oct 4 | Win/lose evaluation logic | Write mission briefing + tutorial/onboarding copy | Import and place the astronaut, rover, habitat, and solar-array assets; wire site selection to the 3D scene |
 | 10 | Oct 5 | Event trigger/effect hooks (schema only, no content) | Write end-of-mission report language (all outcome branches) | Wire event modal and authoritative sim state to 3D world feedback; use placeholders for runtime systems not yet exposed |
-| 11 | Oct 6 | Finalize and freeze `sites.json` with real Day 5–6 data; flip `verified` to `true` | Review own event text against Member 1's real radiation/resource numbers for plausibility | 🎨 3D terrain/material/asset pass: site-specific terrain, rover, habitat, solar arrays, and readable world markers |
+| 11 | Oct 6 | ✅ Freeze the revisioned `sites.json` snapshot: verify coordinates and NASA LOLA samples; retain modeled/unavailable statuses where coverage does not support a measured value | Review own event text against Member 1's sourced radiation/resource numbers for plausibility | 🎨 3D terrain/material/asset pass: site-specific terrain, rover, habitat, solar arrays, and readable world markers |
 | 12 | Oct 7 | Mission report backend (real numbers feeding the report screen) | Start slotting real events into Member 1's trigger system | 🎨 Animate world feedback: solar output, alerts, camera transitions, and event cues |
 | 13 | Oct 8 | Buffer/bug-fix; unit-test sim edge cases (zero power, zero food, etc.) | Finish slotting all events into trigger system | Polish the playable 3D outpost scene with real assets and HUD integration |
 | **14** | **Oct 9** | 🔗 **Test & Integration #2** — full sim runs on real site data + real BVAD numbers + real (not dummy) events, end to end |

@@ -7,7 +7,7 @@ const Simulator = preload("res://src/simulation/mission_simulator.gd")
 const OutpostPreview = preload("res://src/ui/outpost_preview.gd")
 const EventScene = preload("res://scenes/event_preview.tscn")
 const MISSION_LENGTH := 10
-const SITE_FIELDS := {"illumination_pct": ["Illumination", "%"], "elevation_m": ["Elevation", "m"], "slope_deg": ["Slope", "degrees"], "hydrogen_ppm": ["Regional hydrogen potential", "ppmw H"]}
+const SITE_FIELDS := {"illumination_pct": ["Illumination", "%"], "elevation_m": ["Elevation", "m"], "slope_deg": ["Slope", "degrees"], "hydrogen_ppm": ["Hydrogen potential", "ppmw H"]}
 const REQUIRED_SITE_FIELDS := ["illumination_pct", "elevation_m", "slope_deg"]
 
 var simulator: RefCounted

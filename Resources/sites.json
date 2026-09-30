@@ -1,6 +1,9 @@
 {
   "_meta": {
     "description": "Four geographically separated lunar sites with sourced coordinates. Elevation is sampled from global NASA LOLA LDEM_4; slope from global LDSM_16; illumination is an explicit ideal-horizon gameplay model; polar LEND hydrogen is unavailable at these coordinates.",
+    "dataset_revision": "2026-09-30",
+    "frozen_on": "2026-09-30",
+    "freeze_scope": "Site identities and coordinates, NASA LOLA elevation/slope samples, and field provenance are frozen for this build snapshot. Illumination remains a disclosed ideal-horizon model and LEND hydrogen remains unavailable at these nonpolar coordinates. When source data changes, create a new dataset revision and preserve the prior snapshot in version control.",
     "how_to_fill": "Refresh NASA LOLA elevation/slope when newer or finer global products are selected. For illumination, record a NASA layer, period, coordinate, and sampling method or replace the disclosed geometric model. Do not infer polar LEND hydrogen values at nonpolar sites."
   },
   "sites": [
@@ -11,7 +14,11 @@
       "coordinates": {
         "latitude_deg": 0.67416,
         "longitude_deg": 23.47314,
-        "source": "NASA Apollo Landing Sites chart (2023), Apollo 11 / Mare Tranquillitatis; 0.67416°N, 23.47314°E. https://www.nasa.gov/wp-content/uploads/2023/10/south-pole.pdf"
+        "coordinate_frame": "Planetocentric latitude; east-positive longitude, 0–360 degrees",
+        "verified": true,
+        "source_id": "nasa_apollo11_landing_coordinates",
+        "source": "NASA Apollo Landing Sites chart (2023), Apollo 11 / Mare Tranquillitatis; 0.67416°N, 23.47314°E. https://www.nasa.gov/wp-content/uploads/2023/10/south-pole.pdf",
+        "date_read": "2026-09-30"
       },
       "illumination_pct": {
         "value": 50.0,
@@ -23,6 +30,7 @@
       "elevation_m": {
         "value": -1883.0,
         "verified": true,
+        "source_id": "nasa_lro_lola_gdr_global_v1",
         "source": "NASA PDS LRO LOLA GDR v1.0 LDEM_4 (global, 4 pixels/degree; 7.58084 km/pixel), sampled from the pixel containing this coordinate. DN × 0.5 m; height relative to the 1,737.4 km reference sphere, not geoid-corrected elevation. https://pds.nasa.gov/ds-view/pds/viewProfile.jsp?dsid=LRO-L-LOLA-4-GDR-V1.0",
         "date_read": "2026-09-30",
         "product": "LDEM_4",
@@ -43,6 +51,7 @@
       "slope_deg": {
         "value": 2.03,
         "verified": true,
+        "source_id": "nasa_lro_lola_gdr_global_v1",
         "status_label": "NASA LOLA source pixel",
         "source": "NASA PDS LRO LOLA GDR v1.0 LDSM_16 (product v2.0), global slope map at 16 pixels/degree (1.89521 km/pixel; 240 m slope baseline), sampled from the pixel containing this coordinate. Slope = DN × 0.0015 + 45 degrees. https://pds.nasa.gov/ds-view/pds/viewProfile.jsp?dsid=LRO-L-LOLA-4-GDR-V1.0",
         "date_read": "2026-09-30",
@@ -64,6 +73,7 @@
       "hydrogen_ppm": {
         "available": false,
         "verified": false,
+        "source_id": "nasa_lend_polar_hydrogen_2018",
         "availability_note": "No applicable LEND polar estimate at this latitude",
         "source": "Not available: the cited NASA LEND regional near-surface hydrogen estimate covers latitudes above 88° north or south; these site coordinates are outside that region. No point value is inferred.",
         "date_read": "2026-09-30"
@@ -76,7 +86,11 @@
       "coordinates": {
         "latitude_deg": 20.7,
         "longitude_deg": 312.6,
-        "source": "NASA Lunar Geophysical Network study, PKT site just south of Aristarchus Plateau; 20.7°N, 47.4°W, normalized to 312.6°E. https://ntrs.nasa.gov/api/citations/20210010668/downloads/Barker_TRNworkshopLOLADEMsMarch2021v1EM.pdf"
+        "coordinate_frame": "Planetocentric latitude; east-positive longitude, 0–360 degrees",
+        "verified": true,
+        "source_id": "nasa_aristarchus_candidate_2021",
+        "source": "NASA Lunar Geophysical Network study, PKT site just south of Aristarchus Plateau; 20.7°N, 47.4°W, normalized to 312.6°E. https://ntrs.nasa.gov/api/citations/20210010668/downloads/Barker_TRNworkshopLOLADEMsMarch2021v1EM.pdf",
+        "date_read": "2026-09-30"
       },
       "illumination_pct": {
         "value": 50.0,
@@ -88,6 +102,7 @@
       "elevation_m": {
         "value": -1595.5,
         "verified": true,
+        "source_id": "nasa_lro_lola_gdr_global_v1",
         "source": "NASA PDS LRO LOLA GDR v1.0 LDEM_4 (global, 4 pixels/degree; 7.58084 km/pixel), sampled from the pixel containing this coordinate. DN × 0.5 m; height relative to the 1,737.4 km reference sphere, not geoid-corrected elevation. https://pds.nasa.gov/ds-view/pds/viewProfile.jsp?dsid=LRO-L-LOLA-4-GDR-V1.0",
         "date_read": "2026-09-30",
         "product": "LDEM_4",
@@ -108,6 +123,7 @@
       "slope_deg": {
         "value": 8.09,
         "verified": true,
+        "source_id": "nasa_lro_lola_gdr_global_v1",
         "status_label": "NASA LOLA source pixel",
         "source": "NASA PDS LRO LOLA GDR v1.0 LDSM_16 (product v2.0), global slope map at 16 pixels/degree (1.89521 km/pixel; 240 m slope baseline), sampled from the pixel containing this coordinate. Slope = DN × 0.0015 + 45 degrees. https://pds.nasa.gov/ds-view/pds/viewProfile.jsp?dsid=LRO-L-LOLA-4-GDR-V1.0",
         "date_read": "2026-09-30",
@@ -129,6 +145,7 @@
       "hydrogen_ppm": {
         "available": false,
         "verified": false,
+        "source_id": "nasa_lend_polar_hydrogen_2018",
         "availability_note": "No applicable LEND polar estimate at this latitude",
         "source": "Not available: the cited NASA LEND regional near-surface hydrogen estimate covers latitudes above 88° north or south; these site coordinates are outside that region. No point value is inferred.",
         "date_read": "2026-09-30"
@@ -141,7 +158,11 @@
       "coordinates": {
         "latitude_deg": -43.37,
         "longitude_deg": 348.68,
-        "source": "NASA Science, Moon—Tycho; feature center listed at 43.37°S, 348.68°E. https://science.nasa.gov/3d-resources/moon-tycho/"
+        "coordinate_frame": "Planetocentric latitude; east-positive longitude, 0–360 degrees",
+        "verified": true,
+        "source_id": "nasa_tycho_feature_coordinates",
+        "source": "NASA Science, Moon—Tycho; feature center listed at 43.37°S, 348.68°E. https://science.nasa.gov/3d-resources/moon-tycho/",
+        "date_read": "2026-09-30"
       },
       "illumination_pct": {
         "value": 50.0,
@@ -153,6 +174,7 @@
       "elevation_m": {
         "value": -1858.5,
         "verified": true,
+        "source_id": "nasa_lro_lola_gdr_global_v1",
         "source": "NASA PDS LRO LOLA GDR v1.0 LDEM_4 (global, 4 pixels/degree; 7.58084 km/pixel), sampled from the pixel containing this coordinate. DN × 0.5 m; height relative to the 1,737.4 km reference sphere, not geoid-corrected elevation. https://pds.nasa.gov/ds-view/pds/viewProfile.jsp?dsid=LRO-L-LOLA-4-GDR-V1.0",
         "date_read": "2026-09-30",
         "product": "LDEM_4",
@@ -173,6 +195,7 @@
       "slope_deg": {
         "value": 25.0,
         "verified": true,
+        "source_id": "nasa_lro_lola_gdr_global_v1",
         "status_label": "NASA LOLA source pixel",
         "source": "NASA PDS LRO LOLA GDR v1.0 LDSM_16 (product v2.0), global slope map at 16 pixels/degree (1.89521 km/pixel; 240 m slope baseline), sampled from the pixel containing this coordinate. Slope = DN × 0.0015 + 45 degrees. https://pds.nasa.gov/ds-view/pds/viewProfile.jsp?dsid=LRO-L-LOLA-4-GDR-V1.0",
         "date_read": "2026-09-30",
@@ -194,6 +217,7 @@
       "hydrogen_ppm": {
         "available": false,
         "verified": false,
+        "source_id": "nasa_lend_polar_hydrogen_2018",
         "availability_note": "No applicable LEND polar estimate at this latitude",
         "source": "Not available: the cited NASA LEND regional near-surface hydrogen estimate covers latitudes above 88° north or south; these site coordinates are outside that region. No point value is inferred.",
         "date_read": "2026-09-30"
@@ -206,7 +230,11 @@
       "coordinates": {
         "latitude_deg": -20.5,
         "longitude_deg": 128.5,
-        "source": "NASA Science, Crater Tsiolkovsky from Apollo 13; approximate feature coordinates 20.5°S, 128.5°E. https://science.nasa.gov/resource/crater-tsiolkovsky-from-apollo-13/"
+        "coordinate_frame": "Planetocentric latitude; east-positive longitude, 0–360 degrees",
+        "verified": true,
+        "source_id": "nasa_tsiolkovskiy_feature_coordinates",
+        "source": "NASA Science, Crater Tsiolkovsky from Apollo 13; approximate feature coordinates 20.5°S, 128.5°E. https://science.nasa.gov/resource/crater-tsiolkovsky-from-apollo-13/",
+        "date_read": "2026-09-30"
       },
       "illumination_pct": {
         "value": 50.0,
@@ -218,6 +246,7 @@
       "elevation_m": {
         "value": -1768.5,
         "verified": true,
+        "source_id": "nasa_lro_lola_gdr_global_v1",
         "source": "NASA PDS LRO LOLA GDR v1.0 LDEM_4 (global, 4 pixels/degree; 7.58084 km/pixel), sampled from the pixel containing this coordinate. DN × 0.5 m; height relative to the 1,737.4 km reference sphere, not geoid-corrected elevation. https://pds.nasa.gov/ds-view/pds/viewProfile.jsp?dsid=LRO-L-LOLA-4-GDR-V1.0",
         "date_read": "2026-09-30",
         "product": "LDEM_4",
@@ -238,6 +267,7 @@
       "slope_deg": {
         "value": 12.38,
         "verified": true,
+        "source_id": "nasa_lro_lola_gdr_global_v1",
         "status_label": "NASA LOLA source pixel",
         "source": "NASA PDS LRO LOLA GDR v1.0 LDSM_16 (product v2.0), global slope map at 16 pixels/degree (1.89521 km/pixel; 240 m slope baseline), sampled from the pixel containing this coordinate. Slope = DN × 0.0015 + 45 degrees. https://pds.nasa.gov/ds-view/pds/viewProfile.jsp?dsid=LRO-L-LOLA-4-GDR-V1.0",
         "date_read": "2026-09-30",
@@ -259,6 +289,7 @@
       "hydrogen_ppm": {
         "available": false,
         "verified": false,
+        "source_id": "nasa_lend_polar_hydrogen_2018",
         "availability_note": "No applicable LEND polar estimate at this latitude",
         "source": "Not available: the cited NASA LEND regional near-surface hydrogen estimate covers latitudes above 88° north or south; these site coordinates are outside that region. No point value is inferred.",
         "date_read": "2026-09-30"

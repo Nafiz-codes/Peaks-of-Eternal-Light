@@ -1,6 +1,6 @@
 # TRIARCHY resource data
 
-The JSON contracts in this folder drive the game. Each field carries its own provenance status. In `sites.json`, elevation and slope are sampled from NASA LOLA global products, illumination is an ideal-horizon gameplay estimate, and LEND hydrogen is unavailable at the selected nonpolar coordinates. `bvad_constants.json` also labels remaining model choices individually.
+The JSON contracts in this folder drive the game. Each field carries its own provenance status. In `sites.json` revision `2026-09-30`, coordinates and NASA LOLA elevation/slope samples are source-backed; illumination is an ideal-horizon gameplay estimate; LEND hydrogen is unavailable at the selected nonpolar coordinates. `bvad_constants.json` also labels remaining model choices individually.
 
 ## Updating source-backed values
 

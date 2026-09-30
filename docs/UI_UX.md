@@ -1,6 +1,6 @@
 # Member 3 — Presentation design handoff
 
-**Current status — Sep 29, 2026:** Member 3's Days 5–9 are implemented. The project opens on site selection, starts Member 1's simulator, displays its live state, and opens a report on terminal outcomes. Event dialogs are isolated previews until Member 1 supplies a resolver. See **Days 5–9** below for current interfaces and verification. Day 1–4 sections are historical snapshots; their placeholder counts and unavailable-data notes describe those earlier dates.
+**Current status — Sep 30, 2026:** Member 3's Days 5–9 are implemented. The project opens on site selection, starts Member 1's simulator, displays its live state, and opens a report on terminal outcomes. Event dialogs are isolated previews until Member 1 supplies a resolver. See **Days 5–9** below for current interfaces and verification. Day 1–4 sections are historical snapshots; their placeholder counts and unavailable-data notes describe those earlier dates.
 
 ## Feasibility review — 2026-09-27
 
@@ -85,7 +85,7 @@ The HUD reads the same authoritative values and never performs world or resource
 
 The first player loop is GTA-style third-person exploration: move with `W`/`A`/`S`/`D` relative to the orbit camera, rotate the camera freely with the mouse, and let the astronaut turn toward travel. Press `C` to swing the camera to a front view and see the astronaut's face. Space jumps, `E` interacts at labeled energy, water, food, and crew stations, and Esc releases the mouse. An interaction currently records only its stable identifier; Member 1 connects that identifier to an authoritative simulation action before it can alter any reserve.
 
-`lunar_landing_selector.tscn` projects the four sourced south-pole latitude/longitude records into a local south-polar stereographic map and lets the player click a marker. It represents the actual selected locations, while the terrain mesh remains a visual placeholder until a LOLA elevation tile is prepared for runtime use.
+`lunar_landing_selector.tscn` projects the four geographically separated, NASA-referenced latitude/longitude records into a local selection map and lets the player click a marker. It represents the selected locations, while the terrain mesh remains a visual placeholder until a LOLA elevation tile is prepared for runtime use.
 
 ### Interaction and fallback specifications
 
@@ -160,13 +160,13 @@ The existing `scenes/mission_dashboard.tscn` entry scene now hosts site selectio
 | Member 1: `life_support_status` | Nominal/warning/critical/depleted labels | No presentation-owned thresholds |
 | Member 1: `mission_outcome` | Status, reason and failure sol; stop immediately on failure even when `completed` is false | `completed` alone is never treated as success |
 | Member 1: `history` | Labeled textual resource-history table | No invented percentages, independence, objectives or survival metrics |
-| Member 1: site provenance and radiation model | Per-field source disclosures and model notes | The shared hydrogen value is regional; terrain shielding is a gameplay proxy, not a local CRaTER measurement |
+| Member 1: site provenance and radiation model | Per-field source disclosures and model notes | Elevation/slope are global LOLA source pixels; illumination is modeled; polar LEND hydrogen is unavailable at these sites. Terrain shielding is a gameplay proxy, not a local CRaTER measurement |
 | Member 2: `crew.json` | Names and roles, with role fallback | Stress/productivity inputs are not live health |
 | Member 2: `mission_copy.json` | Opening, objective token substitution, science notice | The six-step tutorial flow remains later work; absent/malformed optional copy uses fallback text |
 | Member 2: `events.json` | Two representative modal previews, one choice event and one notification | No trigger parsing, effect execution, or claim that a live event resolved |
 | Member 2: construction/rover content | Controls remain visibly unavailable | Await authoritative action and runtime-state contracts |
 
-The data contracts and simulator were not modified by Member 3's implementation. Current baseline behavior is preserved: Ridge A reaches success at Sol 10; the three lower-illumination sites fail from sustained battery depletion without recovery actions. The site screen explains the development limitation before mission start. Sourced fields retain their source labels, while unverified power/hygiene choices and the ISS water-recovery proxy are explained separately. Do not describe source verification as proof of a safe or balanced mission.
+The current four sites share a disclosed 50% ideal-horizon illumination model, so baseline solar generation is the same at each site; the screen explains this model and its lack of local horizon sampling. Sourced fields retain their source labels, while unverified power/hygiene choices and the ISS water-recovery proxy are explained separately. Do not describe source verification as proof of a safe or balanced mission.
 
 ### Interaction and test results
 
