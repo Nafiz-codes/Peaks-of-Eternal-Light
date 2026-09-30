@@ -24,6 +24,8 @@ var polar_zoom_size := 0.95
 var zoom_in_button: Button
 var zoom_out_button: Button
 var zoom_reset_button: Button
+var landing_in_progress := false
+var menu_layer: CanvasLayer
 
 func _ready() -> void:
 	set_process_unhandled_input(true)
@@ -36,6 +38,8 @@ func _ready() -> void:
 	_update_site_callouts()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if landing_in_progress:
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_I:
 		_open_dashboard()
 		get_viewport().set_input_as_handled()
@@ -65,10 +69,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		select_site(str(collider.get_meta("site_id")))
 
 func select_site(site_id: String) -> void:
+	if landing_in_progress:
+		return
 	if _site_by_id(site_id).is_empty():
 		push_warning("Unknown lunar landing site: %s" % site_id)
 		return
 	selected_site_id = site_id
+	landing_in_progress = launch_outpost_on_selection
 	for marker in get_tree().get_nodes_in_group("lunar_site_marker"):
 		if marker is MeshInstance3D:
 			var material := marker.material_override as StandardMaterial3D
@@ -78,13 +85,47 @@ func select_site(site_id: String) -> void:
 		var session := get_node_or_null("/root/MissionSession")
 		if session != null:
 			session.set("selected_site_id", site_id)
-		call_deferred("_open_selected_outpost")
+		_begin_landing()
+
+func _begin_landing() -> void:
+	var coordinates: Dictionary = _site_by_id(selected_site_id).coordinates
+	var target := _globe_position(float(coordinates.latitude_deg), float(coordinates.longitude_deg))
+	var start_transform := camera.transform
+	var start_size := camera.size
+	var start_offset := camera.h_offset
+	# Keep the existing screen-up direction, including when looking down at a pole.
+	var normal := target.normalized()
+	var up := camera.basis.y
+	if absf(up.dot(normal)) > 0.98:
+		up = camera.basis.x
+	var destination := Transform3D(Basis.looking_at(-normal, up), target + normal * 20.0)
+	for control in menu_layer.find_children("*", "Button", true, false):
+		(control as Button).disabled = true
+	var tween := create_tween()
+	tween.tween_method(func(progress: float) -> void:
+		# Finish the pan early so the deeper zoom stays centered on the site.
+		var pan := smoothstep(0.0, 0.55, progress)
+		camera.transform = start_transform.interpolate_with(destination, pan)
+		camera.h_offset = lerpf(start_offset, 0.0, pan)
+		var zoom := smoothstep(0.15, 1.0, progress)
+		camera.size = exp(lerpf(log(start_size), log(0.065), zoom))
+		for marker in get_tree().get_nodes_in_group("lunar_site_marker"):
+			marker.scale = Vector3.ONE * maxf(0.001, 1.0 - smoothstep(0.3, 0.75, progress))
+		for control in menu_layer.get_children():
+			if control is Control:
+				control.modulate.a = 1.0 - smoothstep(0.0, 0.3, progress)
+	, 0.0, 1.0, 1.8)
+	tween.tween_callback(_open_selected_outpost)
 
 func _open_selected_outpost() -> void:
-	get_tree().change_scene_to_file("res://scenes/lunar_outpost_3d.tscn")
+	var transition := preload("res://src/world/lunar_landing_blend.gd").new()
+	get_tree().root.add_child(transition)
+	transition.begin(self)
 
 
 func _open_dashboard() -> void:
+	if landing_in_progress:
+		return
 	var session := get_node_or_null("/root/MissionSession")
 	if session != null:
 		session.call("open_dashboard", scene_file_path)
@@ -200,6 +241,8 @@ func _update_camera() -> void:
 	_update_zoom_controls()
 
 func _toggle_polar_view() -> void:
+	if landing_in_progress:
+		return
 	polar_view = not polar_view
 	get_node("PolarGrid").visible = polar_view
 	_update_camera()
@@ -209,6 +252,7 @@ func _toggle_polar_view() -> void:
 
 func _add_menu() -> void:
 	var layer := CanvasLayer.new()
+	menu_layer = layer
 	add_child(layer)
 	var panel := PanelContainer.new()
 	panel.position = Vector2(12, 12)
@@ -346,6 +390,8 @@ func _add_polar_grid() -> void:
 	add_child(grid)
 
 func _toggle_surface_map() -> void:
+	if landing_in_progress:
+		return
 	use_legacy_map = not use_legacy_map
 	var material := get_node("SouthPoleMap").material_override as ShaderMaterial
 	material.set_shader_parameter("use_legacy_map", use_legacy_map)
@@ -353,6 +399,8 @@ func _toggle_surface_map() -> void:
 
 
 func _zoom_by(factor: float) -> void:
+	if landing_in_progress:
+		return
 	if polar_view:
 		polar_zoom_size = clampf(polar_zoom_size * factor, 0.5, 4.0)
 	else:
@@ -361,6 +409,8 @@ func _zoom_by(factor: float) -> void:
 	_update_site_callouts()
 
 func _reset_zoom() -> void:
+	if landing_in_progress:
+		return
 	if polar_view:
 		polar_zoom_size = 0.95
 	else:
