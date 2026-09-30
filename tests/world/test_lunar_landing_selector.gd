@@ -47,9 +47,14 @@ func _run() -> void:
 		_assert(absf(rad_to_deg(asin(actual.y)) - float(coordinates.latitude_deg)) < 0.001, "Pin latitude matches its named site.")
 		var longitude := fposmod(rad_to_deg(atan2(actual.x, actual.z)), 360.0)
 		_assert(absf(longitude - float(coordinates.longitude_deg)) < 0.001, "Pin longitude matches its named site.")
+		camera.position = pin.position.normalized() * 30.0
+		camera.look_at(Vector3.ZERO, Vector3.UP)
+		camera.force_update_transform()
+		await physics_frame
+		await physics_frame
 		click.position = camera.unproject_position(pin.global_position)
 		selector.call("_unhandled_input", click)
-		_assert(selector.get("selected_site_id") == site.site_id, "Each polar marker is individually selectable.")
+		_assert(selector.get("selected_site_id") == site.site_id, "Each marker is selectable when facing the camera.")
 	selector.call("_toggle_polar_view")
 	selector.set("orbit", Vector2.ZERO)
 	selector.call("_update_camera")
@@ -73,17 +78,33 @@ func _run() -> void:
 	selector.call("_update_camera")
 	selector.call("_update_site_callouts")
 	for callout in selector.get("site_callouts"):
-		_assert(callout.button.visible, "Surface labels are visible from the landing hemisphere.")
+
 		callout.button.pressed.emit()
 		_assert(selector.get("selected_site_id") == callout.site_id, "On-Moon labels select their own outpost.")
 		var site: Dictionary = selector.call("_site_by_id", callout.site_id)
 		var anchor: Vector3 = selector.call("_globe_position", site.coordinates.latitude_deg, site.coordinates.longitude_deg)
-		_assert(callout.dot.position.distance_to(camera.unproject_position(anchor)) < 0.1, "Leader endpoint stays at the geographic coordinate.")
+		_assert(callout.button.visible == (anchor.normalized().dot(camera.global_basis.z) > 0.015), "Labels respect the visible hemisphere.")
+		if not callout.button.visible:
+			continue
+		_assert((callout.button.position + callout.button.size * 0.5).distance_to(camera.unproject_position(anchor)) < 0.1, "Outpost block stays centered at the geographic coordinate.")
 	selector.set("orbit", Vector2(0, PI * 0.5 - 0.001))
 	selector.call("_update_camera")
 	selector.call("_update_site_callouts")
 	for callout in selector.get("site_callouts"):
-		_assert(not callout.button.visible, "Opposite-hemisphere sites cannot appear through the Moon.")
+		var site: Dictionary = selector.call("_site_by_id", callout.site_id)
+		var anchor: Vector3 = selector.call("_globe_position", site.coordinates.latitude_deg, site.coordinates.longitude_deg)
+		_assert(callout.button.visible == (anchor.normalized().dot(camera.global_basis.z) > 0.015), "Opposite-hemisphere sites cannot appear through the Moon.")
+	for view_orbit in [Vector2(0.7, -0.5), Vector2(-0.8, 0.4)]:
+		selector.set("orbit", view_orbit)
+		selector.call("_update_camera")
+		selector.call("_zoom_by", 0.8)
+		await process_frame
+		for callout in selector.get("site_callouts"):
+			if not callout.button.visible:
+				continue
+			var site: Dictionary = selector.call("_site_by_id", callout.site_id)
+			var anchor: Vector3 = selector.call("_globe_position", site.coordinates.latitude_deg, site.coordinates.longitude_deg)
+			_assert((callout.button.position + callout.button.size * 0.5).distance_to(camera.unproject_position(anchor)) < 0.1, "Blocks follow their coordinates after orbit and zoom.")
 	print("LunarLandingSelector tests passed.")
 	quit(0)
 

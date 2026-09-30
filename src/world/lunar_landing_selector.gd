@@ -196,6 +196,7 @@ func _update_camera() -> void:
 		camera.h_offset = -5.0 * camera.size / 24.0
 		camera.position = Vector3(sin(orbit.x) * cos(orbit.y), sin(orbit.y), cos(orbit.x) * cos(orbit.y)) * 30.0
 		camera.look_at(Vector3.ZERO, Vector3.UP)
+	camera.force_update_transform()
 	_update_zoom_controls()
 
 func _toggle_polar_view() -> void:
@@ -212,10 +213,11 @@ func _add_menu() -> void:
 	var panel := PanelContainer.new()
 	panel.position = Vector2(12, 12)
 	var background := StyleBoxFlat.new()
-	background.bg_color = Color(0.02, 0.03, 0.05, 0.94)
-	background.set_corner_radius_all(8)
+	background.bg_color = Color(0.08, 0.14, 0.21, 0.3)
+	background.set_corner_radius_all(14)
 	panel.add_theme_stylebox_override("panel", background)
 	layer.add_child(panel)
+	_add_glass_backdrop(panel)
 	var margin := MarginContainer.new()
 	for edge in ["left", "top", "right", "bottom"]:
 		margin.add_theme_constant_override("margin_" + edge, 12)
@@ -264,35 +266,39 @@ func _add_menu() -> void:
 		var button := Button.new()
 		button.name = str(site.site_id) + "_SurfaceLabel"
 		var coordinates: Dictionary = site.coordinates
-		button.text = "%s\n%.4f°%s / %.4f°E" % [site.name, absf(float(coordinates.latitude_deg)), "S" if float(coordinates.latitude_deg) < 0 else "N", float(coordinates.longitude_deg)]
+		button.text = str(site.name)
+		button.tooltip_text = "%.4f°%s / %.4f°E · Click to land" % [ absf(float(coordinates.latitude_deg)), "S" if float(coordinates.latitude_deg) < 0 else "N", float(coordinates.longitude_deg)]
 		button.add_theme_font_size_override("font_size", 14)
 		var style := StyleBoxFlat.new()
-		style.bg_color = Color(0.025, 0.06, 0.09, 0.93)
-		style.border_color = Color("91cfff")
+		style.bg_color = Color(0.12, 0.22, 0.32, 0.25)
+		style.border_color = Color(0.8, 0.91, 1.0, 0.45)
 		style.set_border_width_all(1)
-		style.set_corner_radius_all(5)
+		style.set_corner_radius_all(14)
 		style.content_margin_left = 10
 		style.content_margin_right = 10
 		style.content_margin_top = 5
 		style.content_margin_bottom = 5
 		button.add_theme_stylebox_override("normal", style)
 		var hover := style.duplicate() as StyleBoxFlat
-		hover.bg_color = Color("24475d")
+		hover.bg_color = Color(0.28, 0.48, 0.65, 0.45)
 		button.add_theme_stylebox_override("hover", hover)
 		button.pressed.connect(select_site.bind(str(site.site_id)))
-		var line := Line2D.new()
-		line.width = 1.5
-		line.default_color = Color("91cfff")
-		layer.add_child(line)
-		var dot := Polygon2D.new()
-		var circle := PackedVector2Array()
-		for segment in range(16):
-			circle.append(Vector2.from_angle(segment * TAU / 16.0) * 3.0)
-		dot.polygon = circle
-		dot.color = Color("91cfff")
-		layer.add_child(dot)
 		layer.add_child(button)
-		site_callouts.append({"site_id": site.site_id, "button": button, "line": line, "dot": dot})
+		_add_glass_backdrop(button)
+		site_callouts.append({"site_id": site.site_id, "button": button})
+
+func _add_glass_backdrop(control: Control) -> void:
+	var glass := ColorRect.new()
+	glass.name = "FrostedGlass"
+	glass.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glass.show_behind_parent = true
+	var material := ShaderMaterial.new()
+	material.shader = preload("res://Assets/moon/selector_glass.gdshader")
+	glass.material = material
+	control.add_child(glass, false, Node.INTERNAL_MODE_BACK)
+	glass.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	control.resized.connect(func() -> void: material.set_shader_parameter("panel_size", control.size))
+	material.set_shader_parameter("panel_size", control.size)
 
 func _process(_delta: float) -> void:
 	_update_site_callouts()
@@ -301,9 +307,6 @@ func _update_site_callouts() -> void:
 	if camera == null:
 		return
 	var globe := get_node("SouthPoleMap") as MeshInstance3D
-	var center := camera.unproject_position(globe.global_position)
-	var screen_radius := get_viewport().get_visible_rect().size.y * MOON_RADIUS / camera.size
-	var slots := {"ridge_a": Vector2(0.36, -0.30), "shadow_zone": Vector2(-0.36, 0.28), "crater_rim_b": Vector2(-0.36, -0.30), "plateau_d": Vector2(0.36, 0.28)}
 	for callout in site_callouts:
 		var site := _site_by_id(str(callout.site_id))
 		var coordinates: Dictionary = site.coordinates
@@ -313,22 +316,13 @@ func _update_site_callouts() -> void:
 		var normal := (globe.global_basis * local_anchor.normalized()).normalized()
 		var visible_on_globe := normal.dot(camera.global_basis.z) > 0.015
 		callout.button.visible = visible_on_globe
-		callout.line.visible = visible_on_globe
-		callout.dot.visible = visible_on_globe
 		if not visible_on_globe:
 			continue
 		var projected := camera.unproject_position(anchor)
 		var button := callout.button as Button
 		button.size = button.get_combined_minimum_size()
-		var label_center: Vector2
-		if polar_view or camera.size < 3.0:
-			label_center = projected + Vector2(0, -42)
-		else:
-			# Spread labels within the Moon's disc; leaders end at the exact coordinates.
-			label_center = center + slots[str(callout.site_id)] * minf(screen_radius, 500.0)
-		button.position = label_center - button.size * 0.5
-		callout.dot.position = projected
-		callout.line.points = PackedVector2Array([projected, label_center + Vector2(0, button.size.y * 0.5)])
+		# Center the block on its geographic anchor through orbit, zoom and resize.
+		button.position = projected - button.size * 0.5
 
 func _add_polar_grid() -> void:
 	var grid := MeshInstance3D.new()
