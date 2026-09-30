@@ -36,6 +36,10 @@ func _ready() -> void:
 	_update_site_callouts()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_I:
+		_open_dashboard()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_zoom_by(0.8)
@@ -78,6 +82,12 @@ func select_site(site_id: String) -> void:
 
 func _open_selected_outpost() -> void:
 	get_tree().change_scene_to_file("res://scenes/lunar_outpost_3d.tscn")
+
+
+func _open_dashboard() -> void:
+	var session := get_node_or_null("/root/MissionSession")
+	if session != null:
+		session.call("open_dashboard", scene_file_path)
 
 func _add_environment() -> void:
 	var environment := Environment.new()
@@ -221,6 +231,10 @@ func _add_menu() -> void:
 	caption = Label.new()
 	caption.text = "GLOBAL MOON · LROC / LOLA\nRight-drag to orbit · Scroll to zoom\nClick a label on the Moon to land"
 	column.add_child(caption)
+	var dashboard_button := Button.new()
+	dashboard_button.text = "MISSION DASHBOARD  [I]"
+	dashboard_button.pressed.connect(_open_dashboard)
+	column.add_child(dashboard_button)
 	view_button = Button.new()
 	view_button.text = "INSPECT SOUTH POLE"
 	view_button.pressed.connect(_toggle_polar_view)

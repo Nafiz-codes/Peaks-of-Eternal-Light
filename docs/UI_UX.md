@@ -83,7 +83,7 @@ The dashboard is a `CanvasLayer` HUD over a Godot 3D lunar-outpost scene, not th
 
 The HUD reads the same authoritative values and never performs world or resource calculations. The minimum visual loop is select site → inspect 3D outpost → run a sol → see the HUD and world update from the returned tick.
 
-The first player loop is third-person exploration: walk with `W`/`A`/`S`/`D`, jump with Space, look with the mouse, and interact using `E` at the labeled energy, water, food, and crew stations. An interaction currently records only its stable identifier; Member 1 connects that identifier to an authoritative simulation action before it can alter any reserve.
+The first player loop is GTA-style third-person exploration: move with `W`/`A`/`S`/`D` relative to the orbit camera, rotate the camera freely with the mouse, and let the astronaut turn toward travel. Press `C` to swing the camera to a front view and see the astronaut's face. Space jumps, `E` interacts at labeled energy, water, food, and crew stations, and Esc releases the mouse. An interaction currently records only its stable identifier; Member 1 connects that identifier to an authoritative simulation action before it can alter any reserve.
 
 `lunar_landing_selector.tscn` projects the four sourced south-pole latitude/longitude records into a local south-polar stereographic map and lets the player click a marker. It represents the actual selected locations, while the terrain mesh remains a visual placeholder until a LOLA elevation tile is prepared for runtime use.
 

@@ -76,9 +76,15 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 
 ### Early 3D playable-scene handoff — Sep 29
 - Status: ✅ Done
-- What was completed: Replaced the static player placeholder with the supplied animated astronaut GLB, connected its idle and moon-walk clips, aligned the visual root against the imported toe-bone pose so boot soles meet the lunar surface, and wired mouse-look yaw to WASD movement direction. Space jump was already implemented; tuned it to a 1.5 m apex and 2.7 s airtime under 1.62 m/s² lunar gravity. Added focused outpost assertions and verified both the outpost and landing-selector headless checks on Godot 4.7.2.
+- What was completed: Replaced the static player placeholder with the supplied animated astronaut GLB, connected its idle and moon-walk clips, aligned the visual root against the imported toe-bone pose so boot soles meet the lunar surface, and added a collision-aware free-orbit camera with camera-relative WASD movement. Space jump was already implemented; tuned it to a 1.5 m apex and 2.7 s airtime under 1.62 m/s² lunar gravity. Added focused outpost assertions and verified both the outpost and landing-selector headless checks on Godot 4.7.2.
 - Issues / blockers: Visual tuning in a live rendered play session remains open. Interactions in the 3D scene currently report stable identifiers; they do not change simulation reserves yet.
-- Notes for teammates: The GLB is under `Assets/animated_astronaut/source/`. Mouse controls facing; WASD follows that facing, Space jumps, E requests a nearby station interaction, and Esc releases the pointer.
+- Notes for teammates: The GLB is under `Assets/animated_astronaut/source/`. Mouse orbits the camera; WASD follows camera heading and the astronaut turns toward travel. Press C for a front view, Space to jump, E to request a nearby station interaction, and Esc to release the pointer.
+
+### Global site-data refresh and play-flow wiring — Sep 30 — Member 1 / presentation integration
+- Status: ⚠️ Partial
+- What was completed: Replaced the invalidated south-pole terrain samples with per-coordinate NASA PDS LOLA LDEM_4 elevations and LDSM_16 slopes for the four geographically separated sites. Labeled solar availability as an ideal-horizon gameplay model and made polar LEND hydrogen explicitly unavailable outside its coverage. Updated the dashboard’s field status text and science copy. Set the lunar landing selector as the F5/main scene; added an I-key dashboard route and return button/key that preserve the originating selector or outpost scene and preselect the active site. The dashboard mission state now survives scene switches.
+- Issues / blockers: LDEM_4 elevation is about 7.58 km/pixel and LDSM_16 slope is a global 1.895 km/pixel product with a 240 m measurement baseline; neither is a landing-pad survey. A global time-averaged illumination product and an applicable local hydrogen product were not found for these coordinates. The solar value remains a disclosed model estimate; hydrogen is unavailable.
+- Notes for teammates: Field status now means NASA source sample, modeled assumption, or unavailable coverage instead of displaying every field as an unverified development value. Godot 4.7.2 headless editor scan and selector, dashboard, and outpost scene launches exited successfully; the sandbox reported certificate-store and user log/settings write warnings. No gameplay test suite was run.
 
 ### Day 10 — Oct 5 — Event trigger/effect hooks (schema only, no content)
 - Status: ✅ Done ahead of schedule on Sep 29

@@ -88,6 +88,30 @@ func _add_outpost() -> void:
 	_add_interaction_station(outpost, "water_recycler", "WATER RECYCLER", Vector3(0.8, 0.0, 3.0), Color("79c8df"))
 	_add_interaction_station(outpost, "food_storage", "FOOD STORAGE", Vector3(0.0, 0.0, -3.0), Color("b5d878"))
 	_add_interaction_station(outpost, "crew_briefing", "CREW BRIEFING", Vector3(3.4, 0.0, 3.8), Color("b7a2ff"))
+	_add_controls_hint()
+
+
+func _add_controls_hint() -> void:
+	var layer := CanvasLayer.new()
+	layer.name = "ControlsHint"
+	add_child(layer)
+	var panel := PanelContainer.new()
+	panel.position = Vector2(14.0, 14.0)
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.02, 0.03, 0.05, 0.88)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 8.0
+	style.content_margin_bottom = 8.0
+	panel.add_theme_stylebox_override("panel", style)
+	layer.add_child(panel)
+	var hint := Label.new()
+	hint.text = "WASD · MOVE    MOUSE · LOOK\nSPACE · JUMP    E · INTERACT\nI · MISSION DASHBOARD"
+	hint.add_theme_font_size_override("font_size", 14)
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(hint)
 
 
 func _add_habitat(parent: Node3D) -> void:
@@ -156,11 +180,23 @@ func _add_astronaut(parent: Node3D) -> void:
 	var animation_players := visual.find_children("*", "AnimationPlayer", true, false)
 	if not animation_players.is_empty():
 		astronaut.call("set_animation_player", animation_players[0])
+	var camera_pivot := Node3D.new()
+	camera_pivot.name = "CameraPivot"
+	camera_pivot.position.y = 1.45
+	astronaut.add_child(camera_pivot)
+	var spring_arm := SpringArm3D.new()
+	spring_arm.name = "SpringArm"
+	spring_arm.spring_length = 4.8
+	spring_arm.margin = 0.2
+	var camera_shape := SphereShape3D.new()
+	camera_shape.radius = 0.2
+	spring_arm.shape = camera_shape
+	camera_pivot.add_child(spring_arm)
 	var camera := Camera3D.new()
 	camera.name = "ThirdPersonCamera"
-	camera.position = Vector3(0.0, 2.2, 5.5)
-	camera.rotation.x = -0.15
-	astronaut.add_child(camera)
+	camera.fov = 70.0
+	camera.current = true
+	spring_arm.add_child(camera)
 	astronaut.interaction_requested.connect(_on_player_interaction)
 
 

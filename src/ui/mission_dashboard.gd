@@ -8,6 +8,7 @@ const OutpostPreview = preload("res://src/ui/outpost_preview.gd")
 const EventScene = preload("res://scenes/event_preview.tscn")
 const MISSION_LENGTH := 10
 const SITE_FIELDS := {"illumination_pct": ["Illumination", "%"], "elevation_m": ["Elevation", "m"], "slope_deg": ["Slope", "degrees"], "hydrogen_ppm": ["Regional hydrogen potential", "ppmw H"]}
+const REQUIRED_SITE_FIELDS := ["illumination_pct", "elevation_m", "slope_deg"]
 
 var simulator: RefCounted
 var state: Variant = null
@@ -28,6 +29,7 @@ var restart_dialog: ConfirmationDialog
 var busy := false
 
 func _ready() -> void:
+	set_process_unhandled_input(true)
 	var backdrop := ColorRect.new()
 	backdrop.color = Color("0b0d16")
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -47,7 +49,9 @@ func reload_contracts(loader: RefCounted = null) -> void:
 	state = null
 	last_tick = {}
 	selected_site_id = ""
-	simulator = Simulator.new() if loader == null else loader
+	var session := get_node_or_null("/root/MissionSession")
+	var saved_simulator: Variant = null if session == null else session.get("dashboard_simulator")
+	simulator = saved_simulator if saved_simulator is RefCounted else (Simulator.new() if loader == null else loader)
 	if simulator.load_contracts() != OK:
 		show_load_error("Mission data could not be loaded. Check the Resources files and retry.")
 		return
@@ -58,13 +62,29 @@ func reload_contracts(loader: RefCounted = null) -> void:
 			show_load_error("Site data contains a missing or duplicate ID. Correct the data and retry.")
 			return
 		ids.append(id)
+	if session != null:
+		state = session.get("dashboard_state")
+		var saved_last_tick: Variant = session.get("dashboard_last_tick")
+		if saved_last_tick is Dictionary:
+			last_tick = saved_last_tick.duplicate(true)
+		if state != null:
+			selected_site_id = str(state.site_id)
+		else:
+			var active_site := str(session.get("selected_site_id"))
+			if ids.has(active_site):
+				selected_site_id = active_site
 	copy = {}
 	if FileAccess.file_exists("res://Resources/mission_copy.json"):
 		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/mission_copy.json"))
 		if parsed is Dictionary:
 			copy = parsed
 	load_error = ""
-	show_sites()
+	if state == null:
+		show_sites()
+	elif state.mission_outcome.get("status", "") in ["success", "failure"]:
+		show_report()
+	else:
+		show_dashboard()
 
 func show_load_error(message: String) -> void:
 	load_error = message
@@ -98,6 +118,25 @@ func _new_page(name_: String, heading: String) -> void:
 	column.add_child(UI.label("△ △ △  /  by TRIARCHY", 14, UI.PURPLE))
 	column.add_child(UI.label("Peaks of Eternal Light", 34))
 	column.add_child(UI.label(heading, 22, UI.BLUE))
+	if _has_return_destination():
+		column.add_child(UI.button("Return to lunar scene  [I]", _return_to_game))
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_I and _has_return_destination():
+		_return_to_game()
+		get_viewport().set_input_as_handled()
+
+
+func _has_return_destination() -> bool:
+	var session := get_node_or_null("/root/MissionSession")
+	return session != null and not str(session.get("return_scene_path")).is_empty()
+
+
+func _return_to_game() -> void:
+	var session := get_node_or_null("/root/MissionSession")
+	if session != null:
+		session.call("return_to_game")
 
 func _brief(key: String, fallback: String) -> String:
 	var briefing: Variant = copy.get("mission_briefing", {})
@@ -135,10 +174,10 @@ func show_sites() -> void:
 		if coordinates is Dictionary and coordinates.has("latitude_deg") and coordinates.has("longitude_deg"):
 			details.add_child(UI.label("Coordinates: %s°, %s° east" % [coordinates.latitude_deg, coordinates.longitude_deg], 14, UI.MUTED))
 		UI.disclosure(details, "Measurement sources and reading dates", _site_sources(selected))
-		details.add_child(UI.label("Hydrogen is a regional estimate shared by these sites. It is not a landing-point assay or extraction yield.", 14, UI.AMBER))
+		details.add_child(UI.label("Solar availability is an ideal-horizon lunar-day estimate. NASA hydrogen coverage does not include these landing coordinates.", 14, UI.AMBER))
 		if not _valid_site(selected):
 			details.add_child(UI.label("Required numeric site data is missing. This site cannot start a mission.", 14, UI.AMBER))
-	column.add_child(UI.label("Development build: building, rover actions and event effects are not available yet. Low-illumination sites currently have no recovery actions.", 14, UI.AMBER))
+	column.add_child(UI.label("Development build: building, rover actions and event effects are not available yet. The modeled solar average is not a site-specific lighting forecast.", 14, UI.AMBER))
 	start_button = UI.button("Establish outpost", start_mission, not _valid_site(selected))
 	column.add_child(start_button)
 	_add_previews()
@@ -162,7 +201,7 @@ func _site(id: String) -> Dictionary:
 func _valid_site(site: Dictionary) -> bool:
 	if site.is_empty():
 		return false
-	for field in SITE_FIELDS:
+	for field in REQUIRED_SITE_FIELDS:
 		var data: Variant = site.get(field)
 		if not data is Dictionary:
 			return false
@@ -174,9 +213,13 @@ func _valid_site(site: Dictionary) -> bool:
 func field_text(site: Dictionary, field: String) -> String:
 	var descriptor: Array = SITE_FIELDS[field]
 	var data: Variant = site.get(field)
-	if not data is Dictionary or not (data.get("value") is float or data.get("value") is int):
+	if not data is Dictionary:
 		return str(descriptor[0]) + ": Unavailable"
-	var verification := "Verified source" if data.get("verified", false) == true else "Unverified / development value"
+	if data.get("available", true) == false:
+		return "%s: Not available · %s" % [descriptor[0], str(data.get("availability_note", "No applicable source coverage"))]
+	if not (data.get("value") is float or data.get("value") is int):
+		return str(descriptor[0]) + ": Unavailable"
+	var verification := "NASA source" if data.get("verified", false) == true else str(data.get("status_label", "Model estimate"))
 	return "%s: %.2f %s · %s" % [descriptor[0], float(data.value), descriptor[1], verification]
 
 func _site_sources(site: Dictionary) -> String:
@@ -192,6 +235,11 @@ func start_mission() -> void:
 		return
 	state = simulator.begin_mission(selected_site_id, MISSION_LENGTH)
 	last_tick = {}
+	var session := get_node_or_null("/root/MissionSession")
+	if session != null:
+		session.set("dashboard_simulator", simulator)
+		session.set("dashboard_state", state)
+		session.set("dashboard_last_tick", last_tick)
 	show_dashboard()
 
 func show_dashboard() -> void:
@@ -262,6 +310,10 @@ func advance_turn() -> void:
 		run_button.disabled = true
 	last_tick = simulator.advance_sol(state)
 	state = last_tick.state
+	var session := get_node_or_null("/root/MissionSession")
+	if session != null:
+		session.set("dashboard_state", state)
+		session.set("dashboard_last_tick", last_tick)
 	if state.mission_outcome.get("status", "") in ["success", "failure"] or last_tick.get("completed", false):
 		show_report()
 	else:
@@ -311,6 +363,10 @@ func reset_mission() -> void:
 	state = null
 	last_tick = {}
 	selected_site_id = ""
+	var session := get_node_or_null("/root/MissionSession")
+	if session != null:
+		session.set("dashboard_state", null)
+		session.set("dashboard_last_tick", {})
 	show_sites()
 
 func _model_notes() -> String:

@@ -15,7 +15,9 @@
       "data_kind": "life-support design assumptions",
       "version_or_coverage": "Revision 1, January 2018",
       "retrieved_on": "2026-09-26",
-      "used_by": ["bvad_constants.json"]
+      "used_by": [
+        "bvad_constants.json"
+      ]
     },
     {
       "source_id": "nasa_iss_eclss_water_recovery_2025",
@@ -26,7 +28,9 @@
       "data_kind": "operational water-recovery fraction",
       "version_or_coverage": "NASA reference page updated 2025-04-04: Water Recovery System recovers and recycles about 90 percent of station water",
       "retrieved_on": "2026-09-29",
-      "used_by": ["bvad_constants.json"],
+      "used_by": [
+        "bvad_constants.json"
+      ],
       "measurement_note": "The simulator applies this ISS operational figure as a whole-loop water-recovery proxy. It does not claim that an unbuilt lunar outpost uses the same hardware, recovery streams, or reliability."
     },
     {
@@ -38,7 +42,9 @@
       "data_kind": "lunar surface gravity",
       "version_or_coverage": "Moon surface gravity: 1.62 m/s²",
       "retrieved_on": "2026-09-29",
-      "used_by": ["src/world/lunar_astronaut.gd"],
+      "used_by": [
+        "src/world/lunar_astronaut.gd"
+      ],
       "measurement_note": "The character controller uses 1.62 m/s² for downward acceleration. Walking speed and jump velocity are gameplay controls, not NASA measurements."
     },
     {
@@ -50,8 +56,8 @@
       "data_kind": "lunar elevation and terrain",
       "version_or_coverage": "NASA GSFC PGDA 5 m south-pole landing-site products; Connecting Ridge (Site01), Shackleton Rim (Site04), Peak near Shackleton (Site07), and de Gerlache Rim (Site11) sampled on 2026-09-28/29",
       "retrieved_on": "2026-09-29",
-      "used_by": ["sites.json"],
-      "measurement_note": "Record latitude, east-positive longitude, raster/product identifier, pixel resolution, and sampling method for every site value. All four game sites use 5 m documented elevation and slope products at shared X/Y coordinates."
+      "used_by": [],
+      "measurement_note": "Historical source record for the prior south-polar site set. The current coordinates use the global GDR LDEM_4 source record below."
     },
     {
       "source_id": "nasa_lro_lroc_wac_polar_illumination",
@@ -62,8 +68,8 @@
       "data_kind": "polar illumination",
       "version_or_coverage": "WAC_POLE_ILL_PCT_SOUTH_100M, PDS4 v2.0; 88–90°S, 100 m/pixel; percentage of observations illuminated during the source map period",
       "retrieved_on": "2026-09-26",
-      "used_by": ["sites.json"],
-      "measurement_note": "Illumination percentage must retain the layer name, time interval, coordinates, and sampling method; it is then normalized to a solar-generation gameplay modifier. All four game sites have recorded samples."
+      "used_by": [],
+      "measurement_note": "Historical source record for the prior south-polar site set. It does not cover the current four nonpolar landing coordinates."
     },
     {
       "source_id": "nasa_lro_lend_rdr",
@@ -74,8 +80,8 @@
       "data_kind": "neutron flux and hydrogen-related resource potential",
       "version_or_coverage": "PDS LRO LEND archive, Release 67 current at retrieval; LEND_RDR_ALDS_20090915, 2009-09-15 through 2011-12-11, 0.5° × 0.5° south-polar cells",
       "retrieved_on": "2026-09-28",
-      "used_by": ["sites.json"],
-      "measurement_note": "LEND_RDR_ALDS_20090915 stores CSETN relative count rates and statistical errors, not hydrogen ppm. The two site entries retain their sampled map-cell rates in field provenance and use the separately cited NASA LEND regional model for >88° latitude: approximately 140 ppmw H (0.13 ± 0.02 wt% WEH). This is regional evidence, never confirmed extractable water or a direct landing-point assay."
+      "used_by": [],
+      "measurement_note": "Historical source record for the prior south-polar site set. The cited >88° regional result does not cover any of the current four landing coordinates."
     },
     {
       "source_id": "nasa_lend_polar_hydrogen_2018",
@@ -86,8 +92,8 @@
       "data_kind": "LEND model-derived regional hydrogen abundance",
       "version_or_coverage": "Livengood et al., Planetary and Space Science 162 (2018); approximately 140 ppmw H above 88° north or south latitude, 0.13 ± 0.02 wt% WEH",
       "retrieved_on": "2026-09-28",
-      "used_by": ["sites.json"],
-      "measurement_note": "All four selected sites are south of 88°. This result does not resolve differences between their individual 0.5° LEND cells."
+      "used_by": [],
+      "measurement_note": "Historical source record for the prior south-polar site set. The cited >88° regional result does not cover any of the current four landing coordinates."
     },
     {
       "source_id": "nasa_lro_crater",
@@ -98,7 +104,9 @@
       "data_kind": "lunar-orbit radiation environment and CRaTER-informed lunar-surface context",
       "version_or_coverage": "CRaTER measures galactic and solar cosmic radiation behind tissue-equivalent plastic; site-independent baseline uses the separately cited NASA lunar-surface GCR model",
       "retrieved_on": "2026-09-29",
-      "used_by": ["mission_simulator.gd radiation baseline"],
+      "used_by": [
+        "mission_simulator.gd radiation baseline"
+      ],
       "measurement_note": "CRaTER observations characterize the lunar radiation environment and biological response. They are not a geographic surface-dose raster, so the simulator uses a documented, site-independent NASA lunar-surface GCR baseline before applying its explicit terrain gameplay proxy."
     },
     {
@@ -110,8 +118,25 @@
       "data_kind": "modeled lunar-surface GCR effective dose",
       "version_or_coverage": "Table 8.4-2, solar-minimum, no-shielding lunar surface: 0.90 mSv/day; BON2020 2009 solar-minimum environment",
       "retrieved_on": "2026-09-29",
-      "used_by": ["mission_simulator.gd radiation baseline"],
+      "used_by": [
+        "mission_simulator.gd radiation baseline"
+      ],
       "measurement_note": "This is the source of the simulator's 0.90 mSv/sol GCR baseline. It is a site-independent modeled effective dose, not an observed dose at one of the four landing points."
+    },
+    {
+      "source_id": "nasa_lro_lola_gdr_global_v1",
+      "agency": "NASA PDS",
+      "mission_or_program": "Lunar Reconnaissance Orbiter / LOLA",
+      "title": "LOLA Gridded Data Record global elevation and slope products",
+      "url": "https://pds.nasa.gov/ds-view/pds/viewProfile.jsp?dsid=LRO-L-LOLA-4-GDR-V1.0",
+      "product_file": "PDS Geosciences Node LDEM_4.IMG / LDEM_4.LBL and LDSM_16.IMG / LDSM_16.LBL",
+      "data_kind": "Global lunar elevation/shape relative to the 1,737.4 km reference sphere",
+      "version_or_coverage": "LRO-L-LOLA-4-GDR-V1.0; LDEM_4 (product v3.0, 4 pixels/degree, 7.58084 km/pixel) and LDSM_16 (product v2.0, 16 pixels/degree, 1.89521 km/pixel; 240 m slope baseline); global 0–360° east longitude",
+      "retrieved_on": "2026-09-30",
+      "used_by": [
+        "sites.json"
+      ],
+      "measurement_note": "Elevation is the LDEM_4 containing-pixel DN × 0.5 m relative to the 1,737.4 km reference sphere. Slope is sampled directly from the LDSM_16 containing pixel and converted by DN × 0.0015 + 45 degrees. The LDSM measurement baseline is 240 m; neither global raster is a local landing-pad survey."
     }
   ]
 }

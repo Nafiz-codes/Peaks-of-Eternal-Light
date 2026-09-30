@@ -7,15 +7,15 @@
     "subtitle": "Lunar Outpost Mission Trainer",
     "opening": "Commander, establish a lunar outpost and sustain your crew through a short operational mission. Every sol, power, life support, terrain, and human decisions must stay in balance.",
     "primary_objective": "Keep the crew operational through Sol [MISSION_LENGTH].",
-    "site_choice_prompt": "Select a landing site. Compare illumination, terrain, and hydrogen-resource potential before you commit.",
-    "science_notice": "Site readings come from NASA-derived data where marked verified. Hydrogen signals indicate resource potential, not guaranteed extractable water.",
+    "site_choice_prompt": "Select a landing site. Compare modeled solar availability and coarse LOLA terrain values before you commit.",
+    "science_notice": "Elevation and slope come from NASA's global LOLA grids; solar availability is modeled. The cited LEND polar hydrogen estimate does not cover these sites.",
     "success_note": "A mission is not won by one full meter. It is won by making trade-offs early enough to recover from them."
   },
   "tutorial_steps": [
     {
       "step_id": "choose_site",
       "title": "1. Choose a site",
-      "body": "High illumination helps solar generation. Terrain and hydrogen-resource potential create different opportunities and risks. Inspect the source status before treating a reading as certain."
+      "body": "Solar availability is an ideal-horizon estimate. Elevation and slope are sampled from global LOLA grids; their resolution is not a landing-pad survey. No applicable LEND polar hydrogen value is available for these sites."
     },
     {
       "step_id": "read_reserves",

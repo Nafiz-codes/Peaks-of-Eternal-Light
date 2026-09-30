@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Peaks of Eternal Light"
-run/main_scene="res://scenes/mission_dashboard.tscn"
+run/main_scene="res://scenes/lunar_landing_selector.tscn"
 config/features=PackedStringArray("4.7")
 
 [autoload]
