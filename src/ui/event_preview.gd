@@ -3,6 +3,8 @@ extends ConfirmationDialog
 ## Presentation preview only. No simulation event is resolved by this dialog.
 const UI = preload("res://src/ui/ui_style.gd")
 signal preview_finished(choice_id: String)
+signal decision_confirmed(event_id: String, choice_id: String)
+var live_event_id := ""
 var selected_choice := ""
 var content: VBoxContainer
 var return_focus: WeakRef
@@ -34,18 +36,23 @@ func _ready() -> void:
 	content = UI.box()
 	scroll.add_child(content)
 
-func open_preview(event: Dictionary, invoker: Control = null) -> void:
+func open_preview(event: Dictionary, invoker: Control = null, live: bool = false) -> void:
+	live_event_id = str(event.get("event_id", "")) if live else ""
+	title = "Mission decision" if live else "Event layout preview"
+	get_cancel_button().text = "Decide later" if live else "Close preview"
 	return_focus = weakref(invoker) if invoker != null else null
 	selected_choice = ""
 	for child in content.get_children():
 		content.remove_child(child)
 		child.queue_free()
-	content.add_child(UI.label("LAYOUT PREVIEW / No mission effect will be applied", 14, UI.AMBER))
+	content.add_child(UI.label("MISSION DECISION / Sol progression waits for your choice" if live else "LAYOUT PREVIEW / No mission effect will be applied", 14, UI.AMBER))
 	content.add_child(UI.label(str(event.get("category", "notification")).to_upper(), 16, UI.PURPLE))
 	content.add_child(UI.label(str(event.get("text", "No event text supplied.")), 20))
 	var choices: Variant = event.get("choices")
 	var has_choices: bool = choices is Array and not choices.is_empty()
 	get_ok_button().text = "Confirm preview choice" if has_choices else "Acknowledge preview"
+	if live:
+		get_ok_button().text = "Apply decision" if has_choices else "Acknowledge"
 	get_ok_button().disabled = has_choices
 	selection_label = UI.label("No choice selected" if has_choices else "Notification / no choice required", 14, UI.AMBER)
 	if has_choices:
@@ -62,7 +69,7 @@ func open_preview(event: Dictionary, invoker: Control = null) -> void:
 			option.button_group = group
 			content.add_child(option)
 	content.add_child(selection_label)
-	content.add_child(UI.label("Consequences will be supplied by the event system. This preview does not interpret authored effects.", 14, UI.MUTED))
+	content.add_child(UI.label("The mission simulator applies the chosen outcome. Review updated readings after confirmation." if live else "Consequences will be supplied by the event system. This preview does not interpret authored effects.", 14, UI.MUTED))
 	popup_centered_clamped(Vector2i(700, 560), 0.9)
 	if has_choices and content.get_child_count() > 3:
 		content.get_child(3).grab_focus()
@@ -70,7 +77,10 @@ func open_preview(event: Dictionary, invoker: Control = null) -> void:
 		get_ok_button().grab_focus()
 
 func _finish_preview() -> void:
-	preview_finished.emit(selected_choice)
+	if live_event_id.is_empty():
+		preview_finished.emit(selected_choice)
+	else:
+		decision_confirmed.emit(live_event_id, selected_choice)
 	_restore_focus()
 
 func _restore_focus() -> void:

@@ -246,6 +246,51 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 
 ---
 
+### Day 9 — Oct 4, 2026 — 3D assets and site-to-outpost handoff (revised schedule)
+- Status: ✅ Done
+- What was completed: Retained the imported animated astronaut and its movement/camera controls; replaced the rover marker with the supplied `mars_rover.glb`, normalized to a 3 m footprint and grounded using mesh bounds. Saved the existing habitat and solar designs as reusable Godot scene assets with ground supports under `Assets/outpost/`; no separate habitat/solar models were supplied. Preserved the existing globe zoom/arrival transition. The outpost reads the selected site's authored name and labels its layout illustrative. Selecting a different landing site clears stale dashboard mission state and last-tick data; revisiting the same site preserves its mission.
+- Validation: Godot 4.7.2 outpost, landing-selector, landing-transition, new four-site session tests, and dashboard integration suite all passed. A rendered OpenGL outpost capture was inspected. Tests cover imported rover mesh presence, scale/grounding, reusable asset placement, site labels and mission preservation/reset. Restricted-environment user-log/shader-cache and certificate-store warnings remain.
+- Issues / blockers: None for Day 9's presentation handoff. Assets remain a first-pass illustrative environment; site-specific terrain/material polish belongs to Day 11. Rover/construction actions and simulation-driven world feedback remain later work.
+- Notes for teammates: The earlier Sep 29 Day 9 entry describes the previous UI-binding schedule. This entry closes the current workflow's 3D asset and landing handoff task; Day 10 world/event integration is next.
+
+### Day 9 — Oct 4, 2026 — 3D assets and site-to-outpost handoff (revised schedule)
+- Status: ✅ Done
+- What was completed: Retained the imported animated astronaut and its movement/camera controls; replaced the rover marker with the supplied `mars_rover.glb`, normalized to a 3 m footprint and grounded using mesh bounds. Saved the existing habitat and solar designs as reusable Godot scene assets with ground supports under `Assets/outpost/`; no separate habitat/solar models were supplied. Preserved the existing globe zoom/arrival transition. The outpost reads the selected site's authored name and labels its layout illustrative. Selecting a different landing site clears stale dashboard mission state and last-tick data; revisiting the same site preserves its mission.
+- Validation: Godot 4.7.2 outpost, landing-selector, landing-transition, new four-site session tests, and dashboard integration suite all passed. A rendered OpenGL outpost capture was inspected. Tests cover imported rover mesh presence, scale/grounding, reusable asset placement, site labels and mission preservation/reset. Restricted-environment user-log/shader-cache and certificate-store warnings remain.
+- Issues / blockers: None for Day 9's presentation handoff. Assets remain a first-pass illustrative environment; site-specific terrain/material polish belongs to Day 11. Rover/construction actions and simulation-driven world feedback remain later work.
+- Notes for teammates: The earlier Sep 29 Day 9 entry describes the previous UI-binding schedule. This entry closes the current workflow's 3D asset and landing handoff task; Day 10 world/event integration is next.
+
+### Day 10 — Oct 4, 2026 (scheduled Oct 5) — World state and event integration
+- Status: ✅ Done for available authoritative systems
+- What was completed: Added a live outpost HUD with mission start/advance, six reserve readings, terminal status and report access. Reused the event dialog in live mode in both dashboard and world; confirmation calls the simulator, while previews remain isolated. Station interactions inspect current power, water, food and crew readings. World labels and decision beacon consume pending/active events and life-support status.
+- Validation: Four-site end-to-end tests compare every world action with an independent simulator, confirm real modal choices, verify cancel isolation and duplicate guards, and assert rendering does not modify mission state.
+- Issues / blockers: Construction/rover action APIs and some authored effect keys remain outside available runtime support. Their controls/outcomes are not invented.
+
+### Day 11 — Oct 4, 2026 (scheduled Oct 6) — Terrain, materials, assets and markers
+- Status: ✅ Done
+- What was completed: Added deterministic site-seeded surrounding relief, regolith texture, peripheral rocks and terrain collision around a flat pad. Improved the reusable habitat with windows/identification and solar panels with cell divisions. Added simple prop collision hulls, positioned the solar array separately, adjusted lighting and labeled world stations.
+- Validation: Outpost asset/grounding/control tests passed; desktop and overview OpenGL renders inspected. Terrain is labeled illustrative and does not claim to reconstruct NASA's coarse samples.
+- Issues / blockers: None for this presentation pass. Rover operations and construction completion remain authoritative gameplay dependencies.
+
+### Day 12 — Oct 4, 2026 (scheduled Oct 7) — Animated world feedback
+- Status: ✅ Done
+- What was completed: Added solar-indicator light transitions, a short pending-decision beacon cue, changed-sol reading tint and smooth overview-camera transitions. Reduce motion disables those animations and skips the existing landing zoom/descent. Exact resource values remain simulator readings.
+- Validation: Tests cover reduced-motion overview and landing, existing animated landing, and authoritative feedback after event resolution; OpenGL event/overview views inspected.
+- Issues / blockers: No fabricated rover/construction animations; those need actual action state.
+
+### Day 13 — Oct 4, 2026 (scheduled Oct 8) — Outpost and HUD polish
+- Status: ✅ Done
+- What was completed: Added a responsive, vertically scrollable HUD, visible cursor controls, authored briefing/science disclosure, live modal focus and walking/input suppression. Dashboard navigation releases the cursor and restores astronaut position/camera on return. Restarting through the dashboard selects the matching world site. Report now includes decision history and correctly calls survival_pct mission-duration completion.
+- Validation: Desktop 1360×820 and narrow 520×900 renders inspected. Actual scene-navigation tests cover pose preservation, success report, restart and site change. Dashboard regressions and preview isolation passed.
+- Issues / blockers: Member 2's authored report guidance remains pending. A focused simulator integration fix refreshes statuses/outcome/report/current-sol history after choice effects so presentation never shows stale post-choice readings.
+
+### Day 14 — Oct 4, 2026 (scheduled Oct 9) — Test & Integration #2, Member 3 result
+- Status: ✅ Member 3 checks complete; shared team acceptance and balance remain open
+- What was completed: Exercised all four current site contracts, sourced/modelled inputs, current BVAD values and real authored event content through world mission start, sol progression, live decisions, terminal report and restart. Four full missions and ten authored modal choices matched an independent simulator after every action. Tested cancel, duplicate submissions/turns, active-effect pacing, no presentation mutation, scene returns, reduced motion and a separate valid short success mission.
+- Validation: Eight simulator/UI/world suites passed. Rendered desktop, narrow, event and overview checks were inspected. See docs/day14_integration.md for the reproducible checks and scope.
+- Issues / blockers: The first-option baseline route fails on Sol 10 at ridge_a and Sol 9 at the other three sites. Balance tuning remains Member 1/2 work; short-success coverage does not prove a balanced standard mission. Action-gated events and unsupported effect keys cannot be certified until their systems exist. Existing restricted-environment user-log/shader-cache/certificate warnings remain.
+- Notes for teammates: This is Member 3's integration result, not all-member sign-off and not a claim that all 19 event branches are implemented.
+
 ## Shared Test & Integration Notes
 
 *(one combined entry per 🔗 day — what was tested, what passed, what needs fixing before the next block of days starts)*
@@ -260,3 +305,8 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - The UI stops on `mission_outcome.status == failure` even if the tick's `completed` flag is false. Ridge A reaches success on Sol 10; the other baseline sites fail on sustained power depletion. No UI balance adjustment was made to conceal that result.
 - Site selection → mission initialization → live reserves → terminal report → confirmed restart works. Event previews apply no effects and leave state unchanged; any future active event blocks turns until a resolver exists.
 - Member 2's partial Day 7 entry predates this presentation check. It remains their entry to confirm; no all-member meeting or sign-off is claimed. Outstanding later interfaces are deterministic event resolution, build/rover actions and runtime state, live crew status, and advanced report metrics/authored guidance.
+
+### Day 14 — Test & Integration #2 (Member 3 contribution, Oct 4, 2026)
+- Available real-data/event flows pass through the 3D world and dashboard/report. Eight test suites pass; four full-site runs resolve ten authored decisions and match independent simulator state.
+- Presentation Days 10–13 are complete. Shared acceptance remains open for Member 1/2: baseline first-choice routes fail on Sol 9–10, construction/rover APIs and some event effect keys remain unavailable, and report guidance is not authored yet.
+- Details and checks: docs/day14_integration.md. No all-member meeting or sign-off is claimed.

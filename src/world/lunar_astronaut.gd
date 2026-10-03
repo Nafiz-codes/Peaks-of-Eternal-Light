@@ -21,6 +21,7 @@ var camera_pitch := -0.22
 var animation_player: AnimationPlayer
 var moving := false
 var jump_requested := false
+var ui_blocked := false
 
 
 func jump_apex_height_m() -> float:
@@ -41,6 +42,8 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if ui_blocked:
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE:
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
@@ -64,6 +67,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if ui_blocked or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		jump_requested = false
+		velocity.x = 0.0
+		velocity.z = 0.0
+		_update_animation(false)
+		return
 	if not is_on_floor():
 		velocity.y -= LUNAR_GRAVITY_MPS2 * delta
 	if jump_requested and is_on_floor():

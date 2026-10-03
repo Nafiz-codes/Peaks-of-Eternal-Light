@@ -1,0 +1,127 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1cbm5"]
+albedo_color = Color(0.83137256, 0.84705883, 0.8745098, 1)
+roughness = 0.45
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_218iy"]
+top_radius = 2.4
+bottom_radius = 2.4
+height = 7.2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7r10i"]
+albedo_color = Color(0.44705883, 0.5019608, 0.5882353, 1)
+roughness = 0.65
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_q6kkw"]
+top_radius = 0.7
+bottom_radius = 0.7
+height = 2.4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ap65t"]
+albedo_color = Color(0.44705883, 0.5019608, 0.5882353, 1)
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="BoxMesh_v3m4l"]
+size = Vector3(0.5, 0.7, 3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wsgeo"]
+albedo_color = Color(0.44705883, 0.5019608, 0.5882353, 1)
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="BoxMesh_6q52p"]
+size = Vector3(0.5, 0.7, 3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_218iy"]
+albedo_color = Color(0.14117648, 0.2509804, 0.3647059, 1)
+metallic = 0.5
+roughness = 0.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_7r10i"]
+size = Vector3(0.65, 0.55, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_q6kkw"]
+albedo_color = Color(0.14117648, 0.2509804, 0.3647059, 1)
+metallic = 0.5
+roughness = 0.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_ap65t"]
+size = Vector3(0.65, 0.55, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_v3m4l"]
+albedo_color = Color(0.14117648, 0.2509804, 0.3647059, 1)
+metallic = 0.5
+roughness = 0.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_wsgeo"]
+size = Vector3(0.65, 0.55, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6q52p"]
+albedo_color = Color(0.14117648, 0.2509804, 0.3647059, 1)
+metallic = 0.5
+roughness = 0.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_ma72s"]
+size = Vector3(0.65, 0.55, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0emg1"]
+albedo_color = Color(0.14117648, 0.2509804, 0.3647059, 1)
+metallic = 0.5
+roughness = 0.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_h62gb"]
+size = Vector3(0.65, 0.55, 0.12)
+
+[node name="Habitat" type="Node3D" unique_id=528430327]
+
+[node name="HabitatModule" type="MeshInstance3D" parent="." unique_id=787985792]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, -1.2, 2.4, 0)
+material_override = SubResource("StandardMaterial3D_1cbm5")
+mesh = SubResource("CylinderMesh_218iy")
+
+[node name="HabitatAirlock" type="MeshInstance3D" parent="." unique_id=1722036639]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.8, 1.2, 0)
+material_override = SubResource("StandardMaterial3D_7r10i")
+mesh = SubResource("CylinderMesh_q6kkw")
+
+[node name="@MeshInstance3D@2" type="MeshInstance3D" parent="." unique_id=922726891]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0.35, 0)
+material_override = SubResource("StandardMaterial3D_ap65t")
+mesh = SubResource("BoxMesh_v3m4l")
+
+[node name="@MeshInstance3D@3" type="MeshInstance3D" parent="." unique_id=824392439]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.35, 0)
+material_override = SubResource("StandardMaterial3D_wsgeo")
+mesh = SubResource("BoxMesh_6q52p")
+
+[node name="ObservationWindow0" type="MeshInstance3D" parent="." unique_id=1915189859]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.8, 2.8, 2.37)
+material_override = SubResource("StandardMaterial3D_218iy")
+mesh = SubResource("BoxMesh_7r10i")
+
+[node name="ObservationWindow1" type="MeshInstance3D" parent="." unique_id=196854760]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6, 2.8, 2.37)
+material_override = SubResource("StandardMaterial3D_q6kkw")
+mesh = SubResource("BoxMesh_ap65t")
+
+[node name="ObservationWindow2" type="MeshInstance3D" parent="." unique_id=1019528234]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.4, 2.8, 2.37)
+material_override = SubResource("StandardMaterial3D_v3m4l")
+mesh = SubResource("BoxMesh_wsgeo")
+
+[node name="ObservationWindow3" type="MeshInstance3D" parent="." unique_id=1898232867]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 2.8, 2.37)
+material_override = SubResource("StandardMaterial3D_6q52p")
+mesh = SubResource("BoxMesh_ma72s")
+
+[node name="ObservationWindow4" type="MeshInstance3D" parent="." unique_id=990038815]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 2.8, 2.37)
+material_override = SubResource("StandardMaterial3D_0emg1")
+mesh = SubResource("BoxMesh_h62gb")
+
+[node name="HabitatMarking" type="Label3D" parent="." unique_id=1301960645]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 1.65, 2.39)
+modulate = Color(0.1254902, 0.17254902, 0.27058825, 1)
+text = "TRIARCHY / HAB 01"
+font_size = 64
+outline_size = 0

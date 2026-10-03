@@ -148,7 +148,12 @@ func resolve_event_choice(state: Variant, event_id: String, choice_id: String = 
 		_apply_event_effects(state, event_id, selected_effects)
 		state.pending_events.remove_at(index)
 		state.resolved_events.append({"event_id": event_id, "choice_id": choice_id, "sol": state.sol})
+		# Choices can change reserves between ticks; publish current statuses/report.
+		state.life_support_status = _life_support_status(state, maxf(0.0, -state.water_balance_l), state.oxygen_consumed_kg, state.food_consumed_kg)
+		state.mission_outcome = _evaluate_mission_outcome(state)
 		_update_report_data(state)
+		if not state.history.is_empty():
+			state.history[state.history.size() - 1] = state.snapshot()
 		return {"ok": true, "state": state, "event_id": event_id, "choice_id": choice_id}
 	return {"ok": false, "error": "event_not_pending"}
 

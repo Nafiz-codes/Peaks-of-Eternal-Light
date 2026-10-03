@@ -84,10 +84,13 @@ func select_site(site_id: String) -> void:
 	if launch_outpost_on_selection:
 		var session := get_node_or_null("/root/MissionSession")
 		if session != null:
-			session.set("selected_site_id", site_id)
+			session.call("select_landing_site", site_id)
 		_begin_landing()
 
 func _begin_landing() -> void:
+	if get_node("/root/MissionSession").reduce_motion:
+		_open_selected_outpost()
+		return
 	var coordinates: Dictionary = _site_by_id(selected_site_id).coordinates
 	var target := _globe_position(float(coordinates.latitude_deg), float(coordinates.longitude_deg))
 	var start_transform := camera.transform

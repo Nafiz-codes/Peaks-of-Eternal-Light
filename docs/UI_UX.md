@@ -1,6 +1,21 @@
 # Member 3 — Presentation design handoff
 
-**Current status — Sep 30, 2026:** Member 3's Days 5–9 are implemented. The project opens on site selection, starts Member 1's simulator, displays its live state, and opens a report on terminal outcomes. Event dialogs are isolated previews until Member 1 supplies a resolver. See **Days 5–9** below for current interfaces and verification. Day 1–4 sections are historical snapshots; their placeholder counts and unavailable-data notes describe those earlier dates.
+**Current status — Oct 4, 2026:** Member 3 Days 10–13 and Day 14 presentation checks are complete. Live world HUD, event decisions, state feedback, illustrative terrain, animation, and report navigation are integrated. Earlier sections are historical snapshots. See `docs/day14_integration.md` for verification and remaining team dependencies.
+
+## Days 10–14 world integration — 2026-10-04
+
+- The responsive outpost HUD starts and advances the shared mission, shows exact reserves/statuses and opens the event modal in live mode. Preview mode remains isolated. Canceling leaves decisions pending; only the simulator applies choices.
+- MissionSession bridges world actions and guards duplicate turns. Station inspection, solar output, life-support warning labels and the decision beacon consume authoritative state. Dashboard returns restore player location/camera heading; dashboard-originated missions update the selected world site.
+- Terrain is deterministic site-seeded artwork with a flat pad, collidable surrounding relief and regolith texture. Habitat/solar details, labeled stations and prop collision hulls complete the pass. Terrain and lighting are illustrative, not local surveys or forecasts.
+- Solar-light transitions, a decision cue, updated-reading tint and overview camera animate presentation only. Reduce motion disables these and landing animations. Esc releases the pointer and pauses walking; clicking terrain resumes. Live modals block astronaut input and restore focus.
+- The report exposes decision history and labels the backend survival_pct as mission-duration completion, not crew survival. Simulator choice resolution refreshes statuses, outcome, report and the current-sol history snapshot.
+- Desktop (1360×820), narrow (520×900), live modal and overview OpenGL renders were inspected. Tests cover four missions, ten authored choices, cancel/confirm, duplicate guards, exact feedback, failure/success reports, restart and real scene switching. Construction/rover actions, unsupported effect keys and standard-mission balance remain dependencies.
+
+## Day 9 3D handoff — 2026-10-04
+
+The walkable outpost now uses the supplied animated astronaut and imported rover, plus reusable locally authored habitat and solar-array scenes in `Assets/outpost/`. Rover mesh bounds set its scale and ground alignment. Habitat and array supports are included; later terrain/material polish remains Day 11 work. Layout and vehicle representation are illustrative.
+
+The existing selector zoom and arrival animation are preserved. The outpost displays the selected site's authored name. `MissionSession.select_landing_site()` preserves a same-site mission and clears stale mission/tick state when the destination changes, so the dashboard cannot resume the previous site's mission after a new landing. Outpost, selector, transition, four-site session, and dashboard tests passed; an OpenGL capture was inspected. Day 10 still owns authoritative state/event feedback in the world.
 
 ## Feasibility review — 2026-09-27
 

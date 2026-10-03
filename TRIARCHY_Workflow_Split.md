@@ -64,6 +64,9 @@ Member 2 also supplies `Resources/mission_copy.json`. Member 3 reads its briefin
 
 ### Member 3 progress — Sep 29, 2026
 
+Update Oct 4, 2026: Member 3's revised Days 9–13 implementation and Day 14 presentation integration checks are complete ahead of schedule. The outpost now includes reusable assets, site-seeded illustrative terrain, an authoritative mission HUD, live event modals, station feedback, animations, reduced-motion controls and dashboard/report navigation. Day 14 checks ran four missions on the current sourced/modelled dataset and real authored events; their first-choice routes failed on Sol 9–10, so balance and missing rover/construction action systems remain Member 1/2 dependencies. This is not all-member sign-off. See `logs.md` and `docs/day14_integration.md`; older entries below refer to the original UI-binding schedule.
+
+
 - Day 1 complete: reviewed the five existing scaffolds and recorded provisional visual direction, feasibility and integration gaps in [docs/UI_UX.md](docs/UI_UX.md).
 - Day 2 complete: [four core-screen wireframes](docs/wireframes.html), with bindings and interaction notes in the design handoff. These are design artifacts, not playable Godot UI. Browser visual QA remains pending because the local-file preview was blocked by browser URL policy.
 - Day 3 visual system is implemented and documented in [docs/UI_UX.md](docs/UI_UX.md). The actual Godot dashboard was rendered at desktop and narrow widths; the older HTML wireframe still could not be opened in the browser because of URL policy.

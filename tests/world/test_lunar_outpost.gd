@@ -1,6 +1,7 @@
 extends SceneTree
 
 const OUTPOST_SCENE := preload("res://scenes/lunar_outpost_3d.tscn")
+var failures := 0
 
 
 func _init() -> void:
@@ -68,14 +69,27 @@ func _run() -> void:
 	var front_view_direction: Vector3 = astronaut.call("movement_direction_for_input", Vector2(0.0, -1.0))
 	_assert(front_view_direction.is_equal_approx(Vector3(0.0, 0.0, 1.0)), "The front-view toggle orbits the camera to show the astronaut's face.")
 	_assert(outpost.get_node_or_null("Outpost/Rover") != null, "A rover is placed in the outpost.")
+	var rover := outpost.get_node("Outpost/Rover/ImportedRover") as Node3D
+	_assert(not rover.find_children("*", "MeshInstance3D", true, false).is_empty(), "The supplied rover model contains rendered meshes.")
+	var rover_bounds := AABB()
+	var first_mesh := true
+	for node in rover.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		var bounds: AABB = mesh.global_transform * mesh.get_aabb()
+		rover_bounds = bounds if first_mesh else rover_bounds.merge(bounds)
+		first_mesh = false
+	_assert(absf(rover_bounds.position.y) < 0.02, "The imported rover rests on the ground.")
+	_assert(rover_bounds.size.x < 4.3 and rover_bounds.size.z < 4.3, "The rover fits the outpost footprint.")
+	_assert(outpost.get_node("Outpost/Habitat").scene_file_path == "res://Assets/outpost/habitat.tscn", "The habitat uses its reusable asset scene.")
+	_assert(outpost.get_node("Outpost/SolarArray").scene_file_path == "res://Assets/outpost/solar_array.tscn", "The solar array uses its reusable asset scene.")
 	_assert(outpost.get_node_or_null("Outpost/Astronaut/CameraPivot/SpringArm/ThirdPersonCamera") != null, "The 3D scene includes a collision-aware orbit camera.")
 	_assert(outpost.get_node_or_null("Outpost/water_recycler/InteractionArea") != null, "Life-support interaction stations are present.")
 	_assert(outpost.get_node_or_null("SelectedSiteReadout") != null, "The outpost displays the selected landing site.")
-	print("LunarOutpost tests passed.")
-	quit(0)
+	print("LunarOutpost tests: %d failures." % failures)
+	quit(1 if failures > 0 else 0)
 
 
 func _assert(condition: bool, message: String) -> void:
 	if not condition:
+		failures += 1
 		push_error(message)
-		quit(1)

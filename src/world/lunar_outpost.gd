@@ -5,21 +5,142 @@ extends Node3D
 ## Member 3 can bind its visuals to the authoritative MissionState contract.
 
 const ASTRONAUT_SCENE := preload("res://Assets/animated_astronaut/source/Walking astronaut.glb")
+const ROVER_SCENE := preload("res://Assets/mars_rover.glb")
+const HABITAT_SCENE := preload("res://Assets/outpost/habitat.tscn")
+const SOLAR_SCENE := preload("res://Assets/outpost/solar_array.tscn")
 const LunarAstronautScript := preload("res://src/world/lunar_astronaut.gd")
 
 const LUNAR_REGOLITH := Color("5b5b63")
 const HABITAT := Color("d4d8df")
 const SOLAR := Color("203a72")
 const STRUCTURE := Color("728096")
+var site_record: Dictionary = {}
+var feedback: Dictionary = {}
+var solar_indicator: OmniLight3D
+var event_beacon: MeshInstance3D
+var feedback_tween: Tween
+var overview := false
+var camera_tween: Tween
 
 
 func _ready() -> void:
 	name = "LunarOutpost"
+	var session := get_node("/root/MissionSession")
+	if str(session.selected_site_id).is_empty():
+		session.select_landing_site("ridge_a")
+	var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/sites.json"))
+	for site in document.get("sites", []):
+		if str(site.site_id) == str(session.selected_site_id):
+			site_record = site
 	_add_environment()
 	_add_lighting()
 	_add_terrain()
 	_add_outpost()
+	if session.outpost_pose.get("site_id", "") == str(session.selected_site_id):
+		var player := get_node("Outpost/Astronaut")
+		player.transform = session.outpost_pose.transform
+		player.camera_yaw = session.outpost_pose.yaw
+		player.camera_pitch = session.outpost_pose.pitch
+		player._sync_camera_rig()
 	_add_site_readout()
+	_add_feedback_nodes()
+	_add_prop_collisions()
+	add_child(preload("res://src/ui/outpost_hud.gd").new())
+	session.state_changed.connect(refresh_feedback)
+	refresh_feedback()
+
+
+func _add_prop_collisions() -> void:
+	# Simple hulls keep walking/camera collision predictable around imported art.
+	for entry in [["HabitatHull", Vector3(-1.2, 2.4, 0), Vector3(7.2, 4.5, 4.5)], ["AirlockHull", Vector3(2.8, 1.2, 0), Vector3(1.4, 2.4, 1.4)], ["RoverHull", Vector3(5.2, 0.65, -2.8), Vector3(3.0, 1.3, 3.0)], ["SolarHull", Vector3(-6, 0.5, -5.5), Vector3(6.5, 1.0, 2.6)]]:
+		var body := StaticBody3D.new()
+		body.name = entry[0]
+		body.position = entry[1]
+		var collision := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = entry[2]
+		collision.shape = shape
+		body.add_child(collision)
+		add_child(body)
+
+
+func _add_feedback_nodes() -> void:
+	solar_indicator = OmniLight3D.new()
+	solar_indicator.name = "SolarOutputIndicator"
+	solar_indicator.position = Vector3(-6, 1.4, -5.5)
+	solar_indicator.light_color = Color("91cfff")
+	solar_indicator.omni_range = 7.0
+	add_child(solar_indicator)
+	event_beacon = MeshInstance3D.new()
+	event_beacon.name = "DecisionBeacon"
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.18
+	sphere.height = 0.36
+	event_beacon.mesh = sphere
+	event_beacon.material_override = _material(Color("ffd18a"), 0.4)
+	event_beacon.position = Vector3(3.4, 2.1, 3.8)
+	add_child(event_beacon)
+
+
+func refresh_feedback() -> void:
+	var session := get_node("/root/MissionSession")
+	var state: Variant = session.dashboard_state
+	feedback = {"solar_kwh": 0.0, "pending": 0, "water": "awaiting mission", "food": "awaiting mission", "oxygen": "awaiting mission", "active_events": []}
+	if state != null:
+		feedback.solar_kwh = state.power_generated_kwh
+		feedback.pending = state.pending_events.size()
+		feedback.water = state.life_support_status.get("water", "unavailable")
+		feedback.food = state.life_support_status.get("food", "unavailable")
+		feedback.oxygen = state.life_support_status.get("oxygen", "unavailable")
+		feedback.active_events = state.active_events.duplicate(true)
+	var energy_text := "Awaiting mission" if state == null else "%.2f kWh generated / %+.2f balance" % [state.power_generated_kwh, state.power_balance_kwh]
+	_set_station_status("power_console", energy_text, state != null and state.consecutive_power_depleted_sols > 0)
+	_set_station_status("water_recycler", "WATER / " + str(feedback.water).to_upper(), feedback.water in ["warning", "critical", "depleted"])
+	_set_station_status("food_storage", "FOOD / " + str(feedback.food).to_upper(), feedback.food in ["warning", "critical", "depleted"])
+	var event_ids := PackedStringArray()
+	for event in feedback.active_events:
+		event_ids.append(str(event.get("event_id", "")).replace("_", " "))
+	_set_station_status("crew_briefing", "%d pending decisions / O2 %s" % [feedback.pending, feedback.oxygen] + ("\nActive: " + ", ".join(event_ids) if not event_ids.is_empty() else ""), feedback.pending > 0)
+	if feedback_tween != null:
+		feedback_tween.kill()
+	event_beacon.visible = feedback.pending > 0
+	event_beacon.scale = Vector3.ONE
+	# Light intensity is an illustrative indicator; displayed kWh stays exact.
+	var energy := clampf(float(feedback.solar_kwh) / 30.0, 0.0, 2.5)
+	if session.reduce_motion:
+		solar_indicator.light_energy = energy
+	else:
+		feedback_tween = create_tween()
+		feedback_tween.tween_property(solar_indicator, "light_energy", energy, 0.5)
+		if event_beacon.visible:
+			feedback_tween.tween_property(event_beacon, "scale", Vector3.ONE * 1.35, 0.4)
+			feedback_tween.tween_property(event_beacon, "scale", Vector3.ONE, 0.4)
+
+
+func _set_station_status(id: String, text: String, alert: bool) -> void:
+	var label := get_node("Outpost/" + id + "/StatusLabel") as Label3D
+	label.text = str(label.get_meta("station_title")) + " [E]\n" + text
+	label.modulate = Color("ffd18a") if alert else Color("d9e9ff")
+
+
+func toggle_overview() -> void:
+	overview = not overview
+	if camera_tween != null:
+		camera_tween.kill()
+	var arm := get_node("Outpost/Astronaut/CameraPivot/SpringArm") as SpringArm3D
+	var player := get_node("Outpost/Astronaut")
+	var distance := 12.0 if overview else 4.8
+	var pitch := -0.65 if overview else -0.22
+	if get_node("/root/MissionSession").reduce_motion:
+		arm.spring_length = distance
+		player.camera_pitch = pitch
+		player._sync_camera_rig()
+	else:
+		camera_tween = create_tween().set_parallel(true)
+		camera_tween.tween_property(arm, "spring_length", distance, 0.6).set_trans(Tween.TRANS_SINE)
+		camera_tween.tween_method(func(value: float):
+			player.camera_pitch = value
+			player._sync_camera_rig(), float(player.camera_pitch), pitch, 0.6)
 
 
 func _add_environment() -> void:
@@ -28,7 +149,7 @@ func _add_environment() -> void:
 	environment.background_color = Color("050710")
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color("a5b8d9")
-	environment.ambient_light_energy = 0.35
+	environment.ambient_light_energy = 0.25
 	var world_environment := WorldEnvironment.new()
 	world_environment.name = "LunarEnvironment"
 	world_environment.environment = environment
@@ -39,41 +160,31 @@ func _add_lighting() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.name = "LowPolarSun"
 	sun.light_color = Color("ffe5bd")
-	sun.light_energy = 2.0
+	sun.light_energy = 1.1
 	sun.shadow_enabled = true
 	sun.rotation_degrees = Vector3(-32.0, -58.0, 0.0)
 	add_child(sun)
 
 
 func _add_terrain() -> void:
-	var ground := MeshInstance3D.new()
-	ground.name = "LunarRegolith"
-	var ground_mesh := PlaneMesh.new()
-	ground_mesh.size = Vector2(60.0, 60.0)
-	ground.mesh = ground_mesh
-	ground.material_override = _material(LUNAR_REGOLITH, 1.0)
+	var ground := preload("res://src/world/outpost_terrain.gd").build(site_record)
 	add_child(ground)
-	var ground_body := StaticBody3D.new()
-	ground_body.name = "LunarSurfaceCollision"
-	var ground_collision := CollisionShape3D.new()
-	var ground_shape := BoxShape3D.new()
-	ground_shape.size = Vector3(60.0, 0.4, 60.0)
-	ground_collision.shape = ground_shape
-	ground_collision.position.y = -0.2
-	ground_body.add_child(ground_collision)
-	add_child(ground_body)
-
-	for index in range(16):
+	ground.create_trimesh_collision()
+	ground.get_child(0).name = "LunarSurfaceCollision"
+	var rng := RandomNumberGenerator.new()
+	rng.seed = absi(str(site_record.get("site_id", "ridge_a")).hash())
+	for index in range(32):
 		var rock := MeshInstance3D.new()
 		rock.name = "RegolithRock_%02d" % index
-		var rock_mesh := SphereMesh.new()
-		rock_mesh.radius = 0.35 + float(index % 3) * 0.18
-		rock_mesh.height = 0.28 + float(index % 4) * 0.12
-		rock.mesh = rock_mesh
-		rock.material_override = _material(LUNAR_REGOLITH.darkened(0.08 + float(index % 3) * 0.03), 1.0)
-		rock.position = Vector3(float((index * 11) % 23) - 11.0, rock_mesh.height * 0.35, float((index * 7) % 19) - 9.0)
+		var mesh := SphereMesh.new()
+		mesh.radius = rng.randf_range(0.2, 0.7)
+		mesh.height = mesh.radius * 0.75
+		rock.mesh = mesh
+		rock.material_override = _material(LUNAR_REGOLITH.darkened(rng.randf_range(0.0, 0.2)), 1.0)
+		var angle := rng.randf_range(0.0, TAU)
+		var radius := rng.randf_range(9.0, 11.5)
+		rock.position = Vector3(cos(angle) * radius, mesh.height * 0.3, sin(angle) * radius)
 		add_child(rock)
-
 
 func _add_outpost() -> void:
 	var outpost := Node3D.new()
@@ -84,83 +195,26 @@ func _add_outpost() -> void:
 	_add_solar_array(outpost)
 	_add_astronaut(outpost)
 	_add_rover(outpost)
-	_add_interaction_station(outpost, "power_console", "ENERGY CONSOLE", Vector3(-4.0, 0.0, 2.5), SOLAR)
+	_add_interaction_station(outpost, "power_console", "ENERGY CONSOLE", Vector3(-5.5, 0.0, 3.2), SOLAR)
 	_add_interaction_station(outpost, "water_recycler", "WATER RECYCLER", Vector3(0.8, 0.0, 3.0), Color("79c8df"))
-	_add_interaction_station(outpost, "food_storage", "FOOD STORAGE", Vector3(0.0, 0.0, -3.0), Color("b5d878"))
+	_add_interaction_station(outpost, "food_storage", "FOOD STORAGE", Vector3(0.0, 0.0, -4.0), Color("b5d878"))
 	_add_interaction_station(outpost, "crew_briefing", "CREW BRIEFING", Vector3(3.4, 0.0, 3.8), Color("b7a2ff"))
-	_add_controls_hint()
 
-
-func _add_controls_hint() -> void:
-	var layer := CanvasLayer.new()
-	layer.name = "ControlsHint"
-	add_child(layer)
-	var panel := PanelContainer.new()
-	panel.position = Vector2(14.0, 14.0)
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.02, 0.03, 0.05, 0.88)
-	style.set_corner_radius_all(6)
-	style.content_margin_left = 12.0
-	style.content_margin_right = 12.0
-	style.content_margin_top = 8.0
-	style.content_margin_bottom = 8.0
-	panel.add_theme_stylebox_override("panel", style)
-	layer.add_child(panel)
-	var hint := Label.new()
-	hint.text = "WASD · MOVE    MOUSE · LOOK\nSPACE · JUMP    E · INTERACT\nI · MISSION DASHBOARD"
-	hint.add_theme_font_size_override("font_size", 14)
-	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(hint)
 
 
 func _add_habitat(parent: Node3D) -> void:
-	var habitat := MeshInstance3D.new()
-	habitat.name = "HabitatModule"
-	var habitat_mesh := CylinderMesh.new()
-	habitat_mesh.top_radius = 2.4
-	habitat_mesh.bottom_radius = 2.4
-	habitat_mesh.height = 7.2
-	habitat.mesh = habitat_mesh
-	habitat.material_override = _material(HABITAT, 0.45)
-	habitat.rotation_degrees.z = 90.0
-	habitat.position = Vector3(-1.2, 2.4, 0.0)
-	parent.add_child(habitat)
-
-	var airlock := MeshInstance3D.new()
-	airlock.name = "HabitatAirlock"
-	var airlock_mesh := CylinderMesh.new()
-	airlock_mesh.top_radius = 0.7
-	airlock_mesh.bottom_radius = 0.7
-	airlock_mesh.height = 2.4
-	airlock.mesh = airlock_mesh
-	airlock.material_override = _material(STRUCTURE, 0.65)
-	airlock.position = Vector3(2.8, 1.2, 0.0)
-	parent.add_child(airlock)
+	parent.add_child(HABITAT_SCENE.instantiate())
 
 
 func _add_solar_array(parent: Node3D) -> void:
-	var array := Node3D.new()
-	array.name = "SolarArray"
-	array.position = Vector3(-2.5, 0.0, -5.0)
-	array.rotation_degrees.x = -17.0
+	var array := SOLAR_SCENE.instantiate() as Node3D
+	array.position = Vector3(-6.0, 0.0, -5.5)
 	parent.add_child(array)
-	for row in range(2):
-		for column in range(4):
-			var panel := MeshInstance3D.new()
-			panel.name = "Panel_%d_%d" % [row, column]
-			var panel_mesh := BoxMesh.new()
-			panel_mesh.size = Vector3(1.5, 0.08, 1.1)
-			panel.mesh = panel_mesh
-			panel.material_override = _material(SOLAR, 0.35)
-			panel.position = Vector3((float(column) - 1.5) * 1.62, 0.85, (float(row) - 0.5) * 1.2)
-			array.add_child(panel)
-
 
 func _add_astronaut(parent: Node3D) -> void:
 	var astronaut := LunarAstronautScript.new()
 	astronaut.name = "Astronaut"
-	astronaut.position = Vector3(3.4, 0.05, 2.3)
+	astronaut.position = Vector3(3.4, 0.05, 6.5)
 	astronaut.floor_snap_length = 0.25
 	parent.add_child(astronaut)
 	var collision := CollisionShape3D.new()
@@ -201,36 +255,27 @@ func _add_astronaut(parent: Node3D) -> void:
 
 
 func _add_rover(parent: Node3D) -> void:
-	## The supplied rover GLB is retained in Assets, but its imported texture cache
-	## is unavailable in this checkout. Keep the scene runnable with this marker
-	## until Godot reimports that user asset in a normal editor session.
 	var rover := Node3D.new()
 	rover.name = "Rover"
 	rover.position = Vector3(5.2, 0.0, -2.8)
 	rover.rotation_degrees.y = -50.0
 	parent.add_child(rover)
-	var chassis := MeshInstance3D.new()
-	chassis.name = "PlaceholderChassis"
-	var chassis_mesh := BoxMesh.new()
-	chassis_mesh.size = Vector3(2.2, 0.55, 1.4)
-	chassis.mesh = chassis_mesh
-	chassis.material_override = _material(STRUCTURE, 0.55)
-	chassis.position.y = 0.72
-	rover.add_child(chassis)
-	for side in [-1.0, 1.0]:
-		for axle in [-0.72, 0.72]:
-			var wheel := MeshInstance3D.new()
-			wheel.name = "Wheel_%s_%s" % [side, axle]
-			var wheel_mesh := CylinderMesh.new()
-			wheel_mesh.top_radius = 0.32
-			wheel_mesh.bottom_radius = 0.32
-			wheel_mesh.height = 0.24
-			wheel.mesh = wheel_mesh
-			wheel.material_override = _material(Color("282c36"), 1.0)
-			wheel.rotation_degrees.z = 90.0
-			wheel.position = Vector3(axle, 0.34, side * 0.72)
-			rover.add_child(wheel)
-
+	var model := ROVER_SCENE.instantiate() as Node3D
+	model.name = "ImportedRover"
+	rover.add_child(model)
+	# Normalize the supplied model's authored units and pivot to a 3 m footprint.
+	var bounds := AABB()
+	var first := true
+	for node in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		var local_bounds: AABB = (model.global_transform.affine_inverse() * mesh.global_transform) * mesh.get_aabb()
+		bounds = local_bounds if first else bounds.merge(local_bounds)
+		first = false
+	var extent := maxf(bounds.size.x, bounds.size.z)
+	if not first and extent > 0.0:
+		var factor := 3.0 / extent
+		model.scale = Vector3.ONE * factor
+		model.position = Vector3(-bounds.get_center().x, -bounds.position.y, -bounds.get_center().z) * factor
 
 func _add_interaction_station(parent: Node3D, interaction_id: String, label_text: String, position_: Vector3, color: Color) -> void:
 	var station := Node3D.new()
@@ -245,9 +290,12 @@ func _add_interaction_station(parent: Node3D, interaction_id: String, label_text
 	terminal.position.y = 0.625
 	station.add_child(terminal)
 	var label := Label3D.new()
+	label.name = "StatusLabel"
 	label.text = label_text + "  [E]"
-	label.font_size = 36
-	label.outline_size = 8
+	label.set_meta("station_title", label_text)
+	label.font_size = 28
+	label.pixel_size = 0.008
+	label.outline_size = 4
 	label.modulate = Color("f1f3fa")
 	label.position = Vector3(0.0, 1.7, 0.0)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -277,9 +325,8 @@ func _on_interaction_area_exited(body: Node3D, area: Area3D) -> void:
 
 
 func _on_player_interaction(interaction_id: String) -> void:
-	## This is intentionally a presentation event for now. Day 10 maps these IDs
-	## to Member 1's authoritative simulation actions and results.
-	print("Lunar interaction requested: %s" % interaction_id)
+	# Inspect authoritative readings; stations never modify resource values.
+	get_node("MissionHUD").inspect_station(interaction_id)
 
 
 func _add_site_readout() -> void:
@@ -288,13 +335,18 @@ func _add_site_readout() -> void:
 	if session != null and not str(session.get("selected_site_id")).is_empty():
 		site_id = str(session.get("selected_site_id"))
 	var site_name := site_id.replace("_", " ").to_upper()
+	var records: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/sites.json"))
+	for site in records.get("sites", []):
+		if str(site.get("site_id", "")) == site_id:
+			site_name = str(site.get("name", site_name))
 	var label := Label3D.new()
 	label.name = "SelectedSiteReadout"
-	label.text = "SELECTED LUNAR SITE / " + site_name
+	label.text = "LUNAR OUTPOST\n" + site_name
 	label.font_size = 38
+	label.pixel_size = 0.008
 	label.outline_size = 8
 	label.modulate = Color("91cfff")
-	label.position = Vector3(-6.0, 5.2, -2.0)
+	label.position = Vector3(-1.2, 6.0, 0.0)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	add_child(label)
 

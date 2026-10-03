@@ -31,6 +31,9 @@ func begin(selector: Node) -> void:
 	await get_tree().scene_changed
 	var outpost := get_tree().current_scene
 	var player := outpost.get_node("Outpost/Astronaut")
+	if get_node("/root/MissionSession").reduce_motion:
+		queue_free()
+		return
 	player.process_mode = Node.PROCESS_MODE_DISABLED
 	# Let the spring arm settle before capturing the final gameplay view.
 	await get_tree().physics_frame
