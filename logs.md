@@ -98,6 +98,18 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Issues / blockers: None for the revised Day 11 deliverable. Measured local/time-averaged illumination and applicable point hydrogen values are outside the cited products' coverage, so they are intentionally not numeric verified readings.
 - Notes for teammates: Day 11 acceptance is to freeze source-backed coordinates and terrain samples while preserving accurate model/coverage status—not to mark every field verified. Coordinates, global LOLA elevation and slope samples are frozen as revision `2026-09-30`; LOLA resolution is too coarse to represent a landing-pad survey. If suitable illumination or hydrogen data are selected later, publish a new revision and retain this snapshot in version control.
 
+### Day 12 — Oct 3 (completed ahead of Oct 7) — Mission report backend and event runtime
+- Status: ✅ Done for currently exposed simulation state
+- What was completed: Added deterministic per-sol event evaluation for the authored event IDs, seeded random chance rolls, one-event-per-sol pacing, pending player decisions, choice resolution, timed effects, and resolved-event history. Events pause turn progression until a choice is applied. The dashboard now displays pending choices and submits them to the simulator. Added report data for survival percentage, failure cause/sol, initial and final reserves, total radiation dose, resolved-event count/history, and volatile-prospect status.
+- Issues / blockers: Rover-action and built-structure conditions are represented in the simulator but cannot trigger until their action APIs are implemented. The current adapter maps the legacy free-text event conditions by event ID; it does not yet consume the normalized schema directly. Some authored effect keys still need corresponding gameplay systems before they can have an effect.
+- Notes for teammates: `MissionSimulator.resolve_event_choice(state, event_id, choice_id)` is the authoritative choice API. Consume `state.pending_events` for decisions, `state.active_events` for timed effects, and `state.report_data` for report metrics. Only pending choices pause turns; an already resolved timed effect does not.
+
+### Day 13 — Oct 3 (completed ahead of Oct 8) — Edge-case fixes and simulator regression
+- Status: ✅ Done
+- What was completed: Updated the simulation and UI regression flows to resolve pending choices, and corrected turn gating so timed effects do not block play. Verified the simulator suite and four-site UI integration flow against deterministic event and report state.
+- Issues / blockers: Godot reports restricted-environment log-write and Windows certificate-store warnings; both headless checks completed with zero test failures. Full action-triggered event coverage remains dependent on rover/construction runtime integration.
+- Notes for teammates: Event choices can modify authoritative state only through the simulator resolver. The site science labels and sourced/modelled distinctions remain unchanged.
+
 ---
 
 ## Member 2 — Systems & Content Log

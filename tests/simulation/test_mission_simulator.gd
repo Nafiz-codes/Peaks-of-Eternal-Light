@@ -85,6 +85,14 @@ func _run_full_mission(simulator: Object, site_id: String) -> void:
 		_assert(state.get("oxygen_kg") >= 0.0 and state.get("food_kg") >= 0.0, "%s never creates negative life-support reserves." % site_id)
 		_assert(state.get("radiation_this_sol_msv") > 0.0 and state.get("radiation_msv") > 0.0, "%s accumulates a positive lunar radiation dose." % site_id)
 		_assert(tick.get("completed", false) == (expected_sol == MISSION_LENGTH), "%s reports completion only on its final sol." % site_id)
+		while not state.get("pending_events").is_empty():
+			var pending: Dictionary = state.get("pending_events")[0]
+			var choices: Array = pending.get("choices", [])
+			var choice_id := ""
+			if not choices.is_empty():
+				choice_id = str(choices[0].get("choice_id", ""))
+			var resolution: Dictionary = simulator.call("resolve_event_choice", state, str(pending.get("event_id", "")), choice_id)
+			_assert(resolution.get("ok", false), "%s resolves triggered event choices through the simulator." % site_id)
 
 	_assert(state.get("mission_outcome").get("status") == "failure", "%s reports the current baseline life-support or power failure before Sol 10." % site_id)
 

@@ -57,6 +57,14 @@ func _verify() -> void:
 			app.advance_turn()
 			check(app.state.sol == once, "Repeated callbacks while a turn is updating must not tick twice")
 			baseline.advance_sol(reference)
+			while not reference.pending_events.is_empty():
+				var pending: Dictionary = reference.pending_events[0]
+				var choices: Array = pending.get("choices", [])
+				var choice_id := ""
+				if not choices.is_empty():
+					choice_id = str(choices[0].get("choice_id", ""))
+				baseline.resolve_event_choice(reference, str(pending.get("event_id", "")), choice_id)
+				app._resolve_event(str(pending.get("event_id", "")), choice_id)
 			check(app.state.snapshot() == reference.snapshot(), "UI must preserve authoritative state for " + str(site.site_id))
 			var expected := [reference.power_kwh, reference.water_l, reference.oxygen_kg, reference.food_kg, reference.radiation_msv, reference.materials]
 			for index in range(expected.size()):
@@ -109,10 +117,10 @@ func _verify() -> void:
 	app.event_dialog.open_preview(notice, app.run_button)
 	check(not app.event_dialog.get_ok_button().disabled, "No-choice notification permits acknowledgement")
 	app.event_dialog.hide()
-	app.state.active_events.append({"event_id": "future_required_event"})
+	app.state.pending_events.append({"event_id": "future_required_event", "text": "Resolve this decision.", "choices": [{"choice_id": "continue", "text": "Continue", "effects": {}}]})
 	app.show_dashboard()
-	check(app.run_button.disabled, "Active events must pause turns until a resolver exists")
-	app.state.active_events.clear()
+	check(app.run_button.disabled, "Pending event decisions must pause turns until resolved")
+	app.state.pending_events.clear()
 	app.show_load_error("Test load failure")
 	check(app.screen == "error" and app.state == null and app.start_button == null, "Load failures must block mission start")
 	app.show_sites()

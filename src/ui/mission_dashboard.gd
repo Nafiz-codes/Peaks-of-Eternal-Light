@@ -273,7 +273,15 @@ func show_dashboard() -> void:
 	crew.add_child(UI.label("Live crew health and modifiers are not available yet.", 14, UI.MUTED))
 	var activity := UI.panel(right)
 	activity.add_child(UI.label("MISSION ACTIVITY", 18))
-	activity.add_child(UI.label("No active events." if state.active_events.is_empty() else "%d active event(s). Turn progression is paused until an event-resolution interface is available." % state.active_events.size(), 15, UI.AMBER))
+	activity.add_child(UI.label("No pending decisions." if state.pending_events.is_empty() else "%d event decision(s) need attention." % state.pending_events.size(), 15, UI.AMBER))
+	for pending in state.pending_events:
+		activity.add_child(UI.label(str(pending.get("text", "Event decision")), 15))
+		var choices: Variant = pending.get("choices", [])
+		if choices is Array:
+			for choice in choices:
+				var event_id := str(pending.get("event_id", ""))
+				var choice_id := str(choice.get("choice_id", ""))
+				activity.add_child(UI.button(str(choice.get("text", choice_id)), func(): _resolve_event(event_id, choice_id)))
 	if state.sol > 0:
 		activity.add_child(UI.label("Last sol: energy generated %.2f kWh / consumed %.2f kWh / balance %+.2f kWh" % [state.power_generated_kwh, state.power_consumed_kwh, state.power_balance_kwh], 15))
 		activity.add_child(UI.label("Water consumed %.2f L / recovered %.2f L · Radiation +%.3f mSv" % [state.water_consumed_l, state.water_recovered_l, state.radiation_this_sol_msv], 15))
@@ -300,7 +308,17 @@ func _add_readings(parent: Node) -> void:
 			card.add_child(UI.label(str(entry[3]).to_upper(), 14, UI.BLUE if entry[3] == "nominal" else UI.AMBER))
 
 func _can_advance() -> bool:
-	return state != null and not busy and state.sol < state.mission_length_sols and state.mission_outcome.get("status", "") == "in_progress" and state.active_events.is_empty() and not event_dialog.visible
+	return state != null and not busy and state.sol < state.mission_length_sols and state.mission_outcome.get("status", "") == "in_progress" and state.pending_events.is_empty() and not event_dialog.visible
+
+func _resolve_event(event_id: String, choice_id: String) -> void:
+	var result: Dictionary = simulator.resolve_event_choice(state, event_id, choice_id)
+	if not result.get("ok", false):
+		return
+	state = result.state
+	var session := get_node_or_null("/root/MissionSession")
+	if session != null:
+		session.set("dashboard_state", state)
+	show_dashboard()
 
 func advance_turn() -> void:
 	if not _can_advance():
@@ -339,6 +357,9 @@ func show_report() -> void:
 		report.add_child(UI.label("%s / Sol %d of %d" % [_site(state.site_id).get("name", state.site_id), state.sol, state.mission_length_sols]))
 		if outcome.get("status", "") == "failure":
 			report.add_child(UI.label("Cause: %s / first recorded on Sol %d" % [str(outcome.get("failure_reason", "Unavailable")).replace("_", " "), outcome.get("failure_sol", 0)], 18, UI.AMBER))
+		var metrics: Dictionary = state.report_data
+		report.add_child(UI.label("Survival: %.0f%% / %d of %d sols" % [float(metrics.get("survival_pct", 0.0)), int(metrics.get("sols_survived", 0)), int(metrics.get("mission_length_sols", 0))], 16))
+		report.add_child(UI.label("Events resolved: %d / Total modeled dose: %.2f mSv / Prospect: %s" % [int(metrics.get("events_resolved", 0)), float(metrics.get("radiation_total_msv", 0.0)), str(metrics.get("volatile_prospect_status", "none"))], 15))
 		_add_readings(column)
 		var history := PackedStringArray(["Sol / Energy (kWh) / Water (L) / Oxygen (kg) / Food (kg) / Dose (mSv)"])
 		for snapshot in state.history:
@@ -347,7 +368,7 @@ func show_report() -> void:
 		record.add_child(UI.label("RESOURCE HISTORY", 18))
 		record.add_child(UI.label("\n".join(history) if not state.history.is_empty() else "No recorded history.", 15))
 		UI.disclosure(column, "Source measurements and model assumptions", _site_sources(_site(state.site_id)) + "\n\n" + _model_notes())
-	column.add_child(UI.label("Independence, survival percentage, construction and objective metrics: unavailable. Authored report guidance is scheduled for the next content handoff.", 14, UI.MUTED))
+	column.add_child(UI.label("Construction and independence metrics require build and rover actions. Authored report guidance is scheduled for the next content handoff.", 14, UI.MUTED))
 	var restart := UI.button("Choose a new mission" if state != null else "Back to site selection", _request_restart)
 	column.add_child(restart)
 	_resize()

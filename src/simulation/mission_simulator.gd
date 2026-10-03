@@ -74,12 +74,14 @@ func begin_mission(selected_site_id: String, mission_length: int = 10) -> Varian
 	state.terrain_shielding_factor = _terrain_shielding_factor(_find_site(selected_site_id))
 	state.life_support_status = _life_support_status(state, 0.0, 0.0, 0.0)
 	state.mission_outcome = _evaluate_mission_outcome(state)
+	_update_report_data(state)
 	state.history.append(state.snapshot())
 	return state
 
 
 func advance_sol(state: Variant) -> Dictionary:
 	assert(state != null, "A MissionState is required.")
+	assert(state.pending_events.is_empty(), "Resolve pending event decisions before advancing the mission.")
 	assert(state.sol < state.mission_length_sols, "The mission has already ended.")
 
 	state.sol += 1
@@ -105,8 +107,11 @@ func advance_sol(state: Variant) -> Dictionary:
 	state.food_kg = maxf(0.0, state.food_kg - state.food_consumed_kg)
 	state.life_support_status = _life_support_status(state, -state.water_balance_l, state.oxygen_consumed_kg, state.food_consumed_kg)
 	state.consecutive_power_depleted_sols = state.consecutive_power_depleted_sols + 1 if state.power_kwh <= 0.0 else 0
+	_evaluate_event_triggers(state)
 	state.mission_outcome = _evaluate_mission_outcome(state)
+	_update_report_data(state)
 	state.history.append(state.snapshot())
+	_expire_effects(state)
 	return {
 		"state": state,
 		"completed": state.sol >= state.mission_length_sols,
@@ -118,7 +123,163 @@ func advance_sol(state: Variant) -> Dictionary:
 		},
 		"life_support": life_support_tick,
 		"active_events": state.active_events.duplicate(true),
+		"pending_events": state.pending_events.duplicate(true),
 		"outcome": state.mission_outcome.duplicate(true)
+	}
+
+
+func resolve_event_choice(state: Variant, event_id: String, choice_id: String = "") -> Dictionary:
+	if state == null:
+		return {"ok": false, "error": "missing_mission_state"}
+	for index in range(state.pending_events.size()):
+		var event: Dictionary = state.pending_events[index]
+		if str(event.get("event_id", "")) != event_id:
+			continue
+		var selected_effects: Dictionary = event.get("effects", {}).duplicate(true)
+		if event.get("choices") is Array and not event.choices.is_empty():
+			var found_choice := false
+			for choice in event.choices:
+				if str(choice.get("choice_id", "")) == choice_id:
+					selected_effects = choice.get("effects", {}).duplicate(true)
+					found_choice = true
+					break
+			if not found_choice:
+				return {"ok": false, "error": "unknown_choice"}
+		_apply_event_effects(state, event_id, selected_effects)
+		state.pending_events.remove_at(index)
+		state.resolved_events.append({"event_id": event_id, "choice_id": choice_id, "sol": state.sol})
+		_update_report_data(state)
+		return {"ok": true, "state": state, "event_id": event_id, "choice_id": choice_id}
+	return {"ok": false, "error": "event_not_pending"}
+
+
+func _evaluate_event_triggers(state: Variant) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("%s:%d" % [state.site_id, state.sol])
+	for event in events:
+		var event_id := str(event.get("event_id", ""))
+		if event_id.is_empty() or state.triggered_event_ids.has(event_id) or not _event_condition_met(event_id, state):
+			continue
+		if not _event_roll_succeeds(event_id, rng):
+			continue
+		state.triggered_event_ids.append(event_id)
+		var runtime_event: Dictionary = event.duplicate(true)
+		if event.get("choices") is Array and not event.choices.is_empty():
+			state.pending_events.append(runtime_event)
+		else:
+			_apply_event_effects(state, event_id, event.get("effects", {}))
+			state.resolved_events.append({"event_id": event_id, "choice_id": "automatic", "sol": state.sol})
+		break # One new event per sol keeps authored choices legible and bounded.
+
+
+func _event_condition_met(event_id: String, state: Variant) -> bool:
+	var site: Dictionary = _find_site(state.site_id)
+	var illumination := _field_value(site, "illumination_pct")
+	match event_id:
+		"solar_array_dust_accumulation": return state.sol > 3 and _has_rover_or_eva_activity(state)
+		"solar_particle_event": return true
+		"volatile_prospect_detected": return _has_rover_or_eva_activity(state) and not state.volatile_prospect_found
+		"equipment_malfunction": return state.sol >= 3 and not state.built_structures.is_empty()
+		"crew_conflict": return state.crew_stress_avg > 0.6
+		"greenhouse_bloom": return _structure_age(state, "greenhouse") >= 2
+		"micrometeorite_strike": return true
+		"water_recycler_clog": return state.sol > 2
+		"rover_mobility_hazard": return state.last_rover_action == "traverse"
+		"battery_thermal_alert": return state.power_kwh / BATTERY_CAPACITY_KWH * 100.0 < 35.0
+		"regolith_stockpile": return state.last_rover_action == "survey" and not state.built_structures.has("shielding_wall")
+		"extended_illumination_window": return illumination >= 50.0
+		"crew_process_improvement": return state.sol >= 4 and state.crew_stress_avg < 0.45
+		"comms_blackout": return not state.built_structures.has("comms_relay")
+		"greenhouse_nutrient_imbalance": return _structure_age(state, "greenhouse") >= 0
+		"radiation_shelter_drill": return state.sol >= 2
+		"prospect_confirmation": return state.volatile_prospect_found and state.last_rover_action == "prospecting"
+		"solar_array_alignment": return state.built_structures.has("solar_array") and illumination >= 50.0
+		"resupply_window": return state.sol == 5
+	return false
+
+
+func _event_roll_succeeds(event_id: String, rng: RandomNumberGenerator) -> bool:
+	var chance_pct := 100.0
+	match event_id:
+		"solar_array_dust_accumulation": chance_pct = 8.0
+		"solar_particle_event": chance_pct = 4.0
+		"equipment_malfunction": chance_pct = 6.0
+		"micrometeorite_strike": chance_pct = 3.0
+		"water_recycler_clog": chance_pct = 6.0
+		"rover_mobility_hazard": chance_pct = 10.0
+		"battery_thermal_alert": chance_pct = 8.0
+		"extended_illumination_window": chance_pct = 12.0
+		"crew_process_improvement": chance_pct = 10.0
+		"comms_blackout": chance_pct = 7.0
+		"greenhouse_nutrient_imbalance": chance_pct = 7.0
+		"radiation_shelter_drill": chance_pct = 9.0
+		"solar_array_alignment": chance_pct = 10.0
+	return rng.randf() * 100.0 < chance_pct
+
+
+func _apply_event_effects(state: Variant, event_id: String, effects: Dictionary) -> void:
+	if effects.has("materials"):
+		state.materials = maxf(0.0, state.materials + _numeric_effect(effects.materials))
+	if effects.has("crew_stress"):
+		state.crew_stress_avg = clampf(state.crew_stress_avg + _numeric_effect(effects.crew_stress), 0.0, 1.0)
+	if effects.get("volatile_prospect_found", false):
+		state.volatile_prospect_found = true
+		state.volatile_prospect_status = "uninvestigated"
+	if effects.has("volatile_prospect_status"):
+		state.volatile_prospect_status = str(effects.volatile_prospect_status)
+	if effects.get("extraction_candidate_unlocked", false):
+		state.volatile_prospect_status = "extraction_candidate"
+	if effects.has("battery_charge_bonus_kwh"):
+		state.power_kwh = minf(BATTERY_CAPACITY_KWH, state.power_kwh + float(effects.battery_charge_bonus_kwh))
+	if effects.has("power_cost_kwh"):
+		state.power_kwh = maxf(0.0, state.power_kwh - float(effects.power_cost_kwh))
+	if effects.has("radiation_dose_spike"):
+		var spike := 0.45 if str(effects.radiation_dose_spike) == "low" else 1.8
+		state.radiation_msv += spike
+		state.radiation_this_sol_msv += spike
+	var duration := int(effects.get("duration_sols", 0))
+	if duration > 0:
+		state.active_events.append({"event_id": event_id, "effects": effects.duplicate(true), "remaining_sols": duration})
+
+
+func _expire_effects(state: Variant) -> void:
+	for index in range(state.active_events.size() - 1, -1, -1):
+		state.active_events[index].remaining_sols = int(state.active_events[index].get("remaining_sols", 1)) - 1
+		if state.active_events[index].remaining_sols <= 0:
+			state.active_events.remove_at(index)
+
+
+func _numeric_effect(value: Variant) -> float:
+	var text := str(value)
+	if text.begins_with("+") or text.begins_with("-"):
+		return float(text)
+	return float(value)
+
+
+func _has_rover_or_eva_activity(state: Variant) -> bool:
+	return not str(state.last_rover_action).is_empty()
+
+
+func _structure_age(state: Variant, structure_id: String) -> int:
+	return int(state.built_structures.get(structure_id, -1000))
+
+
+func _update_report_data(state: Variant) -> void:
+	var history: Array = state.history
+	var initial: Dictionary = history[0] if not history.is_empty() else state.snapshot()
+	var depletion_reason := str(state.mission_outcome.get("failure_reason", ""))
+	state.report_data = {
+		"sols_survived": state.sol,
+		"mission_length_sols": state.mission_length_sols,
+		"survival_pct": 100.0 * float(state.sol) / maxf(1.0, float(state.mission_length_sols)),
+		"failure_reason": depletion_reason,
+		"failure_sol": state.mission_outcome.get("failure_sol", 0),
+		"initial_reserves": {"power_kwh": initial.get("power_kwh", 0.0), "water_l": initial.get("water_l", 0.0), "oxygen_kg": initial.get("oxygen_kg", 0.0), "food_kg": initial.get("food_kg", 0.0), "materials": initial.get("materials", 0.0)},
+		"final_reserves": {"power_kwh": state.power_kwh, "water_l": state.water_l, "oxygen_kg": state.oxygen_kg, "food_kg": state.food_kg, "materials": state.materials},
+		"events_resolved": state.resolved_events.size(),
+		"event_history": state.resolved_events.duplicate(true),
+		"radiation_total_msv": state.radiation_msv,
+		"volatile_prospect_status": state.volatile_prospect_status
 	}
 
 
@@ -158,7 +319,7 @@ func _calculate_power(state: Variant, site: Dictionary) -> Dictionary:
 	var active_effect_multiplier := _active_power_generation_multiplier(state.active_events)
 	var generated_kwh := BASE_SOLAR_GENERATION_KWH_PER_SOL * illumination_fraction * active_effect_multiplier
 	var baseline_kw_per_person := _field_value(bvad_constants, "power_baseline_kw_per_person")
-	var consumed_kwh := baseline_kw_per_person * float(state.crew_size) * 24.0
+	var consumed_kwh := baseline_kw_per_person * float(state.crew_size) * 24.0 * _active_effect_multiplier_for(state.active_events, "power_consumption_multiplier")
 	return {
 		"generated_kwh": generated_kwh,
 		"consumed_kwh": consumed_kwh,
@@ -174,7 +335,8 @@ func _calculate_life_support(state: Variant) -> Dictionary:
 		_field_value(bvad_constants, "potable_water_consumption_l_per_person_per_day")
 		+ _field_value(bvad_constants, "hygiene_water_consumption_l_per_person_per_day")
 	)
-	var water_recovered_l := water_consumed_l * clampf(_field_value(bvad_constants, "water_recycling_efficiency_pct") / 100.0, 0.0, 1.0)
+	var recycling_efficiency := clampf(_field_value(bvad_constants, "water_recycling_efficiency_pct") / 100.0, 0.0, 1.0)
+	var water_recovered_l := water_consumed_l * recycling_efficiency * _active_effect_multiplier_for(state.active_events, "water_recovery_multiplier")
 	var oxygen_consumed_kg := crew_count * _field_value(bvad_constants, "o2_consumption_kg_per_person_per_day")
 	var food_consumed_kg := crew_count * _field_value(bvad_constants, "food_consumption_kg_dry_per_person_per_day")
 	return {
@@ -218,12 +380,16 @@ func _terrain_shielding_factor(site: Dictionary) -> float:
 
 
 func _active_power_generation_multiplier(active_events: Array) -> float:
+	return _active_effect_multiplier_for(active_events, "power_generation_multiplier")
+
+
+func _active_effect_multiplier_for(active_events: Array, effect_key: String) -> float:
 	var multiplier := 1.0
 	for event in active_events:
 		if event is Dictionary:
 			var effects: Variant = event.get("effects", {})
-			if effects is Dictionary and effects.has("power_generation_multiplier"):
-				multiplier *= float(effects.get("power_generation_multiplier", 1.0))
+			if effects is Dictionary and effects.has(effect_key):
+				multiplier *= float(effects.get(effect_key, 1.0))
 	return maxf(0.0, multiplier)
 
 
