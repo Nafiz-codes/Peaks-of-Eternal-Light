@@ -23,13 +23,14 @@ func _ready() -> void:
 	name = "MissionHUD"
 	world = get_parent()
 	session = get_node("/root/MissionSession")
-	help_hint = UI.label("ESC: use HUD / pause walking\nClick terrain: resume exploration", 15, UI.TEXT)
+	help_hint = UI.label("Alt: show mission / details\nEsc: release cursor · Click terrain: resume exploration", 15, UI.TEXT)
 	help_hint.position = Vector2(18, 14)
 	help_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	help_hint.add_theme_color_override("font_outline_color", Color.BLACK)
 	help_hint.add_theme_constant_override("outline_size", 6)
 	add_child(help_hint)
 	panel = PanelContainer.new()
+	panel.hide()
 	panel.add_theme_stylebox_override("panel", UI.style(Color(0.04, 0.05, 0.09, 0.94), UI.PURPLE))
 	add_child(panel)
 	scroll = ScrollContainer.new()
@@ -70,7 +71,7 @@ func _ready() -> void:
 		action.custom_minimum_size.x = 175
 	notice = UI.label("", 14, UI.BLUE)
 	content.add_child(notice)
-	content.add_child(UI.label("Esc: cursor / pause walking · Click terrain: resume · WASD: move · Mouse: look · Space: jump · E: station · I: dashboard", 13, UI.MUTED))
+	content.add_child(UI.label("Alt: hide mission / details · Esc: cursor / pause walking · Click terrain: resume · WASD: move · Mouse: look · Space: jump · E: station · I: dashboard", 13, UI.MUTED))
 	content.add_child(UI.label("Illustrative terrain and lighting · NASA coarse terrain samples inform the simulation; solar availability is modeled. Construction and rover operations are not yet available.", 13, UI.MUTED))
 	var copy: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/mission_copy.json"))
 	if copy is Dictionary:
@@ -84,6 +85,21 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_resize)
 	_resize()
 	refresh()
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.keycode == KEY_ALT and event.pressed and not event.echo:
+		# Keep the decision dialog's cursor and focus until it is dismissed.
+		if not event_dialog.visible:
+			panel.visible = not panel.visible
+			help_hint.text = ("Alt: hide mission / details" if panel.visible else "Alt: show mission / details") + "\nEsc: release cursor · Click terrain: resume exploration"
+			if panel.visible:
+				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+			else:
+				var focused := get_viewport().gui_get_focus_owner()
+				if focused != null and panel.is_ancestor_of(focused):
+					focused.release_focus()
+				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		get_viewport().set_input_as_handled()
 
 func _resize() -> void:
 	var viewport_size := get_viewport().get_visible_rect().size

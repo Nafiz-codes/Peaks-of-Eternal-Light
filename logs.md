@@ -291,6 +291,35 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Issues / blockers: The first-option baseline route fails on Sol 10 at ridge_a and Sol 9 at the other three sites. Balance tuning remains Member 1/2 work; short-success coverage does not prove a balanced standard mission. Action-gated events and unsupported effect keys cannot be certified until their systems exist. Existing restricted-environment user-log/shader-cache/certificate warnings remain.
 - Notes for teammates: This is Member 3's integration result, not all-member sign-off and not a claim that all 19 event branches are implemented.
 
+### Oct 4, 2026 — Member 3 outpost mission/detail bar toggle
+- Status: Done.
+- What was completed: Reviewed all ten repository Markdown files. Recorded the user's Member 3-only working scope in docs/UI_UX.md. The bottom outpost mission/detail bar now starts hidden and toggles with Alt; opening releases the pointer, closing restores exploration, and key repeat is ignored. Updated control hints and preserved live event-dialog input ownership. Station inspection does not automatically reopen the bar.
+- Validation: Godot 4.7.2 outpost navigation and four-site integration suites passed with zero failures, including ten authored event choices. Existing restricted-environment log-write and certificate-store warnings remain. Physical keyboard/visual playtesting was not performed.
+- Notes for teammates: Presentation-only change; simulation and content contracts are unchanged.
+
+### Oct 4, 2026 — Member 3 outpost surface boundary
+- Status: Done.
+- What was completed: Added four invisible collision walls derived from the actual terrain mesh bounds, keeping the astronaut inside the surface. Walls overlap at corners and extend above the highest terrain beyond normal jump height.
+- Validation: Godot 4.7.2 outpost suite passed with zero failures, including real astronaut collision sweeps toward all four edges and all four corners at airborne height. Existing restricted-environment log-write and certificate-store warnings remain.
+- Notes for teammates: World presentation and collision only; simulation and content contracts are unchanged.
+
+### Oct 4, 2026 — Member 3 distant lunar landscape and stars
+- Status: Done.
+- What was completed: Added visual-only terrain rings extending to 2.5 km per axis with site-seeded ridges and illustrative crater relief. Inner edges share the original surface samples. Preserved the original 120 m square playable terrain and all four boundary walls. Added a fixed procedural star sky with varied brightness and restrained color; extended the outpost camera's far plane to include the landscape.
+- Validation: Outpost tests passed, including airborne collision at every original edge and corner. Inspected an OpenGL screenshot of the expanded horizon and visible stars; the sky shader compiled successfully. Existing restricted-environment log/cache and certificate warnings remain.
+- Notes for teammates: Member 3 visual presentation only; no scientific terrain reconstruction or star-chart accuracy is claimed. Simulation and authored content remain unchanged.
+
+### Oct 4, 2026 — Member 3 expanded lunar plains revision
+- Status: Done.
+- What was completed: Replaced the expanded area's tall ridges with gently rolling plains, shallow crater bowls and low rims. Blended away fine terrain noise with distance and replaced the steep remote drop with a gentle horizon curve. Original playable terrain, boundary walls and starfield are preserved.
+- Validation: Inspected an OpenGL render confirming the low, open horizon and removal of the mountain backdrop. The scene compiled and rendered successfully; existing environment log/cache and certificate warnings remain.
+
+### Oct 4, 2026 — Member 3 scattered ridges and stone hills
+- Status: Done.
+- What was completed: Added five localized low ridges and 24 site-seeded clusters of irregular, darker stone outcrops to the expanded plains. Increased nearby terrain-ring density to show the ridge shapes. Rock clusters are anchored to rendered terrain triangle centers, beyond the original playable area. Broad plains, shallow craters, stars and the existing player boundary remain.
+- Validation: Godot 4.7.2 outpost suite passed, including boundary collision sweeps. Inspected OpenGL renders from the base and near the playable edge; scattered stone hills and a low horizon are visible. Existing environment log/cache and certificate warnings remain.
+- Notes for teammates: Member 3 scenery only; no simulation or content contract changes.
+
 ## Shared Test & Integration Notes
 
 *(one combined entry per 🔗 day — what was tested, what passed, what needs fixing before the next block of days starts)*

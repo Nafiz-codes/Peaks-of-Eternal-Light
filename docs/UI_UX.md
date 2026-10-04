@@ -2,6 +2,16 @@
 
 **Current status — Oct 4, 2026:** Member 3 Days 10–13 and Day 14 presentation checks are complete. Live world HUD, event decisions, state feedback, illustrative terrain, animation, and report navigation are integrated. Earlier sections are historical snapshots. See `docs/day14_integration.md` for verification and remaining team dependencies.
 
+## Current working scope and outpost controls — 2026-10-04
+
+Per the user's instruction, follow only Member 3's presentation, UI and integration work. Member 1/2 systems remain dependencies.
+
+The bottom mission/detail bar starts hidden on every outpost visit. Press Alt to show it and release the cursor; press Alt again to hide it and resume exploration. Holding Alt does not repeatedly toggle it. A visible event dialog retains input until dismissed. Station inspections update details without automatically opening the bar; use Alt to read them.
+
+The outpost perimeter uses invisible collision walls aligned to the rendered terrain bounds. They keep the astronaut's full collision capsule inside the surface, including at corners and during jumps.
+
+The visible landscape extends to 2.5 km from the outpost along each axis, using progressively coarser terrain rings with gently rolling plains, shallow crater bowls and low worn rims. Five isolated low ridges and 24 clusters of irregular dark stone outcrops add variety to the expanded area while leaving broad open plains. The expanded area has no large mountain backdrop; its fine relief fades smoothly from the original surface into the distant plain. The original 120 m square playable surface and its collision boundary remain unchanged. The extension has no gameplay collision. A fixed procedural starfield provides subtle brightness and color variation against black space; it is artistic presentation, not a measured star chart or exposure simulation.
+
 ## Days 10–14 world integration — 2026-10-04
 
 - The responsive outpost HUD starts and advances the shared mission, shows exact reserves/statuses and opens the event modal in live mode. Preview mode remains isolated. Canceling leaves decisions pending; only the simulator applies choices.

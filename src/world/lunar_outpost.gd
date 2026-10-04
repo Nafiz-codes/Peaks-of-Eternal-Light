@@ -145,8 +145,12 @@ func toggle_overview() -> void:
 
 func _add_environment() -> void:
 	var environment := Environment.new()
-	environment.background_mode = Environment.BG_COLOR
-	environment.background_color = Color("050710")
+	environment.background_mode = Environment.BG_SKY
+	var sky := Sky.new()
+	var starfield := ShaderMaterial.new()
+	starfield.shader = preload("res://src/world/lunar_starfield.gdshader")
+	sky.sky_material = starfield
+	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color("a5b8d9")
 	environment.ambient_light_energy = 0.25
@@ -171,6 +175,8 @@ func _add_terrain() -> void:
 	add_child(ground)
 	ground.create_trimesh_collision()
 	ground.get_child(0).name = "LunarSurfaceCollision"
+	_add_terrain_boundary(ground.get_aabb())
+	add_child(preload("res://src/world/outpost_terrain.gd").build_surroundings(site_record, ground.material_override))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = absi(str(site_record.get("site_id", "ridge_a")).hash())
 	for index in range(32):
@@ -185,6 +191,25 @@ func _add_terrain() -> void:
 		var radius := rng.randf_range(9.0, 11.5)
 		rock.position = Vector3(cos(angle) * radius, mesh.height * 0.3, sin(angle) * radius)
 		add_child(rock)
+
+func _add_terrain_boundary(bounds: AABB) -> void:
+	# Invisible perimeter walls follow the rendered surface, including its corners.
+	# Extend above the highest terrain by more than the astronaut's jump height.
+	var boundary := StaticBody3D.new()
+	boundary.name = "TerrainBoundary"
+	add_child(boundary)
+	var center := bounds.get_center()
+	var wall_height := bounds.size.y + 20.0
+	for axis in [0, 2]:
+		for edge in [bounds.position[axis], bounds.end[axis]]:
+			var collision := CollisionShape3D.new()
+			var shape := BoxShape3D.new()
+			shape.size = Vector3(bounds.size.x + 1.0, wall_height, bounds.size.z + 1.0)
+			shape.size[axis] = 1.0
+			collision.shape = shape
+			collision.position = center
+			collision.position[axis] = edge
+			boundary.add_child(collision)
 
 func _add_outpost() -> void:
 	var outpost := Node3D.new()
@@ -249,6 +274,7 @@ func _add_astronaut(parent: Node3D) -> void:
 	var camera := Camera3D.new()
 	camera.name = "ThirdPersonCamera"
 	camera.fov = 70.0
+	camera.far = 6000.0
 	camera.current = true
 	spring_arm.add_child(camera)
 	astronaut.interaction_requested.connect(_on_player_interaction)

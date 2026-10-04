@@ -85,6 +85,15 @@ func _run() -> void:
 	_assert(outpost.get_node_or_null("Outpost/Astronaut/CameraPivot/SpringArm/ThirdPersonCamera") != null, "The 3D scene includes a collision-aware orbit camera.")
 	_assert(outpost.get_node_or_null("Outpost/water_recycler/InteractionArea") != null, "Life-support interaction stations are present.")
 	_assert(outpost.get_node_or_null("SelectedSiteReadout") != null, "The outpost displays the selected landing site.")
+	# Sweep the real astronaut capsule toward every edge and corner while airborne.
+	# This catches missing walls, corner gaps and barriers that can be jumped over.
+	astronaut.set_physics_process(false)
+	var terrain_bounds: AABB = outpost.get_node("LunarRegolith").get_aabb()
+	for direction in [Vector3.RIGHT, Vector3.LEFT, Vector3.FORWARD, Vector3.BACK, Vector3(1, 0, 1), Vector3(1, 0, -1), Vector3(-1, 0, 1), Vector3(-1, 0, -1)]:
+		astronaut.position = Vector3(direction.x * (terrain_bounds.size.x * 0.5 - 3.0), terrain_bounds.end.y + jump_apex, direction.z * (terrain_bounds.size.z * 0.5 - 3.0))
+		var collision := astronaut.move_and_collide(direction * 10.0)
+		_assert(collision != null and collision.get_collider() == outpost.get_node("TerrainBoundary"), "The perimeter blocks airborne movement at every edge and corner.")
+		_assert(absf(astronaut.position.x) < terrain_bounds.size.x * 0.5 - 0.4 and absf(astronaut.position.z) < terrain_bounds.size.z * 0.5 - 0.4, "The astronaut's full capsule remains over the surface.")
 	print("LunarOutpost tests: %d failures." % failures)
 	quit(1 if failures > 0 else 0)
 
