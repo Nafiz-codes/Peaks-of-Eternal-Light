@@ -1,0 +1,89 @@
+{
+  "epoch_utc": "2026-10-05T00:00:00Z",
+  "source": "NASA/JPL Horizons, DE441",
+  "source_url": "https://ssd.jpl.nasa.gov/api/horizons.api",
+  "earth_equatorial_radius_km": 6378.137,
+  "world_axes": "+X east, +Y zenith, -Z north",
+  "sites": {
+    "ridge_a": {
+      "azimuth_deg": 259.389848964,
+      "elevation_deg": 68.978474087,
+      "angular_diameter_deg": 1.9736125,
+      "observer_to_earth_center_km": 370344.60319665837,
+      "sun_azimuth_deg": 269.159601493,
+      "sun_elevation_deg": -39.396031557,
+      "observer_coordinates": {
+        "latitude_deg": 0.67416,
+        "longitude_deg": 23.47314,
+        "coordinate_frame": "Planetocentric latitude; east-positive longitude, 0\u2013360 degrees",
+        "verified": true,
+        "source_id": "nasa_apollo11_landing_coordinates",
+        "source": "NASA Apollo Landing Sites chart (2023), Apollo 11 / Mare Tranquillitatis; 0.67416\u00b0N, 23.47314\u00b0E. https://www.nasa.gov/wp-content/uploads/2023/10/south-pole.pdf",
+        "date_read": "2026-09-30"
+      },
+      "observer_altitude_km": -1.883,
+      "request_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%2723.47314%2C0.67416%2C-1.883%27&START_TIME=%272026-10-05+00%3A00%27&STOP_TIME=%272026-10-05+00%3A01%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C13%2C20%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27",
+      "sun_request_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%2723.47314%2C0.67416%2C-1.883%27&START_TIME=%272026-10-05+00%3A00%27&STOP_TIME=%272026-10-05+00%3A01%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27"
+    },
+    "shadow_zone": {
+      "azimuth_deg": 109.812476818,
+      "elevation_deg": 35.049653271,
+      "angular_diameter_deg": 1.970308611111111,
+      "observer_to_earth_center_km": 370965.57785583695,
+      "sun_azimuth_deg": 256.662141666,
+      "sun_elevation_deg": 28.801903779,
+      "observer_coordinates": {
+        "latitude_deg": 20.7,
+        "longitude_deg": 312.6,
+        "coordinate_frame": "Planetocentric latitude; east-positive longitude, 0\u2013360 degrees",
+        "verified": true,
+        "source_id": "nasa_aristarchus_candidate_2021",
+        "source": "NASA Lunar Geophysical Network study, PKT site just south of Aristarchus Plateau; 20.7\u00b0N, 47.4\u00b0W, normalized to 312.6\u00b0E. https://ntrs.nasa.gov/api/citations/20210010668/downloads/Barker_TRNworkshopLOLADEMsMarch2021v1EM.pdf",
+        "date_read": "2026-09-30"
+      },
+      "observer_altitude_km": -1.5955,
+      "request_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27312.6%2C20.7%2C-1.5955%27&START_TIME=%272026-10-05+00%3A00%27&STOP_TIME=%272026-10-05+00%3A01%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C13%2C20%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27",
+      "sun_request_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27312.6%2C20.7%2C-1.5955%27&START_TIME=%272026-10-05+00%3A00%27&STOP_TIME=%272026-10-05+00%3A01%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27"
+    },
+    "crater_rim_b": {
+      "azimuth_deg": 21.416427745,
+      "elevation_deg": 47.657513996,
+      "angular_diameter_deg": 1.9718238888888888,
+      "observer_to_earth_center_km": 370680.5151922579,
+      "sun_azimuth_deg": 266.056528888,
+      "sun_elevation_deg": -2.59975016,
+      "observer_coordinates": {
+        "latitude_deg": -43.37,
+        "longitude_deg": 348.68,
+        "coordinate_frame": "Planetocentric latitude; east-positive longitude, 0\u2013360 degrees",
+        "verified": true,
+        "source_id": "nasa_tycho_feature_coordinates",
+        "source": "NASA Science, Moon\u2014Tycho; feature center listed at 43.37\u00b0S, 348.68\u00b0E. https://science.nasa.gov/3d-resources/moon-tycho/",
+        "date_read": "2026-09-30"
+      },
+      "observer_altitude_km": -1.8585,
+      "request_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27348.68%2C-43.37%2C-1.8585%27&START_TIME=%272026-10-05+00%3A00%27&STOP_TIME=%272026-10-05+00%3A01%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C13%2C20%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27",
+      "sun_request_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27348.68%2C-43.37%2C-1.8585%27&START_TIME=%272026-10-05+00%3A00%27&STOP_TIME=%272026-10-05+00%3A01%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27"
+    },
+    "plateau_d": {
+      "azimuth_deg": 252.566884938,
+      "elevation_deg": -31.92223439,
+      "angular_diameter_deg": 1.9601905555555554,
+      "observer_to_earth_center_km": 372880.22506977833,
+      "sun_azimuth_deg": 105.228030952,
+      "sun_elevation_deg": -32.571565913,
+      "observer_coordinates": {
+        "latitude_deg": -20.5,
+        "longitude_deg": 128.5,
+        "coordinate_frame": "Planetocentric latitude; east-positive longitude, 0\u2013360 degrees",
+        "verified": true,
+        "source_id": "nasa_tsiolkovskiy_feature_coordinates",
+        "source": "NASA Science, Crater Tsiolkovsky from Apollo 13; approximate feature coordinates 20.5\u00b0S, 128.5\u00b0E. https://science.nasa.gov/resource/crater-tsiolkovsky-from-apollo-13/",
+        "date_read": "2026-09-30"
+      },
+      "observer_altitude_km": -1.7685,
+      "request_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27128.5%2C-20.5%2C-1.7685%27&START_TIME=%272026-10-05+00%3A00%27&STOP_TIME=%272026-10-05+00%3A01%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C13%2C20%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27",
+      "sun_request_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27128.5%2C-20.5%2C-1.7685%27&START_TIME=%272026-10-05+00%3A00%27&STOP_TIME=%272026-10-05+00%3A01%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27"
+    }
+  }
+}

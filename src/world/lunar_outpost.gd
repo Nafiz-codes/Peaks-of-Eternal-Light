@@ -14,6 +14,8 @@ const LUNAR_REGOLITH := Color("5b5b63")
 const HABITAT := Color("d4d8df")
 const SOLAR := Color("203a72")
 const STRUCTURE := Color("728096")
+# Requested visual adjustment: 25% closer, then another 30% closer (0.75 * 0.70).
+const EARTH_DISTANCE_SCALE := 0.525
 var site_record: Dictionary = {}
 var feedback: Dictionary = {}
 var solar_indicator: OmniLight3D
@@ -149,6 +151,20 @@ func _add_environment() -> void:
 	var sky := Sky.new()
 	var starfield := ShaderMaterial.new()
 	starfield.shader = preload("res://src/world/lunar_starfield.gdshader")
+	starfield.set_shader_parameter("earth_surface", preload("res://Assets/earth/Earth_Diffuse_6K.jpg"))
+	starfield.set_shader_parameter("earth_clouds", preload("res://Assets/earth/Earth_Clouds_6K.jpg"))
+	starfield.set_shader_parameter("earth_night", preload("res://Assets/earth/Earth_Illumination_6K.jpg"))
+	starfield.set_shader_parameter("earth_gloss", preload("res://Assets/earth/Earth_Glossiness_6K.jpg"))
+	var ephemeris: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/earth_ephemeris.json"))
+	var earth: Dictionary = ephemeris.sites[str(site_record.site_id)]
+	var earth_direction := _sky_direction(float(earth.azimuth_deg), float(earth.elevation_deg))
+	starfield.set_shader_parameter("earth_position_km", earth_direction * float(earth.observer_to_earth_center_km) * EARTH_DISTANCE_SCALE)
+	starfield.set_shader_parameter("earth_radius_km", float(ephemeris.earth_equatorial_radius_km))
+	starfield.set_shader_parameter("earth_sun_direction", _sky_direction(float(earth.sun_azimuth_deg), float(earth.sun_elevation_deg)))
+	set_meta("earth_ephemeris_epoch_utc", ephemeris.epoch_utc)
+	set_meta("earth_distance_km", earth.observer_to_earth_center_km)
+	set_meta("earth_render_distance_km", float(earth.observer_to_earth_center_km) * EARTH_DISTANCE_SCALE)
+	set_meta("earth_elevation_deg", earth.elevation_deg)
 	sky.sky_material = starfield
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -158,6 +174,13 @@ func _add_environment() -> void:
 	world_environment.name = "LunarEnvironment"
 	world_environment.environment = environment
 	add_child(world_environment)
+
+
+func _sky_direction(azimuth_deg: float, elevation_deg: float) -> Vector3:
+	# Godot local east/up/north: +X/+Y/-Z. Horizons azimuth runs clockwise from north.
+	var azimuth := deg_to_rad(azimuth_deg)
+	var elevation := deg_to_rad(elevation_deg)
+	return Vector3(sin(azimuth) * cos(elevation), sin(elevation), -cos(azimuth) * cos(elevation))
 
 
 func _add_lighting() -> void:
