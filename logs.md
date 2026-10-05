@@ -176,6 +176,24 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Issues / blockers: Mission report language remains correctly deferred to Day 10, after Member 1 defines win/lose outcomes. UI loading and display of this new content file is also a later integration task.
 - Notes for teammates: Keep the briefing's verified-data and resource-potential wording intact when presenting NASA-derived site information. Replace bracketed tokens only with simulation-provided values; do not hard-code mission length or invent outcome data.
 
+### Day 10 — Oct 6 — Write end-of-mission report language (all outcome branches)
+- Status: ✅ Done
+- What was completed: Added authored report guidance for successful completion and each currently authoritative failure reason: oxygen depletion, water depletion, food depletion, and sustained power depletion. The dashboard displays this text only after reading the simulator's outcome; it does not derive an outcome, calculate metrics, or alter mission state.
+- Issues / blockers: Construction, rover, independence, and per-crew metrics remain unavailable because their authoritative runtime state is not yet exposed. The report keeps those limitations visible rather than inferring them.
+- Notes for teammates: Add any future failure reason to `mission_report_copy.failure` in `Resources/mission_copy.json`; the `default` entry remains a safe fallback. UI must select guidance from `mission_outcome.failure_reason`, not from resource text or displayed values.
+
+### Day 11 — Oct 6 — Plausibility review against current sourced radiation/resource values
+- Status: ✅ Done
+- What was completed: Reviewed all 19 event entries against the current resource and radiation contracts. The dust event is correctly framed as solar-array accumulation, not weather; rover discoveries remain unverified volatile prospects rather than water; radiation language uses qualitative gameplay outcomes; and solar/illumination opportunities remain labeled as modeled gameplay content rather than site-specific forecasts.
+- Issues / blockers: Trigger probability, duration, and reward values are still gameplay-balance assumptions. Construction/rover-gated events and unsupported effect keys cannot be fully exercised until their APIs are available.
+- Notes for teammates: Preserve the distinction between NASA-sourced/modelled baseline inputs and authored gameplay effects. Do not promote a hydrogen signal to confirmed extraction or treat terrain-proxy radiation as a site measurement.
+
+### Day 12 — Oct 6 — Start slotting real events into the trigger system
+- Status: ✅ Done for the scheduled start; Day 13 remains open for unsupported paths
+- What was completed: Routed and directly verified currently supported authored outcomes through the existing simulator resolver: radiation/stress decisions, prospect-status changes, battery charge, materials, power cost, and automatic resupply. Added a focused Day 12 test and a coverage document; all 19 authored events continue to load from `events.json`.
+- Issues / blockers: Structure, rover, damage, productivity, warning, battery-capacity, and several duration/trigger behaviors are not yet authoritative runtime APIs. Their events are documented as deferred rather than claimed as integrated.
+- Notes for teammates: `docs/member2_day12_event_slotting.md` lists the exact verified and deferred paths. Keep `events.json` as authored data; runtime handlers must consume the data rather than recreate narrative content in code.
+
 ---
 
 ## Member 3 — Presentation & Integration Log

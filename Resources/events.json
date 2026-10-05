@@ -7,7 +7,10 @@
       "event_id": "solar_array_dust_accumulation",
       "category": "hazard",
       "trigger_condition": "random_chance: 8% per sol after sol 3 and rover_or_eva_activity",
-      "effects": { "power_generation_multiplier": 0.6, "duration_sols": 3 },
+      "effects": {
+        "power_generation_multiplier": 0.6,
+        "duration_sols": 3
+      },
       "text": "Lunar dust has accumulated on the solar arrays, reducing the light reaching their cells until the arrays are cleaned or the effect expires.",
       "choices": null
     },
@@ -15,51 +18,114 @@
       "event_id": "solar_particle_event",
       "category": "hazard",
       "trigger_condition": "random_chance: 4% per sol",
-      "effects": { "radiation_dose_spike": "high", "duration_sols": 1 },
+      "effects": {
+        "radiation_dose_spike": "high",
+        "duration_sols": 1
+      },
       "text": "Sensors detect an incoming solar particle event. Crew must shelter immediately.",
       "choices": [
-        { "choice_id": "shelter_now", "text": "Shelter in the shielded module", "effects": { "radiation_dose_spike": "low" } },
-        { "choice_id": "keep_working", "text": "Push through to finish current task", "effects": { "radiation_dose_spike": "high", "crew_stress": "+0.1" } }
+        {
+          "choice_id": "shelter_now",
+          "text": "Shelter in the shielded module",
+          "effects": {
+            "radiation_dose_spike": "low"
+          }
+        },
+        {
+          "choice_id": "keep_working",
+          "text": "Push through to finish current task",
+          "effects": {
+            "radiation_dose_spike": "high",
+            "crew_stress": "+0.1"
+          }
+        }
       ]
     },
     {
       "event_id": "volatile_prospect_detected",
       "category": "discovery",
       "trigger_condition": "rover_discovery_roll: success",
-      "effects": { "volatile_prospect_found": true, "requires_follow_up": "prospecting_or_extraction" },
+      "effects": {
+        "volatile_prospect_found": true,
+        "requires_follow_up": "prospecting_or_extraction"
+      },
       "text": "The rover detects a hydrogen-rich volatile prospect. It may contain water ice, but the signal must be investigated before the outpost can plan extraction.",
       "choices": [
-        { "choice_id": "investigate_prospect", "text": "Schedule a rover prospecting mission", "effects": { "rover_task": "prospecting" } },
-        { "choice_id": "mark_for_later", "text": "Mark the prospect and continue the mission", "effects": { "volatile_prospect_status": "deferred" } }
+        {
+          "choice_id": "investigate_prospect",
+          "text": "Schedule a rover prospecting mission",
+          "effects": {
+            "rover_task": "prospecting"
+          }
+        },
+        {
+          "choice_id": "mark_for_later",
+          "text": "Mark the prospect and continue the mission",
+          "effects": {
+            "volatile_prospect_status": "deferred"
+          }
+        }
       ]
     },
     {
       "event_id": "equipment_malfunction",
       "category": "equipment",
       "trigger_condition": "random_chance: 6% per sol if structure_age >= 3 sols",
-      "effects": { "affected_structure": "random", "output_multiplier": 0.5, "duration_sols": 2 },
+      "effects": {
+        "affected_structure": "random",
+        "output_multiplier": 0.5,
+        "duration_sols": 2
+      },
       "text": "A key system is malfunctioning and running below capacity until repaired.",
       "choices": [
-        { "choice_id": "repair_now", "text": "Divert crew time to repair immediately", "effects": { "crew_stress": "+0.05", "duration_sols": 1 } },
-        { "choice_id": "wait", "text": "Let it run at reduced capacity", "effects": {} }
+        {
+          "choice_id": "repair_now",
+          "text": "Divert crew time to repair immediately",
+          "effects": {
+            "crew_stress": "+0.05",
+            "duration_sols": 1
+          }
+        },
+        {
+          "choice_id": "wait",
+          "text": "Let it run at reduced capacity",
+          "effects": {}
+        }
       ]
     },
     {
       "event_id": "crew_conflict",
       "category": "crew",
       "trigger_condition": "crew_stress_avg > 0.6",
-      "effects": { "crew_stress": "+0.05", "productivity_multiplier": 0.9, "duration_sols": 2 },
+      "effects": {
+        "crew_stress": "+0.05",
+        "productivity_multiplier": 0.9,
+        "duration_sols": 2
+      },
       "text": "Tensions rise under the pressure of outpost life.",
       "choices": [
-        { "choice_id": "mediate", "text": "Spend a sol mediating", "effects": { "crew_stress": "-0.1" } },
-        { "choice_id": "ignore", "text": "Let them work it out", "effects": {} }
+        {
+          "choice_id": "mediate",
+          "text": "Spend a sol mediating",
+          "effects": {
+            "crew_stress": "-0.1"
+          }
+        },
+        {
+          "choice_id": "ignore",
+          "text": "Let them work it out",
+          "effects": {}
+        }
       ]
     },
     {
       "event_id": "greenhouse_bloom",
       "category": "discovery",
       "trigger_condition": "structure_built: greenhouse AND sols_since_built >= 2",
-      "effects": { "food_production_multiplier": 1.2, "duration_sols": 4 },
+      "effects": {
+        "food_production_multiplier": 1.2,
+        "duration_sols": 4
+      },
       "text": "An unexpectedly strong crop cycle boosts food output for a while.",
       "choices": null
     },
@@ -67,7 +133,10 @@
       "event_id": "micrometeorite_strike",
       "category": "hazard",
       "trigger_condition": "random_chance: 3% per sol",
-      "effects": { "affected_structure": "random", "structural_damage": true },
+      "effects": {
+        "affected_structure": "random",
+        "structural_damage": true
+      },
       "text": "A micrometeorite strikes the outpost, damaging a structure.",
       "choices": null
     },
@@ -75,128 +144,299 @@
       "event_id": "water_recycler_clog",
       "category": "equipment",
       "trigger_condition": "random_chance: 6% per sol after sol 2",
-      "effects": { "water_recovery_multiplier": 0.65, "duration_sols": 2 },
+      "effects": {
+        "water_recovery_multiplier": 0.65,
+        "duration_sols": 2
+      },
       "text": "A filter in the water-recovery loop is clogging faster than expected. The crew can spend time restoring the system or accept reduced recovery temporarily.",
       "choices": [
-        { "choice_id": "service_recycler", "text": "Assign the engineer to service the recycler", "effects": { "crew_stress": "+0.03", "water_recovery_multiplier": 1.0, "duration_sols": 0 } },
-        { "choice_id": "ration_water", "text": "Ration water until the next maintenance window", "effects": { "crew_stress": "+0.05" } }
+        {
+          "choice_id": "service_recycler",
+          "text": "Assign the engineer to service the recycler",
+          "effects": {
+            "crew_stress": "+0.03",
+            "water_recovery_multiplier": 1.0,
+            "duration_sols": 0
+          }
+        },
+        {
+          "choice_id": "ration_water",
+          "text": "Ration water until the next maintenance window",
+          "effects": {
+            "crew_stress": "+0.05"
+          }
+        }
       ]
     },
     {
       "event_id": "rover_mobility_hazard",
       "category": "equipment",
       "trigger_condition": "rover_action: traverse AND random_chance: 10% per action",
-      "effects": { "rover_range_multiplier": 0.5, "duration_sols": 1 },
+      "effects": {
+        "rover_range_multiplier": 0.5,
+        "duration_sols": 1
+      },
       "text": "The rover finds a patch of soft regolith and loses traction. Continuing risks wasting power, while retreating leaves the route unexplored.",
       "choices": [
-        { "choice_id": "recover_carefully", "text": "Use a careful recovery route", "effects": { "rover_power_multiplier": 1.25, "rover_range_multiplier": 1.0 } },
-        { "choice_id": "return_to_base", "text": "Return to base and remap the route", "effects": { "rover_task": "return", "volatile_prospect_status": "unexplored" } }
+        {
+          "choice_id": "recover_carefully",
+          "text": "Use a careful recovery route",
+          "effects": {
+            "rover_power_multiplier": 1.25,
+            "rover_range_multiplier": 1.0
+          }
+        },
+        {
+          "choice_id": "return_to_base",
+          "text": "Return to base and remap the route",
+          "effects": {
+            "rover_task": "return",
+            "volatile_prospect_status": "unexplored"
+          }
+        }
       ]
     },
     {
       "event_id": "battery_thermal_alert",
       "category": "equipment",
       "trigger_condition": "power_reserve_pct < 35 AND random_chance: 8% per sol",
-      "effects": { "battery_available_capacity_multiplier": 0.8, "duration_sols": 2 },
+      "effects": {
+        "battery_available_capacity_multiplier": 0.8,
+        "duration_sols": 2
+      },
       "text": "Battery temperature control is drawing extra reserve power. The outpost can protect the battery or keep all systems running at higher risk.",
       "choices": [
-        { "choice_id": "conserve_power", "text": "Enter a one-sol conservation mode", "effects": { "power_consumption_multiplier": 0.8, "crew_stress": "+0.04" } },
-        { "choice_id": "maintain_operations", "text": "Maintain normal operations", "effects": { "battery_available_capacity_multiplier": 0.7 } }
+        {
+          "choice_id": "conserve_power",
+          "text": "Enter a one-sol conservation mode",
+          "effects": {
+            "power_consumption_multiplier": 0.8,
+            "crew_stress": "+0.04"
+          }
+        },
+        {
+          "choice_id": "maintain_operations",
+          "text": "Maintain normal operations",
+          "effects": {
+            "battery_available_capacity_multiplier": 0.7
+          }
+        }
       ]
     },
     {
       "event_id": "regolith_stockpile",
       "category": "opportunity",
       "trigger_condition": "rover_action: survey AND structure_not_built: shielding_wall",
-      "effects": { "shielding_wall_material_discount": 20 },
+      "effects": {
+        "shielding_wall_material_discount": 20
+      },
       "text": "A rover survey identifies a nearby regolith deposit suitable for shielding fill. Hauling it now could make radiation protection cheaper later.",
       "choices": [
-        { "choice_id": "stockpile_regolith", "text": "Stockpile the regolith near the habitat", "effects": { "rover_task": "haul_regolith", "crew_stress": "+0.02" } },
-        { "choice_id": "continue_survey", "text": "Keep the rover on its current survey", "effects": {} }
+        {
+          "choice_id": "stockpile_regolith",
+          "text": "Stockpile the regolith near the habitat",
+          "effects": {
+            "rover_task": "haul_regolith",
+            "crew_stress": "+0.02"
+          }
+        },
+        {
+          "choice_id": "continue_survey",
+          "text": "Keep the rover on its current survey",
+          "effects": {}
+        }
       ]
     },
     {
       "event_id": "extended_illumination_window",
       "category": "opportunity",
       "trigger_condition": "site_illumination_pct >= 50 AND random_chance: 12% per sol",
-      "effects": { "power_generation_multiplier": 1.2, "duration_sols": 1 },
+      "effects": {
+        "power_generation_multiplier": 1.2,
+        "duration_sols": 1
+      },
       "text": "The local terrain is receiving an unusually favorable illumination window. The outpost can bank energy or use the surplus for a demanding task.",
       "choices": [
-        { "choice_id": "charge_reserves", "text": "Prioritize battery charging", "effects": { "battery_charge_bonus_kwh": 10 } },
-        { "choice_id": "run_high_draw_task", "text": "Use the surplus for deferred operations", "effects": { "materials": "+8", "crew_stress": "+0.02" } }
+        {
+          "choice_id": "charge_reserves",
+          "text": "Prioritize battery charging",
+          "effects": {
+            "battery_charge_bonus_kwh": 10
+          }
+        },
+        {
+          "choice_id": "run_high_draw_task",
+          "text": "Use the surplus for deferred operations",
+          "effects": {
+            "materials": "+8",
+            "crew_stress": "+0.02"
+          }
+        }
       ]
     },
     {
       "event_id": "crew_process_improvement",
       "category": "crew",
       "trigger_condition": "sol >= 4 AND crew_stress_avg < 0.45 AND random_chance: 10% per sol",
-      "effects": { "productivity_multiplier": 1.1, "duration_sols": 2 },
+      "effects": {
+        "productivity_multiplier": 1.1,
+        "duration_sols": 2
+      },
       "text": "A quiet review of the outpost routine produces a better shift handoff. For a short time, the crew can complete work with less friction.",
       "choices": [
-        { "choice_id": "adopt_new_schedule", "text": "Adopt the improved schedule", "effects": { "crew_stress": "-0.03" } },
-        { "choice_id": "keep_current_routine", "text": "Keep the current routine", "effects": {} }
+        {
+          "choice_id": "adopt_new_schedule",
+          "text": "Adopt the improved schedule",
+          "effects": {
+            "crew_stress": "-0.03"
+          }
+        },
+        {
+          "choice_id": "keep_current_routine",
+          "text": "Keep the current routine",
+          "effects": {}
+        }
       ]
     },
     {
       "event_id": "comms_blackout",
       "category": "hazard",
       "trigger_condition": "structure_not_built: comms_relay AND random_chance: 7% per sol",
-      "effects": { "event_warning_disabled": true, "duration_sols": 1 },
+      "effects": {
+        "event_warning_disabled": true,
+        "duration_sols": 1
+      },
       "text": "Terrain and antenna alignment interrupt the outpost's communications window. Without a relay, the next hazard may arrive with less warning.",
       "choices": [
-        { "choice_id": "repoint_antenna", "text": "Assign crew time to repoint the antenna", "effects": { "crew_stress": "+0.03", "event_warning_disabled": false } },
-        { "choice_id": "wait_for_window", "text": "Wait for the next communications window", "effects": {} }
+        {
+          "choice_id": "repoint_antenna",
+          "text": "Assign crew time to repoint the antenna",
+          "effects": {
+            "crew_stress": "+0.03",
+            "event_warning_disabled": false
+          }
+        },
+        {
+          "choice_id": "wait_for_window",
+          "text": "Wait for the next communications window",
+          "effects": {}
+        }
       ]
     },
     {
       "event_id": "greenhouse_nutrient_imbalance",
       "category": "equipment",
       "trigger_condition": "structure_built: greenhouse AND random_chance: 7% per sol",
-      "effects": { "food_production_multiplier": 0.6, "duration_sols": 2 },
+      "effects": {
+        "food_production_multiplier": 0.6,
+        "duration_sols": 2
+      },
       "text": "The greenhouse nutrient mix has drifted out of balance. The crop can be stabilized with extra power, or the team can accept lower yields briefly.",
       "choices": [
-        { "choice_id": "recalibrate_nutrients", "text": "Recalibrate the nutrient system", "effects": { "power_cost_kwh": 8, "food_production_multiplier": 1.0, "duration_sols": 0 } },
-        { "choice_id": "accept_lower_yield", "text": "Accept reduced yield until the next sol", "effects": { "crew_stress": "+0.02" } }
+        {
+          "choice_id": "recalibrate_nutrients",
+          "text": "Recalibrate the nutrient system",
+          "effects": {
+            "power_cost_kwh": 8,
+            "food_production_multiplier": 1.0,
+            "duration_sols": 0
+          }
+        },
+        {
+          "choice_id": "accept_lower_yield",
+          "text": "Accept reduced yield until the next sol",
+          "effects": {
+            "crew_stress": "+0.02"
+          }
+        }
       ]
     },
     {
       "event_id": "radiation_shelter_drill",
       "category": "crew",
       "trigger_condition": "sol >= 2 AND random_chance: 9% per sol",
-      "effects": { "shelter_response_bonus": 0.15, "duration_sols": 3 },
+      "effects": {
+        "shelter_response_bonus": 0.15,
+        "duration_sols": 3
+      },
       "text": "The crew requests a short radiation-shelter drill. It costs time now, but could make the next emergency response more effective.",
       "choices": [
-        { "choice_id": "run_drill", "text": "Run the shelter drill", "effects": { "crew_stress": "+0.01", "shelter_response_bonus": 0.2 } },
-        { "choice_id": "defer_drill", "text": "Defer the drill to preserve operations", "effects": { "crew_stress": "+0.02" } }
+        {
+          "choice_id": "run_drill",
+          "text": "Run the shelter drill",
+          "effects": {
+            "crew_stress": "+0.01",
+            "shelter_response_bonus": 0.2
+          }
+        },
+        {
+          "choice_id": "defer_drill",
+          "text": "Defer the drill to preserve operations",
+          "effects": {
+            "crew_stress": "+0.02"
+          }
+        }
       ]
     },
     {
       "event_id": "prospect_confirmation",
       "category": "discovery",
       "trigger_condition": "volatile_prospect_found: true AND rover_action: prospecting",
-      "effects": { "volatile_prospect_status": "investigated", "extraction_candidate_unlocked": true },
+      "effects": {
+        "volatile_prospect_status": "investigated",
+        "extraction_candidate_unlocked": true
+      },
       "text": "Follow-up measurements refine the volatile prospect. The site is now an extraction candidate, not a guaranteed water source.",
       "choices": [
-        { "choice_id": "flag_extraction_candidate", "text": "Flag the site for future extraction", "effects": { "volatile_prospect_status": "extraction_candidate" } },
-        { "choice_id": "continue_sampling", "text": "Continue sampling before committing", "effects": { "rover_task": "prospecting", "crew_stress": "+0.01" } }
+        {
+          "choice_id": "flag_extraction_candidate",
+          "text": "Flag the site for future extraction",
+          "effects": {
+            "volatile_prospect_status": "extraction_candidate"
+          }
+        },
+        {
+          "choice_id": "continue_sampling",
+          "text": "Continue sampling before committing",
+          "effects": {
+            "rover_task": "prospecting",
+            "crew_stress": "+0.01"
+          }
+        }
       ]
     },
     {
       "event_id": "solar_array_alignment",
       "category": "opportunity",
       "trigger_condition": "structure_built: solar_array AND site_illumination_pct >= 50 AND random_chance: 10% per sol",
-      "effects": { "power_generation_multiplier": 1.1, "duration_sols": 2 },
+      "effects": {
+        "power_generation_multiplier": 1.1,
+        "duration_sols": 2
+      },
       "text": "A favorable Sun angle creates an opportunity to realign the solar array. The adjustment improves generation, but it takes crew attention away from other work.",
       "choices": [
-        { "choice_id": "realign_array", "text": "Realign the solar array", "effects": { "crew_stress": "+0.02", "power_generation_multiplier": 1.15 } },
-        { "choice_id": "keep_current_alignment", "text": "Keep the current alignment", "effects": {} }
+        {
+          "choice_id": "realign_array",
+          "text": "Realign the solar array",
+          "effects": {
+            "crew_stress": "+0.02",
+            "power_generation_multiplier": 1.15
+          }
+        },
+        {
+          "choice_id": "keep_current_alignment",
+          "text": "Keep the current alignment",
+          "effects": {}
+        }
       ]
     },
     {
       "event_id": "resupply_window",
       "category": "opportunity",
       "trigger_condition": "sol == 5",
-      "effects": { "materials": "+30" },
+      "effects": {
+        "materials": "+30"
+      },
       "text": "A scheduled resupply delivery arrives, adding to your materials stockpile.",
       "choices": null
     }

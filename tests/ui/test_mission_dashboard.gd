@@ -72,6 +72,12 @@ func _verify() -> void:
 				check(displayed[1].text == "%.2f" % float(expected[index]), "Visible resource reading must update from the returned state")
 			await process_frame
 		check(app.screen == "report", "Terminal outcomes should open the report")
+		var report_text := ""
+		for label in app.find_children("*", "Label", true, false):
+			report_text += str(label.text) + "\n"
+		var failure_copy: Dictionary = app.copy.get("mission_report_copy", {}).get("failure", {})
+		var expected_guidance := str(failure_copy.get(str(app.state.mission_outcome.get("failure_reason", "")), failure_copy.get("default", "")))
+		check(not expected_guidance.is_empty() and report_text.contains(expected_guidance), "Failure report uses Member 2's authored guidance for its authoritative cause")
 		var final_sol: int = app.state.sol
 		app.advance_turn()
 		check(app.state.sol == final_sol, "No turns after success or early failure")
@@ -127,5 +133,13 @@ func _verify() -> void:
 	check(app.screen == "sites", "Retry should recover to site selection")
 	app.show_report()
 	check(app.screen == "report" and app.state == null, "Report shell supports no attached mission")
+	var success_state: Variant = app.simulator.begin_mission("ridge_a", 1)
+	app.simulator.advance_sol(success_state)
+	app.state = success_state
+	app.show_report()
+	var success_report_text := ""
+	for label in app.find_children("*", "Label", true, false):
+		success_report_text += str(label.text) + "\n"
+	check(success_report_text.contains("Primary objective complete"), "Success report uses Member 2's authored guidance")
 	print("Member 3 UI integration: %d failures; four site flows, terminal guards, previews, missing values and load recovery checked." % failures)
 	quit(1 if failures else 0)

@@ -49,5 +49,15 @@
     "rover_label": "ROVER OPERATIONS",
     "event_queue_label": "MISSION ACTIVITY",
     "pending_outcome": "Mission outcome pending authoritative simulation result."
+  },
+  "mission_report_copy": {
+    "success": "Primary objective complete. The crew sustained the outpost through the planned mission duration. Review the reserve history and recorded decisions before planning the next deployment.",
+    "failure": {
+      "oxygen_depleted": "Oxygen reserves reached zero. Prioritize dependable life-support margin before extending operations.",
+      "water_depleted": "Water reserves reached zero. Reassess recovery capacity and reserve use before the next attempt.",
+      "food_depleted": "Food reserves reached zero. Plan consumption and any food-production capacity earlier in the mission.",
+      "sustained_power_depletion": "Power reserves remained depleted for too long. Match the site and operational load to available generation before proceeding.",
+      "default": "The mission ended before the primary objective was met. Use the recorded failure cause, reserves, and decisions to revise the next plan."
+    }
   }
 }

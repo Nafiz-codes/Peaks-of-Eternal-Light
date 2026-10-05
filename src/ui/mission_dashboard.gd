@@ -373,6 +373,7 @@ func show_report() -> void:
 		report.add_child(UI.label("%s / Sol %d of %d" % [_site(state.site_id).get("name", state.site_id), state.sol, state.mission_length_sols]))
 		if outcome.get("status", "") == "failure":
 			report.add_child(UI.label("Cause: %s / first recorded on Sol %d" % [str(outcome.get("failure_reason", "Unavailable")).replace("_", " "), outcome.get("failure_sol", 0)], 18, UI.AMBER))
+		report.add_child(UI.label(_report_guidance(outcome), 15, UI.MUTED))
 		var metrics: Dictionary = state.report_data
 		report.add_child(UI.label("Mission duration completed: %.0f%% / %d of %d sols" % [float(metrics.get("survival_pct", 0.0)), int(metrics.get("sols_survived", 0)), int(metrics.get("mission_length_sols", 0))], 16))
 		report.add_child(UI.label("Events resolved: %d / Total modeled dose: %.2f mSv / Prospect: %s" % [int(metrics.get("events_resolved", 0)), float(metrics.get("radiation_total_msv", 0.0)), str(metrics.get("volatile_prospect_status", "none"))], 15))
@@ -386,11 +387,18 @@ func show_report() -> void:
 		construction.add_child(UI.label("OUTPOST RECORD", 18))
 		construction.add_child(UI.label("Completed structures recorded: %d\nLast rover action: %s" % [state.built_structures.size(), "None" if str(state.last_rover_action).is_empty() else str(state.last_rover_action)], 15))
 		UI.disclosure(column, "Source measurements and model assumptions", _site_sources(_site(state.site_id)) + "\n\n" + _model_notes())
-	column.add_child(UI.label("Construction and independence metrics require build and rover actions. Authored report guidance is scheduled for the next content handoff.", 14, UI.MUTED))
+	column.add_child(UI.label("Construction and independence metrics require build and rover actions.", 14, UI.MUTED))
 	var restart := UI.button("Choose a new mission" if state != null else "Back to site selection", _request_restart)
 	column.add_child(restart)
 	_resize()
 	restart.grab_focus()
+
+func _report_guidance(outcome: Dictionary) -> String:
+	var report_copy: Dictionary = copy.get("mission_report_copy", {})
+	if str(outcome.get("status", "")) == "success":
+		return str(report_copy.get("success", "Primary objective complete. Review the mission record before planning the next deployment."))
+	var failure_copy: Dictionary = report_copy.get("failure", {})
+	return str(failure_copy.get(str(outcome.get("failure_reason", "")), failure_copy.get("default", "The mission ended before the primary objective was met.")))
 
 func _request_restart() -> void:
 	if state == null:
