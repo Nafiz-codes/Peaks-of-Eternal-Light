@@ -18,6 +18,10 @@ var busy_dialog := false
 var displayed_sol := -1
 var notice: Label
 var help_hint: Label
+var operations: AcceptDialog
+var activity: Label
+var clear_preview_button: Button
+var reading_tween: Tween
 
 func _ready() -> void:
 	name = "MissionHUD"
@@ -59,6 +63,16 @@ func _ready() -> void:
 	actions.add_child(event_button)
 	report_button = UI.button("Dashboard / report", open_dashboard)
 	actions.add_child(report_button)
+	for entry in [["Construction planning", "build"], ["Rover operations", "rover"]]:
+		var button := UI.button(entry[0], Callable())
+		button.pressed.connect(func(): open_operations(entry[1], button))
+		actions.add_child(button)
+	clear_preview_button = UI.button("Clear placement preview", func():
+		world.construction_view.clear_preview()
+		clear_preview_button.hide()
+		notice.text = "Placement preview cleared.")
+	clear_preview_button.hide()
+	actions.add_child(clear_preview_button)
 	actions.add_child(UI.button("Overview camera", func(): world.toggle_overview()))
 	var reduced := CheckButton.new()
 	reduced.text = "Reduce motion"
@@ -71,6 +85,8 @@ func _ready() -> void:
 		action.custom_minimum_size.x = 175
 	notice = UI.label("", 14, UI.BLUE)
 	content.add_child(notice)
+	activity = UI.label("", 14, UI.MUTED)
+	content.add_child(activity)
 	content.add_child(UI.label("Alt: hide mission / details · Esc: cursor / pause walking · Click terrain: resume · WASD: move · Mouse: look · Space: jump · E: station · I: dashboard", 13, UI.MUTED))
 	content.add_child(UI.label("Illustrative terrain and lighting · NASA coarse terrain samples inform the simulation; solar availability is modeled. Construction and rover operations are not yet available.", 13, UI.MUTED))
 	var copy: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/mission_copy.json"))
@@ -81,6 +97,14 @@ func _ready() -> void:
 	add_child(event_dialog)
 	event_dialog.decision_confirmed.connect(_resolve_decision)
 	event_dialog.visibility_changed.connect(_dialog_visibility_changed)
+	operations = preload("res://src/ui/operations_panel.gd").new()
+	add_child(operations)
+	operations.visibility_changed.connect(_dialog_visibility_changed)
+	operations.placement_preview_requested.connect(func(id: String):
+		var catalog := _construction_contract()
+		if world.construction_view.show_preview(id, catalog.get("structures", [])):
+			clear_preview_button.show()
+			notice.text = "Placement preview only. No resources spent and no structure built.")
 	session.state_changed.connect(refresh)
 	get_viewport().size_changed.connect(_resize)
 	_resize()
@@ -89,7 +113,7 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.keycode == KEY_ALT and event.pressed and not event.echo:
 		# Keep the decision dialog's cursor and focus until it is dismissed.
-		if not event_dialog.visible:
+		if not _modal_visible():
 			panel.visible = not panel.visible
 			help_hint.text = ("Alt: hide mission / details" if panel.visible else "Alt: show mission / details") + "\nEsc: release cursor · Click terrain: resume exploration"
 			if panel.visible:
@@ -110,13 +134,18 @@ func _resize() -> void:
 
 func refresh() -> void:
 	var state: Variant = session.dashboard_state
+	var events: Array = [] if session.dashboard_simulator == null else session.dashboard_simulator.events
+	activity.text = preload("res://src/ui/mission_activity.gd").describe(state, events)
+	if session.reduce_motion and reading_tween != null:
+		reading_tween.kill()
+		readings.modulate = Color.WHITE
 	heading.text = str(world.site_record.get("name", "Lunar outpost"))
 	if state == null:
 		status.text = "READY / Start a 10-sol mission at this site."
 		for key in values:
 			values[key].text = key + " / Awaiting mission"
 		run_button.text = "Start mission"
-		run_button.disabled = false
+		run_button.disabled = _modal_visible()
 		event_button.disabled = true
 		return
 	heading.text += " · SOL %02d / %d" % [state.sol, state.mission_length_sols]
@@ -131,17 +160,20 @@ func refresh() -> void:
 	values.Dose.text = "Dose %.3f mSv · modeled" % state.radiation_msv
 	values.Materials.text = "Materials %.1f units" % state.materials
 	run_button.text = "Run the sol"
-	run_button.disabled = not session.can_advance() or event_dialog.visible
-	event_button.disabled = terminal or state.pending_events.is_empty() or event_dialog.visible
+	run_button.disabled = not session.can_advance() or _modal_visible()
+	event_button.disabled = terminal or state.pending_events.is_empty() or _modal_visible()
 	report_button.text = "View mission report" if terminal else "Mission dashboard"
 	if displayed_sol != state.sol:
 		displayed_sol = state.sol
 		if not session.reduce_motion:
 			readings.modulate = Color(0.65, 0.8, 1.0)
-			create_tween().tween_property(readings, "modulate", Color.WHITE, 0.5)
+			if reading_tween != null:
+				reading_tween.kill()
+			reading_tween = create_tween()
+			reading_tween.tween_property(readings, "modulate", Color.WHITE, 0.5)
 
 func advance_turn() -> void:
-	if event_dialog.visible:
+	if _modal_visible():
 		return
 	if session.dashboard_state == null:
 		var error: int = session.start_selected_mission()
@@ -155,7 +187,7 @@ func advance_turn() -> void:
 
 func open_pending_event() -> void:
 	var state: Variant = session.dashboard_state
-	if state == null or state.pending_events.is_empty() or state.mission_outcome.status != "in_progress" or event_dialog.visible:
+	if state == null or state.pending_events.is_empty() or state.mission_outcome.status != "in_progress" or _modal_visible():
 		return
 	event_dialog.open_preview(state.pending_events[0], event_button, true)
 
@@ -165,8 +197,8 @@ func _resolve_decision(event_id: String, choice_id: String) -> void:
 	refresh()
 
 func _dialog_visibility_changed() -> void:
-	world.get_node("Outpost/Astronaut").ui_blocked = event_dialog.visible
-	if event_dialog.visible:
+	world.get_node("Outpost/Astronaut").ui_blocked = _modal_visible()
+	if _modal_visible():
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	refresh()
 
@@ -185,5 +217,18 @@ func inspect_station(id: String) -> void:
 			open_pending_event()
 
 func open_dashboard() -> void:
-	if not event_dialog.visible:
+	if not _modal_visible():
 		session.open_dashboard(world.scene_file_path)
+
+func _modal_visible() -> bool:
+	return (is_instance_valid(event_dialog) and event_dialog.visible) or (is_instance_valid(operations) and operations.visible)
+
+func _construction_contract() -> Dictionary:
+	if session.dashboard_simulator != null:
+		return session.dashboard_simulator.construction
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/construction.json"))
+	return parsed if parsed is Dictionary else {}
+
+func open_operations(kind: String, invoker: Control = null) -> void:
+	if not _modal_visible():
+		operations.open_operations(kind, session.dashboard_state, _construction_contract(), invoker, true)

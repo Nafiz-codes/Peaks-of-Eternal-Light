@@ -27,6 +27,7 @@ var start_button: Button
 var event_dialog: ConfirmationDialog
 var restart_dialog: ConfirmationDialog
 var busy := false
+var operations: AcceptDialog
 
 func _ready() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
@@ -44,6 +45,11 @@ func _ready() -> void:
 	restart_dialog.exclusive = true
 	restart_dialog.confirmed.connect(reset_mission)
 	add_child(restart_dialog)
+	operations = preload("res://src/ui/operations_panel.gd").new()
+	add_child(operations)
+	operations.visibility_changed.connect(func():
+		if is_instance_valid(run_button):
+			run_button.disabled = not _can_advance())
 	get_viewport().size_changed.connect(_resize)
 	reload_contracts()
 
@@ -136,6 +142,8 @@ func _has_return_destination() -> bool:
 
 
 func _return_to_game() -> void:
+	if event_dialog.visible or restart_dialog.visible or operations.visible:
+		return
 	var session := get_node_or_null("/root/MissionSession")
 	if session != null:
 		session.call("return_to_game")
@@ -265,8 +273,10 @@ func show_dashboard() -> void:
 	terrain.add_child(UI.label("OUTPOST / SCHEMATIC", 16))
 	terrain.add_child(OutpostPreview.new())
 	terrain.add_child(UI.label("Habitat · Solar array · Rover / Placement is illustrative", 14, UI.MUTED))
-	left.add_child(UI.button("Build / unavailable", Callable(), true))
-	left.add_child(UI.button("Rover / unavailable", Callable(), true))
+	for entry in [["Construction planning", "build"], ["Rover operations", "rover"]]:
+		var button := UI.button(entry[0], Callable())
+		button.pressed.connect(func(): operations.open_operations(entry[1], state, simulator.construction, button))
+		left.add_child(button)
 	var crew := UI.panel(right)
 	crew.add_child(UI.label("CREW / %d" % state.crew_size, 18))
 	for member in simulator.crew:
@@ -287,6 +297,7 @@ func show_dashboard() -> void:
 		activity.add_child(UI.label("Water consumed %.2f L / recovered %.2f L · Radiation +%.3f mSv" % [state.water_consumed_l, state.water_recovered_l, state.radiation_this_sol_msv], 15))
 	if state.consecutive_power_depleted_sols > 0:
 		activity.add_child(UI.label("! Battery depleted for %d consecutive sol(s)." % state.consecutive_power_depleted_sols, 16, UI.AMBER))
+	UI.disclosure(activity, "Active effects and decision record", preload("res://src/ui/mission_activity.gd").describe(state, simulator.events))
 	UI.disclosure(column, "Model assumptions and source status", _model_notes())
 	UI.disclosure(column, "Selected site provenance", _site_sources(_site(state.site_id)))
 	_add_previews()
@@ -308,7 +319,7 @@ func _add_readings(parent: Node) -> void:
 			card.add_child(UI.label(str(entry[3]).to_upper(), 14, UI.BLUE if entry[3] == "nominal" else UI.AMBER))
 
 func _can_advance() -> bool:
-	return state != null and not busy and state.sol < state.mission_length_sols and state.mission_outcome.get("status", "") == "in_progress" and state.pending_events.is_empty() and not event_dialog.visible
+	return state != null and not busy and state.sol < state.mission_length_sols and state.mission_outcome.get("status", "") == "in_progress" and state.pending_events.is_empty() and not event_dialog.visible and not operations.visible and not restart_dialog.visible
 
 func _resolve_event(event_id: String, choice_id: String) -> void:
 	if state == null or state.mission_outcome.get("status", "") != "in_progress":
@@ -366,16 +377,14 @@ func show_report() -> void:
 		report.add_child(UI.label("Mission duration completed: %.0f%% / %d of %d sols" % [float(metrics.get("survival_pct", 0.0)), int(metrics.get("sols_survived", 0)), int(metrics.get("mission_length_sols", 0))], 16))
 		report.add_child(UI.label("Events resolved: %d / Total modeled dose: %.2f mSv / Prospect: %s" % [int(metrics.get("events_resolved", 0)), float(metrics.get("radiation_total_msv", 0.0)), str(metrics.get("volatile_prospect_status", "none"))], 15))
 		_add_readings(column)
-		var history := PackedStringArray(["Sol / Energy (kWh) / Water (L) / Oxygen (kg) / Food (kg) / Dose (mSv)"])
-		for snapshot in state.history:
-			history.append("%d / %.2f / %.2f / %.2f / %.2f / %.3f" % [snapshot.sol, snapshot.power_kwh, snapshot.water_l, snapshot.oxygen_kg, snapshot.food_kg, snapshot.radiation_msv])
 		var record := UI.panel(column)
-		record.add_child(UI.label("RESOURCE HISTORY", 18))
-		record.add_child(UI.label("\n".join(history) if not state.history.is_empty() else "No recorded history.", 15))
-		var decisions := PackedStringArray()
-		for event in metrics.get("event_history", []):
-			decisions.append("Sol %d / %s / %s" % [event.get("sol", 0), str(event.get("event_id", "")).replace("_", " "), str(event.get("choice_id", "")).replace("_", " ")])
-		UI.disclosure(column, "Decision history", "\n".join(decisions) if not decisions.is_empty() else "No resolved events.")
+		var history := preload("res://src/ui/resource_history.gd").new()
+		history.set_history(state.history)
+		record.add_child(history)
+		UI.disclosure(column, "Decision history", preload("res://src/ui/mission_activity.gd").describe(state, simulator.events))
+		var construction := UI.panel(column)
+		construction.add_child(UI.label("OUTPOST RECORD", 18))
+		construction.add_child(UI.label("Completed structures recorded: %d\nLast rover action: %s" % [state.built_structures.size(), "None" if str(state.last_rover_action).is_empty() else str(state.last_rover_action)], 15))
 		UI.disclosure(column, "Source measurements and model assumptions", _site_sources(_site(state.site_id)) + "\n\n" + _model_notes())
 	column.add_child(UI.label("Construction and independence metrics require build and rover actions. Authored report guidance is scheduled for the next content handoff.", 14, UI.MUTED))
 	var restart := UI.button("Choose a new mission" if state != null else "Back to site selection", _request_restart)

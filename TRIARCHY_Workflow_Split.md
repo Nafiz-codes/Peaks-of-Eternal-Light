@@ -64,6 +64,8 @@ Member 2 also supplies `Resources/mission_copy.json`. Member 3 reads its briefin
 
 ### Member 3 progress — Sep 29, 2026
 
+Update Oct 5, 2026: Days 14–20 Member 3 presentation work now includes shared rover/construction inspection, explicit placement previews, confirmed-structure visuals, a tested rover route-animation adapter, shared activity history and responsive report charts. Nine suites pass. Days 16/17/20 still need Member 1/2 action APIs for live end-to-end completion; no gameplay or balance implementation was added. See `docs/member3_days14_20.md` for the day-by-day status and complete handoff.
+
 Update Oct 4, 2026: Member 3's revised Days 9–13 implementation and Day 14 presentation integration checks are complete ahead of schedule. The outpost now includes reusable assets, site-seeded illustrative terrain, an authoritative mission HUD, live event modals, station feedback, animations, reduced-motion controls and dashboard/report navigation. Day 14 checks ran four missions on the current sourced/modelled dataset and real authored events; their first-choice routes failed on Sol 9–10, so balance and missing rover/construction action systems remain Member 1/2 dependencies. This is not all-member sign-off. See `logs.md` and `docs/day14_integration.md`; older entries below refer to the original UI-binding schedule.
 
 

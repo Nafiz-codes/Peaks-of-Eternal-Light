@@ -320,7 +320,21 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Validation: Godot 4.7.2 outpost suite passed, including boundary collision sweeps. Inspected OpenGL renders from the base and near the playable edge; scattered stone hills and a low horizon are visible. Existing environment log/cache and certificate warnings remain.
 - Notes for teammates: Member 3 scenery only; no simulation or content contract changes.
 
+### Days 14–20 — Oct 5, 2026 — Member 3 presentation and integration pass
+- Status: Available presentation work implemented and tested; live rover/construction completion remains dependent on Members 1/2. The user explicitly confirmed Member 3-only scope.
+- Day 14: Revalidated the four real-site mission flows and all existing regressions. Joint acceptance and balance remain open.
+- Day 15: Shared construction/rover inspection panels consume actual catalog and mission data; modal guards prevent background input and restore focus.
+- Day 16: Rover parameter/prospect UI and a validated, deduplicated route-animation component with synchronized hull and reduced motion. Routes are supplied only in tests until an authoritative gameplay API exists.
+- Day 17: Six illustrative structure silhouettes, noncolliding labeled placement ghosts, and idempotent completed/shielding visuals reading existing built_structures. No construction action, queue or dose formula was invented.
+- Day 18: Fixed notification events with null choices, modal navigation/turn guards, and reduced-motion changes during active animations.
+- Day 19: Added six-resource selectable report charts with matching text records, authored decision descriptions and an outpost summary.
+- Day 20: Integrated available world/HUD/dashboard feedback and documented the remaining action/content contracts.
+- Validation: Nine suites pass; new suite 56 assertions headless and 63 with OpenGL screenshot capture, zero failures. Inspected desktop/narrow construction/report layouts, preview/completed-fixture visuals and rover panel. Physical keyboard/controller playtesting was not performed.
+- Remaining dependencies: rover/build APIs and state, construction progress, shielding effects, remaining event effects, authored report guidance, per-crew status, balance and shared acceptance. First-choice routes still fail on Sol 9–10. Known user-log/cache/certificate environment warnings remain.
+- Detailed changes and reproducible commands: docs/member3_days14_20.md; tools/test_member3.ps1.
+
 ## Shared Test & Integration Notes
+
 
 *(one combined entry per 🔗 day — what was tested, what passed, what needs fixing before the next block of days starts)*
 

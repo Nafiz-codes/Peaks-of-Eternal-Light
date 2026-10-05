@@ -23,6 +23,8 @@ var event_beacon: MeshInstance3D
 var feedback_tween: Tween
 var overview := false
 var camera_tween: Tween
+var construction_view: Node3D
+var rover_view: Node
 
 
 func _ready() -> void:
@@ -47,6 +49,12 @@ func _ready() -> void:
 	_add_site_readout()
 	_add_feedback_nodes()
 	_add_prop_collisions()
+	construction_view = preload("res://src/world/construction_presentation.gd").new()
+	construction_view.name = "ConstructionPresentation"
+	add_child(construction_view)
+	rover_view = preload("res://src/world/rover_presentation.gd").new()
+	rover_view.name = "RoverPresentation"
+	add_child(rover_view)
 	add_child(preload("res://src/ui/outpost_hud.gd").new())
 	session.state_changed.connect(refresh_feedback)
 	refresh_feedback()
@@ -87,6 +95,16 @@ func _add_feedback_nodes() -> void:
 func refresh_feedback() -> void:
 	var session := get_node("/root/MissionSession")
 	var state: Variant = session.dashboard_state
+	var catalog: Dictionary = {} if session.dashboard_simulator == null else session.dashboard_simulator.construction
+	construction_view.sync_completed({} if state == null else state.built_structures, catalog.get("structures", []))
+	if session.reduce_motion:
+		rover_view.finish_immediately(get_node("Outpost/Rover"), get_node("RoverHull"))
+		if camera_tween != null and camera_tween.is_running():
+			camera_tween.kill()
+			var player := get_node("Outpost/Astronaut")
+			player.get_node("CameraPivot/SpringArm").spring_length = 12.0 if overview else 4.8
+			player.camera_pitch = -0.65 if overview else -0.22
+			player._sync_camera_rig()
 	feedback = {"solar_kwh": 0.0, "pending": 0, "water": "awaiting mission", "food": "awaiting mission", "oxygen": "awaiting mission", "active_events": []}
 	if state != null:
 		feedback.solar_kwh = state.power_generated_kwh

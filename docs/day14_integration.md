@@ -1,5 +1,7 @@
 # Member 3 — Day 14 integration result
 
+Revalidated October 5, 2026 with the Days 14–20 presentation changes: all eight existing suites plus the new presentation suite pass. The four-site outcomes and ten authored decisions remain unchanged. See [member3_days14_20.md](member3_days14_20.md) for changes, 56 new headless assertions, rendered checks and remaining dependencies. This does not add joint team acceptance.
+
 Completed October 4, 2026, ahead of the October 9 schedule. This records Member 3's checks, not joint team sign-off.
 
 ## Implemented Days 10–13

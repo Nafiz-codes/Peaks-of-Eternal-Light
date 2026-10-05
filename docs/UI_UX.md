@@ -1,5 +1,7 @@
 # Member 3 — Presentation design handoff
 
+**Update — Oct 5, 2026:** Days 14–20 presentation work and nine-suite validation are recorded in [member3_days14_20.md](member3_days14_20.md). Added shared operations panels, non-mutating placement previews, completed-state visuals, a fixture-tested rover animation adapter, activity history and responsive report charts. Live rover/construction actions remain Member 1/2 dependencies; Days 16/17/20 are not certified end to end. The user reconfirmed Member 3-only scope.
+
 **Current status — Oct 4, 2026:** Member 3 Days 10–13 and Day 14 presentation checks are complete. Live world HUD, event decisions, state feedback, illustrative terrain, animation, and report navigation are integrated. Earlier sections are historical snapshots. See `docs/day14_integration.md` for verification and remaining team dependencies.
 
 ## Current working scope and outpost controls — 2026-10-04
