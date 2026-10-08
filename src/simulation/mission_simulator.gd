@@ -11,7 +11,9 @@ const CONSTRUCTION_PATH := "res://Resources/construction.json"
 const EVENTS_PATH := "res://Resources/events.json"
 const MissionStateScript = preload("res://src/simulation/mission_state.gd")
 
-const INITIAL_POWER_KWH := 120.0
+# Gameplay start reserve tuned on Day 16 so a first-choice 10-sol route has a
+# narrow recovery margin at the disclosed 50% illumination model.
+const INITIAL_POWER_KWH := 170.0
 const INITIAL_WATER_L := 400.0
 const INITIAL_OXYGEN_KG := 45.0
 const INITIAL_FOOD_KG := 30.0
@@ -22,6 +24,10 @@ const BATTERY_CAPACITY_KWH := 180.0
 ## the 2009 solar minimum. CRaTER supplies the observational radiation context;
 ## this site-independent modeled value is not a geographic CRaTER reading.
 const LUNAR_SURFACE_GCR_MSV_PER_SOL := 0.90
+## Member 2's construction contract: the completed shielding wall reduces
+## remaining crew dose by 25%; when combined with terrain this applies to the
+## dose left after the terrain proxy (multiplicative stacking).
+const SHIELDING_WALL_DOSE_MULTIPLIER := 0.75
 ## Terrain has no direct local dose measurement in the selected products. These
 ## documented gameplay weights turn LOLA topography into a bounded sky-view proxy.
 const TERRAIN_DEPTH_REFERENCE_M := 2500.0
@@ -93,7 +99,8 @@ func advance_sol(state: Variant) -> Dictionary:
 	state.power_kwh = clampf(state.power_kwh + state.power_balance_kwh, 0.0, BATTERY_CAPACITY_KWH)
 
 	state.terrain_shielding_factor = _terrain_shielding_factor(site)
-	state.radiation_this_sol_msv = LUNAR_SURFACE_GCR_MSV_PER_SOL * (1.0 - state.terrain_shielding_factor)
+	var structural_dose_multiplier := SHIELDING_WALL_DOSE_MULTIPLIER if state.built_structures.has("shielding_wall") else 1.0
+	state.radiation_this_sol_msv = LUNAR_SURFACE_GCR_MSV_PER_SOL * (1.0 - state.terrain_shielding_factor) * structural_dose_multiplier
 	state.radiation_msv += state.radiation_this_sol_msv
 
 	var life_support_tick: Dictionary = _calculate_life_support(state)
@@ -108,10 +115,10 @@ func advance_sol(state: Variant) -> Dictionary:
 	state.life_support_status = _life_support_status(state, -state.water_balance_l, state.oxygen_consumed_kg, state.food_consumed_kg)
 	state.consecutive_power_depleted_sols = state.consecutive_power_depleted_sols + 1 if state.power_kwh <= 0.0 else 0
 	_evaluate_event_triggers(state)
+	_expire_effects(state)
 	state.mission_outcome = _evaluate_mission_outcome(state)
 	_update_report_data(state)
 	state.history.append(state.snapshot())
-	_expire_effects(state)
 	return {
 		"state": state,
 		"completed": state.sol >= state.mission_length_sols,
@@ -119,6 +126,7 @@ func advance_sol(state: Variant) -> Dictionary:
 		"radiation": {
 			"dose_this_sol_msv": state.radiation_this_sol_msv,
 			"terrain_shielding_factor": state.terrain_shielding_factor,
+			"built_structure_dose_multiplier": structural_dose_multiplier,
 			"model_status": "nasa_lunar_surface_gcr_baseline_with_terrain_proxy"
 		},
 		"life_support": life_support_tick,
@@ -244,11 +252,20 @@ func _apply_event_effects(state: Variant, event_id: String, effects: Dictionary)
 		state.radiation_this_sol_msv += spike
 	var duration := int(effects.get("duration_sols", 0))
 	if duration > 0:
-		state.active_events.append({"event_id": event_id, "effects": effects.duplicate(true), "remaining_sols": duration})
+		state.active_events.append({
+			"event_id": event_id,
+			"effects": effects.duplicate(true),
+			"remaining_sols": duration,
+			"started_sol": state.sol
+		})
 
 
 func _expire_effects(state: Variant) -> void:
 	for index in range(state.active_events.size() - 1, -1, -1):
+		# Events triggered during this sol become active next sol, so do not
+		# consume duration on the same sol that created the timed effect.
+		if int(state.active_events[index].get("started_sol", -1)) >= state.sol:
+			continue
 		state.active_events[index].remaining_sols = int(state.active_events[index].get("remaining_sols", 1)) - 1
 		if state.active_events[index].remaining_sols <= 0:
 			state.active_events.remove_at(index)
@@ -308,7 +325,7 @@ func _evaluate_mission_outcome(state: Variant) -> Dictionary:
 	var status := "in_progress"
 	if not failure_reason.is_empty():
 		status = "failure"
-	elif mission_finished:
+	elif mission_finished and state.pending_events.is_empty():
 		status = "success"
 	return {
 		"status": status,

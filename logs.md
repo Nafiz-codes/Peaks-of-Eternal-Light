@@ -106,9 +106,51 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 
 ### Day 13 — Oct 3 (completed ahead of Oct 8) — Edge-case fixes and simulator regression
 - Status: ✅ Done
-- What was completed: Updated the simulation and UI regression flows to resolve pending choices, and corrected turn gating so timed effects do not block play. Verified the simulator suite and four-site UI integration flow against deterministic event and report state.
-- Issues / blockers: Godot reports restricted-environment log-write and Windows certificate-store warnings; both headless checks completed with zero test failures. Full action-triggered event coverage remains dependent on rover/construction runtime integration.
-- Notes for teammates: Event choices can modify authoritative state only through the simulator resolver. The site science labels and sourced/modelled distinctions remain unchanged.
+- What was completed: Updated simulation and UI regression flows to resolve pending choices, corrected turn gating so timed effects do not block play, and fixed timed-effect duration so a newly triggered effect keeps its full configured duration instead of losing a sol immediately. Added simulator regression coverage for three affected sols followed by clean expiration.
+- Issues / blockers: Godot reports restricted-environment log-write and Windows certificate-store warnings; simulator and dashboard headless checks completed with zero test failures. Full action-triggered event coverage remains dependent on rover/construction runtime integration.
+- Notes for teammates: Event choices can modify authoritative state only through the simulator resolver. Timed effects are recorded with `started_sol`; their duration is consumed after each later sol they affect. The site science labels and sourced/modelled distinctions remain unchanged.
+
+### Day 14 — Oct 8 (completed ahead of Oct 9) — Test & Integration #2 (Member 1 result)
+- Status: ✅ Member 1 integration checks passed; shared team acceptance remains open
+- What was completed: Ran the simulator, Member 2 event-slotting, dashboard, selector, landing, outpost, four-site world integration, navigation, and Member 3 Days 14–20 suites on Godot 4.7.2. All 10 suites passed. The world integration completed all four 10-sol site routes and resolved 11 authored choices while matching an independent simulator.
+- Issues / blockers: This is not all-member sign-off. Member 2's own handoff still lists rover/build-gated triggers and unsupported effect families; those could not be exercised through live action APIs.
+- Notes for teammates: The nine-suite Member 3 runner's initial result was a false failure because its filter did not recognize Godot's timestamped `user://logs/...` write warning. After Godot's first import completed, the suites passed with that known environment warning excluded; no test assertions or script errors were filtered.
+
+### Day 15 — Oct 8 (completed ahead of Oct 10) — Event integration support
+- Status: ⚠️ Partial — supported runtime paths checked; action-dependent paths remain blocked
+- What was completed: Rechecked the event mapping against all 19 authored entries, ran Member 2's focused resolver test, and confirmed the full four-site integration path resolves real event choices through the shared simulator state. The Day 13 duration fix preserves full timed-effect lifetimes.
+- Issues / blockers: Rover-action and built-structure triggers/effects still lack authoritative action/build APIs. Member 2's integration note accurately identifies those unsupported paths; Member 1 did not fabricate rover or construction state to make them appear integrated.
+- Notes for teammates: Current event adapter is still ID-based and does not consume `event_runtime.schema.json`; treat the documented coverage as partial until those mechanics and remaining handlers are connected.
+
+### Day 16 — Oct 8 (completed ahead of Oct 11) — First-playtest power balance
+- Status: ✅ Done for the current 10-sol first-choice baseline
+- What was completed: Increased the starting energy reserve from 120 to 170 kWh, within the existing 180 kWh battery capacity. With the disclosed 50% modeled illumination and current 48 kWh/sol load, all four geographically separated sites now complete the 10-sol first-choice route. Updated simulator/dashboard assertions and verified the four-site world comparison.
+- Issues / blockers: This is a gameplay balance value, not NASA data. It gives the modeled baseline only a 15 kWh nominal energy margin before event effects; test alternate decisions and live build/rover recovery after those APIs arrive.
+- Notes for teammates: The 170 kWh start is centralized in `MissionSimulator.INITIAL_POWER_KWH`. Site illumination remains modeled/unverified; do not interpret the balancing change as a revised scientific measurement.
+
+### Day 17 — Oct 8 (completed ahead of Oct 12) — Radiation/shielding edge case
+- Status: ✅ Done for the authored shielding-wall effect
+- What was completed: Applied the construction contract's 25% shielding-wall reduction to dose remaining after the LOLA-derived terrain gameplay proxy. The combination rule is multiplicative, and the tick result now reports its structural dose multiplier. Added regression coverage that compares shielded and terrain-only doses.
+- Issues / blockers: The 0.90 mSv/sol solar-minimum GCR value is still a site-independent modeled baseline, and terrain shielding remains a gameplay proxy. No site-specific radiation measurement is claimed.
+- Notes for teammates: `built_structures.shielding_wall` must represent a completed structure before the modifier applies. The visual wall itself remains presentation-only; this formula belongs to the simulator.
+
+### Day 18 — Oct 8 (completed ahead of Oct 13) — Final-sol event decision fix
+- Status: ✅ Done
+- What was completed: A mission reaching its final sol now waits for pending event decisions before receiving a success outcome. Dashboard navigation follows the authoritative terminal status instead of showing the report merely because the sol counter reached its limit. Added a regression for a final-sol pending decision and verified the actual four-site event flow.
+- Issues / blockers: Failure outcomes still stop progression immediately; only successful completion is deferred while a required decision is pending.
+- Notes for teammates: After resolving the final decision, the simulator reevaluates the outcome and publishes the success report data. Do not equate `mission_finished` with `status == success` while `pending_events` is nonempty.
+
+### Day 19 — Oct 8 (completed ahead of Oct 14) — Sim-state handoff for terminal decisions
+- Status: ✅ Done
+- What was completed: Clarified the shared state contract: `mission_outcome.mission_finished` can be true while `status` remains `in_progress` if a required final-sol choice is pending; `resolve_event_choice()` releases the terminal success once the queue is clear. Updated the presentation handoff to rely on terminal status and keep the final choice actionable.
+- Issues / blockers: No additional UI-owned simulation logic was introduced. Rover/build state remains outside this handoff until its action contract exists.
+- Notes for teammates: `MissionState` remains authoritative. The UI may disable another sol when `sol == mission_length_sols` while still allowing a pending decision to be resolved.
+
+### Day 20 — Oct 8 (completed ahead of Oct 15) — Member 1 regression pass
+- Status: ✅ Done
+- What was completed: Ran 10 Godot 4.7.2 suites: simulator, Member 2 slotting, dashboard, selector, landing transition, lunar outpost, landing-site session, outpost integration, navigation, and Member 3 Days 14–20. All passed with zero assertion/script failures. The four-site integration reports success on Sol 10 for each site and resolves the events reached by its seeded routes.
+- Issues / blockers: The sandbox emits user-log and Windows certificate-store warnings. The full integration does not cover every possible event branch or the still-unimplemented rover/build actions.
+- Notes for teammates: The checks ran after the first project asset import. A clean checkout may need Godot's initial import before headless scene tests can load imported assets.
 
 ---
 
@@ -308,6 +350,7 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Validation: Eight simulator/UI/world suites passed. Rendered desktop, narrow, event and overview checks were inspected. See docs/day14_integration.md for the reproducible checks and scope.
 - Issues / blockers: The first-option baseline route fails on Sol 10 at ridge_a and Sol 9 at the other three sites. Balance tuning remains Member 1/2 work; short-success coverage does not prove a balanced standard mission. Action-gated events and unsupported effect keys cannot be certified until their systems exist. Existing restricted-environment user-log/shader-cache/certificate warnings remain.
 - Notes for teammates: This is Member 3's integration result, not all-member sign-off and not a claim that all 19 event branches are implemented.
+- Oct 8 follow-up: Member 1's 170 kWh starting-energy tune now completes all four 10-sol first-choice routes. Member 2 has added authored mission-report guidance since this original result. The October 4 findings above remain historical for that build.
 
 ### Oct 4, 2026 — Member 3 outpost mission/detail bar toggle
 - Status: Done.
@@ -348,7 +391,7 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Day 19: Added six-resource selectable report charts with matching text records, authored decision descriptions and an outpost summary.
 - Day 20: Integrated available world/HUD/dashboard feedback and documented the remaining action/content contracts.
 - Validation: Nine suites pass; new suite 56 assertions headless and 63 with OpenGL screenshot capture, zero failures. Inspected desktop/narrow construction/report layouts, preview/completed-fixture visuals and rover panel. Physical keyboard/controller playtesting was not performed.
-- Remaining dependencies: rover/build APIs and state, construction progress, shielding effects, remaining event effects, authored report guidance, per-crew status, balance and shared acceptance. First-choice routes still fail on Sol 9–10. Known user-log/cache/certificate environment warnings remain.
+- Remaining dependencies at the time of this Oct 5 entry: rover/build APIs and state, construction progress, shielding effects, remaining event effects, authored report guidance, per-crew status, balance and shared acceptance. Member 1's Oct 8 follow-up below changes the balance result; Member 2 has also since added authored report guidance. Known user-log/cache/certificate environment warnings remain.
 - Detailed changes and reproducible commands: docs/member3_days14_20.md; tools/test_member3.ps1.
 
 ## Shared Test & Integration Notes
@@ -369,5 +412,5 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 
 ### Day 14 — Test & Integration #2 (Member 3 contribution, Oct 4, 2026)
 - Available real-data/event flows pass through the 3D world and dashboard/report. Eight test suites pass; four full-site runs resolve ten authored decisions and match independent simulator state.
-- Presentation Days 10–13 are complete. Shared acceptance remains open for Member 1/2: baseline first-choice routes fail on Sol 9–10, construction/rover APIs and some event effect keys remain unavailable, and report guidance is not authored yet.
+- Presentation Days 10–13 are complete. Shared acceptance remains open for Member 1/2: construction/rover APIs and some event effect keys remain unavailable. The first-choice balance and report-guidance gaps noted here were addressed in later Oct 8 and Oct 6 follow-ups respectively; the Oct 4 integration result above remains historical.
 - Details and checks: docs/day14_integration.md. No all-member meeting or sign-off is claimed.

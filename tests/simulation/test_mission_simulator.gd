@@ -24,10 +24,11 @@ func _init() -> void:
 	_assert(not first_tick.get("completed", true), "A two-sol mission is not complete after its first tick.")
 	_assert(is_equal_approx(state.get("power_generated_kwh"), 32.5), "Ridge A solar generation uses the disclosed 50% ideal-horizon model.")
 	_assert(is_equal_approx(state.get("power_consumed_kwh"), 48.0), "Baseline power consumption uses crew size and the contract value.")
-	_assert(is_equal_approx(state.get("power_kwh"), 104.5), "The battery reserve receives the sol power balance.")
+	_assert(is_equal_approx(state.get("power_kwh"), 154.5), "The battery reserve receives the sol power balance.")
 	_assert(state.get("radiation_this_sol_msv") > 0.0, "Every sol adds a positive radiation dose.")
 	_assert(state.get("radiation_this_sol_msv") > 0.80 and state.get("radiation_this_sol_msv") < 0.90, "Radiation uses the NASA lunar-surface baseline and terrain proxy.")
 	_assert(state.get("terrain_shielding_factor") > 0.0, "Terrain fields produce a shielding factor.")
+	_assert(is_equal_approx(first_tick.radiation.built_structure_dose_multiplier, 1.0), "No built shielding wall leaves the structural dose multiplier neutral.")
 	_assert(is_equal_approx(state.get("water_consumed_l"), 10.0), "Water use follows the verified BVAD nominal potable-water value for all crew.")
 	_assert(is_equal_approx(state.get("water_recovered_l"), 9.0), "Water recovery uses the explicitly provisional contract recycling rate.")
 	_assert(is_equal_approx(state.get("water_l"), 399.0), "The reserve reflects water use and recovery.")
@@ -41,6 +42,15 @@ func _init() -> void:
 	_assert(second_tick.get("completed", false), "A two-sol mission completes after its second tick.")
 	_assert(second_tick.get("outcome").get("status") == "success", "A mission that reaches its final sol with reserves succeeds.")
 	_assert(state.get("history").size() == 3, "History includes the initial state and each completed tick.")
+
+	var final_decision_state: Object = simulator.call("begin_mission", "ridge_a", 1)
+	final_decision_state.sol = 1
+	final_decision_state.pending_events.append({"event_id": "final_sol_decision", "choices": [{"choice_id": "confirm"}], "effects": {}})
+	var waiting_outcome: Dictionary = simulator.call("_evaluate_mission_outcome", final_decision_state)
+	_assert(waiting_outcome.status == "in_progress" and waiting_outcome.mission_finished, "A final-sol decision must be resolved before reporting success.")
+	final_decision_state.pending_events.clear()
+	var completed_outcome: Dictionary = simulator.call("_evaluate_mission_outcome", final_decision_state)
+	_assert(completed_outcome.status == "success", "Resolving the final decision releases the completed mission outcome.")
 
 	var low_oxygen_state: Object = simulator.call("begin_mission", "ridge_a", 1)
 	low_oxygen_state.set("oxygen_kg", 4.0)
@@ -60,6 +70,34 @@ func _init() -> void:
 		simulator.call("advance_sol", power_failure_state)
 	_assert(power_failure_state.get("mission_outcome").get("status") == "failure", "Two consecutive sols with an empty battery fail the mission.")
 	_assert(power_failure_state.get("mission_outcome").get("failure_reason") == "sustained_power_depletion", "The outcome distinguishes sustained power loss from a warning.")
+
+	var duration_state: Object = simulator.call("begin_mission", "ridge_a", 8)
+	duration_state.sol = 1
+	simulator.events.clear()
+	simulator.call("_apply_event_effects", duration_state, "duration_regression", {
+		"power_generation_multiplier": 0.5,
+		"duration_sols": 3
+	})
+	simulator.call("_expire_effects", duration_state)
+	_assert(duration_state.active_events.size() == 1, "A newly triggered timed effect survives the sol it was created.")
+	_assert(duration_state.active_events[0].remaining_sols == 3, "A newly triggered timed effect retains its full configured duration.")
+	for expected_remaining in [2, 1, 0]:
+		var duration_tick: Dictionary = simulator.call("advance_sol", duration_state)
+		_assert(is_equal_approx(duration_tick.power.generated_kwh, 16.25), "Timed generation modifier applies through each configured sol.")
+		if expected_remaining > 0:
+			_assert(duration_state.active_events.size() == 1 and duration_state.active_events[0].remaining_sols == expected_remaining, "Timed duration decrements after an affected sol.")
+		else:
+			_assert(duration_state.active_events.is_empty(), "Timed effect expires after its final affected sol.")
+	var expired_tick: Dictionary = simulator.call("advance_sol", duration_state)
+	_assert(is_equal_approx(expired_tick.power.generated_kwh, 32.5), "Expired solar modifier no longer affects the following sol.")
+
+	var terrain_only_state: Object = simulator.call("begin_mission", "ridge_a", 2)
+	var wall_state: Object = simulator.call("begin_mission", "ridge_a", 2)
+	wall_state.built_structures["shielding_wall"] = 0
+	simulator.events.clear()
+	var terrain_only_tick: Dictionary = simulator.call("advance_sol", terrain_only_state)
+	var wall_tick: Dictionary = simulator.call("advance_sol", wall_state)
+	_assert(is_equal_approx(wall_tick.radiation.dose_this_sol_msv / terrain_only_tick.radiation.dose_this_sol_msv, 0.75), "Shielding-wall stacking applies 25% reduction to dose remaining after terrain.")
 
 	for site in simulator.get("sites"):
 		_run_full_mission(simulator, str(site.get("site_id", "")))
@@ -94,7 +132,7 @@ func _run_full_mission(simulator: Object, site_id: String) -> void:
 			var resolution: Dictionary = simulator.call("resolve_event_choice", state, str(pending.get("event_id", "")), choice_id)
 			_assert(resolution.get("ok", false), "%s resolves triggered event choices through the simulator." % site_id)
 
-	_assert(state.get("mission_outcome").get("status") == "failure", "%s reports the current baseline life-support or power failure before Sol 10." % site_id)
+	_assert(state.get("mission_outcome").get("status") == "success", "%s completes the balanced first-choice 10-sol baseline." % site_id)
 
 
 func _assert(condition: bool, message: String) -> void:

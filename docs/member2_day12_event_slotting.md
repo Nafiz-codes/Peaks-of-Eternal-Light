@@ -26,7 +26,7 @@ The remaining authored events stay loaded, but cannot yet be certified end to en
 | Crew conflict, crew-process improvement, shelter drill follow-up | Productivity, shelter-response, and per-crew behavior |
 | Battery thermal alert, comms blackout, solar-array alignment | Battery-capacity, warning, relay, and build-state behavior |
 
-The existing resolver still supports a subset of immediate choice effects within some of those entries. This document does not claim their unsupported base effects or triggers are implemented.
+The existing resolver still supports a subset of immediate choice effects within some of those entries. Timed effects use `remaining_sols` and `started_sol`; their full configured duration is preserved, and the counter is consumed after each affected sol. This document does not claim unsupported base effects or action-gated triggers are implemented.
 
 ## Run
 

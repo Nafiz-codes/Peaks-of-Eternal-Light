@@ -39,3 +39,7 @@ Example PowerShell command from the repository:
 Choice resolution refreshes life-support statuses, outcome, report and current history snapshot in the simulator so both views show post-choice values. Resource/effect formulas stay outside presentation.
 
 Construction and rover APIs, per-crew health, some authored effect keys and Member 2's authored report guidance remain unavailable. Action-gated events cannot all be exercised through normal play. The runtime still adapts legacy event content by ID. This verifies available real events, not all 19 events or the other members' remaining work. Balance tuning and all-member Day 14 acceptance remain open.
+
+## Member 1 follow-up — Oct 8, 2026
+
+The findings above are preserved as the Oct 5 build result. Member 1 later raised starting energy to 170 kWh and changed terminal evaluation so a required final-sol event decision resolves before success is reported. Member 2 has since added authored success/failure report guidance. Godot 4.7.2 simulator, dashboard, and outpost integration checks now complete all four 10-sol routes; the full current regression set is recorded in `logs.md` under Member 1 Day 20. The balance change does not alter the modeled illumination or any NASA-derived field. Rover/build actions, per-crew status, and unexercised event branches remain open.

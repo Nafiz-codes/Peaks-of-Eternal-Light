@@ -348,7 +348,7 @@ func advance_turn() -> void:
 	if session != null:
 		session.set("dashboard_state", state)
 		session.set("dashboard_last_tick", last_tick)
-	if state.mission_outcome.get("status", "") in ["success", "failure"] or last_tick.get("completed", false):
+	if state.mission_outcome.get("status", "") in ["success", "failure"]:
 		show_report()
 	else:
 		show_dashboard()

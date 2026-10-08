@@ -1,5 +1,5 @@
 param(
-    [string]$GodotPath = "$PSScriptRoot/../.tools/godot/Godot_v4.7.2-stable_win64_console.exe"
+    [string]$GodotPath = (Join-Path $PSScriptRoot '../.tools/Godot_v4.7.2/Godot_v4.7.2-stable_win64_console.exe')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,7 +25,7 @@ foreach ($test in $tests) {
     # Godot can return 0 after a GDScript runtime error: inspect diagnostics too.
     $unexpected = @($output | Where-Object {
         "$_" -match 'SCRIPT ERROR:|Parse Error:|ERROR:' -and
-        "$_" -notmatch "Failed to open log file for writing: user://logs/godot.log|Failed to read the root certificate store\."
+        "$_" -notmatch "Failed to open 'user://logs/godot.*\.log'|Failed to open log file for writing: user://logs/godot.log|Failed to read the root certificate store\."
     })
     if ($code -ne 0 -or $unexpected.Count -gt 0) {
         $failed++

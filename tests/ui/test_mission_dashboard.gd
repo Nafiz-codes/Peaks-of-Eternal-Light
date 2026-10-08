@@ -65,7 +65,13 @@ func _verify() -> void:
 					choice_id = str(choices[0].get("choice_id", ""))
 				baseline.resolve_event_choice(reference, str(pending.get("event_id", "")), choice_id)
 				app._resolve_event(str(pending.get("event_id", "")), choice_id)
-			check(app.state.snapshot() == reference.snapshot(), "UI must preserve authoritative state for " + str(site.site_id))
+			var actual_snapshot: Dictionary = app.state.snapshot()
+			var reference_snapshot: Dictionary = reference.snapshot()
+			if actual_snapshot != reference_snapshot:
+				for key in reference_snapshot:
+					if actual_snapshot.get(key) != reference_snapshot.get(key):
+						print("State mismatch %s / %s: UI=%s reference=%s" % [site.site_id, key, actual_snapshot.get(key), reference_snapshot.get(key)])
+			check(actual_snapshot == reference_snapshot, "UI must preserve authoritative state for " + str(site.site_id))
 			var expected := [reference.power_kwh, reference.water_l, reference.oxygen_kg, reference.food_kg, reference.radiation_msv, reference.materials]
 			for index in range(expected.size()):
 				var displayed: Array[Node] = app.readings.get_child(index).find_children("*", "Label", true, false)
@@ -75,14 +81,18 @@ func _verify() -> void:
 		var report_text := ""
 		for label in app.find_children("*", "Label", true, false):
 			report_text += str(label.text) + "\n"
-		var failure_copy: Dictionary = app.copy.get("mission_report_copy", {}).get("failure", {})
-		var expected_guidance := str(failure_copy.get(str(app.state.mission_outcome.get("failure_reason", "")), failure_copy.get("default", "")))
-		check(not expected_guidance.is_empty() and report_text.contains(expected_guidance), "Failure report uses Member 2's authored guidance for its authoritative cause")
+		if app.state.mission_outcome.status == "failure":
+			var failure_copy: Dictionary = app.copy.get("mission_report_copy", {}).get("failure", {})
+			var expected_guidance := str(failure_copy.get(str(app.state.mission_outcome.get("failure_reason", "")), failure_copy.get("default", "")))
+			check(not expected_guidance.is_empty() and report_text.contains(expected_guidance), "Failure report uses Member 2's authored guidance for its authoritative cause")
+		else:
+			var success_guidance := str(app.copy.get("mission_report_copy", {}).get("success", ""))
+			check(not success_guidance.is_empty() and report_text.contains(success_guidance), "Success report uses Member 2's authored guidance")
 		var final_sol: int = app.state.sol
 		app.advance_turn()
 		check(app.state.sol == final_sol, "No turns after success or early failure")
 		check(app.state.history.size() == reference.history.size(), "Report history must retain simulator snapshots")
-		check(app.state.mission_outcome.status == "failure", "Respect current baseline outcomes")
+		check(app.state.mission_outcome.status == "success", "All sites support the balanced first-choice baseline")
 		app._request_restart()
 		check(app.restart_dialog.visible and app.state != null, "Restart needs confirmation before discarding a report")
 		app.restart_dialog.hide()
@@ -141,5 +151,14 @@ func _verify() -> void:
 	for label in app.find_children("*", "Label", true, false):
 		success_report_text += str(label.text) + "\n"
 	check(success_report_text.contains("Primary objective complete"), "Success report uses Member 2's authored guidance")
+	var failed_state: Variant = app.simulator.begin_mission("ridge_a", 2)
+	failed_state.food_kg = 0.0
+	app.simulator.advance_sol(failed_state)
+	app.state = failed_state
+	app.show_report()
+	var failure_report_text := ""
+	for label in app.find_children("*", "Label", true, false):
+		failure_report_text += str(label.text) + "\n"
+	check(failure_report_text.contains("Food reserves reached zero"), "Failure report uses Member 2's authored guidance")
 	print("Member 3 UI integration: %d failures; four site flows, terminal guards, previews, missing values and load recovery checked." % failures)
 	quit(1 if failures else 0)

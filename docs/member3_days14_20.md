@@ -103,6 +103,7 @@ Godot 4.7.2:
 - New suite: **0 failures / 56 assertions headless**; **0 failures / 63 assertions with OpenGL captures**.
 - Inspected construction panels and report charts at **1360×820** and **520×900**, plus placement preview, all-completed structure fixture and rover panel renders.
 - The four-site test still reports the first-choice route failing on Sol 10 at ridge_a and Sol 9 at the other three sites. Presentation changes do not resolve balance. Ten authored decisions were exercised, not all 19 events or all branches.
+- **Superseded by Member 1's Oct 8 balance pass:** the starting reserve is now 170 kWh and all four sites complete the current 10-sol first-choice route in the updated Godot 4.7.2 integration checks. The original result above remains valid for the Oct 5 build. Rover/build actions and unexercised event branches remain open.
 - Expected restricted-environment diagnostics remain: user-log write access and Windows certificate store; rendered checks also cannot create the shader cache. No GDScript errors remained in passing runs.
 - This is automated interaction and rendered inspection, not physical keyboard/controller playtesting or teammate acceptance.
 
@@ -120,8 +121,8 @@ Logs and screenshots are under `.tools/day20/` (local, ignored by Git). The scre
 1. **Rover:** an authoritative action API, accepted/rejected outcomes, unique action IDs, position/route state and persistence across scene visits. The presentation adapter currently expects world-local metre positions; it must be mapped to the final agreed contract rather than assuming km equal world metres. Costs/discoveries remain simulation decisions.
 2. **Construction:** an authoritative build request, rejection reasons, construction queue/progress and completed-state updates. The existing `built_structures` dictionary is consumed read-only. No arbitrary placement or in-progress contract is assumed.
 3. **Shielding:** simulation-owned dose effects and combination rules. The visible wall alone conveys no quantitative reduction.
-4. **Content/report:** remaining supported effect keys, action-gated event coverage, per-crew status and authored outcome guidance. Catalog descriptions are planning information, not evidence those effects run.
-5. **Integration acceptance:** balance review and a normal-length playable success route, followed by shared team sign-off. These remain prerequisites for the later vertical slice.
+4. **Content/report:** remaining supported effect keys, action-gated event coverage and per-crew status. Authored outcome guidance is now present in `mission_copy.json` and is read by the dashboard. Catalog descriptions are planning information, not evidence those effects run.
+5. **Integration acceptance:** the normal-length route now succeeds on all four sites after Member 1's Oct 8 energy-balance adjustment. Shared team sign-off and review of all event branches still remain prerequisites for the later vertical slice.
 
 ## Try the changes
 
