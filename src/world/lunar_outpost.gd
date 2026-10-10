@@ -8,6 +8,10 @@ const ASTRONAUT_SCENE := preload("res://Assets/animated_astronaut/source/Walking
 const ROVER_SCENE := preload("res://Assets/curiosity_rover.glb")
 const HABITAT_SCENE := preload("res://Assets/outpost/habitat.tscn")
 const SOLAR_SCENE := preload("res://Assets/outpost/solar_array.tscn")
+const ASTRONAUT_HEIGHT := 1.7
+# The authored crew door is 2.033674 m high before scene normalization.
+const LANDER_AUTHORED_DOOR_HEIGHT := 2.033674
+const LANDER_DOOR_CLEARANCE := 0.4
 const LunarAstronautScript := preload("res://src/world/lunar_astronaut.gd")
 
 const LUNAR_REGOLITH := Color("5b5b63")
@@ -62,7 +66,7 @@ func _ready() -> void:
 
 func _add_prop_collisions() -> void:
 	# Simple hulls keep walking/camera collision predictable around imported art.
-	for entry in [["HabitatHull", Vector3(-1.2, 2.4, 0), Vector3(7.2, 4.5, 4.5)], ["AirlockHull", Vector3(2.8, 1.2, 0), Vector3(1.4, 2.4, 1.4)], ["RoverHull", Vector3(5.2, 0.65, -2.8), Vector3(3.0, 1.3, 3.0)], ["SolarHull", Vector3(-6, 0.5, -5.5), Vector3(6.5, 1.0, 2.6)]]:
+	for entry in [["RoverHull", Vector3(5.2, 0.65, -2.8), Vector3(3.0, 1.3, 3.0)], ["SolarHull", Vector3(-6, 0.5, -5.5), Vector3(6.5, 1.0, 2.6)]]:
 		var body := StaticBody3D.new()
 		body.name = entry[0]
 		body.position = entry[1]
@@ -269,7 +273,57 @@ func _add_outpost() -> void:
 
 
 func _add_habitat(parent: Node3D) -> void:
-	parent.add_child(HABITAT_SCENE.instantiate())
+	var habitat := HABITAT_SCENE.instantiate() as Node3D
+	parent.add_child(habitat)
+	var model := habitat.get_node("BlueMoonLander") as Node3D
+	var bounds := AABB()
+	var first := true
+	var meshes := model.find_children("*", "MeshInstance3D", true, false)
+	for node in meshes:
+		var mesh := node as MeshInstance3D
+		var local_bounds: AABB = (habitat.global_transform.affine_inverse() * mesh.global_transform) * mesh.get_aabb()
+		bounds = local_bounds if first else bounds.merge(local_bounds)
+		first = false
+	if not first:
+		# Size the entrance for the astronaut instead of shrinking the vehicle to a footprint.
+		var factor := (ASTRONAUT_HEIGHT + LANDER_DOOR_CLEARANCE) / LANDER_AUTHORED_DOOR_HEIGHT
+		model.scale *= factor
+		model.position = (model.position - Vector3(bounds.get_center().x, bounds.position.y, bounds.get_center().z)) * factor
+	# Follow the actual legs, stairs and body instead of the old cylindrical habitat hull.
+	for node in meshes:
+		(node as MeshInstance3D).create_trimesh_collision()
+	_add_lander_stair_surface(habitat, model)
+
+
+func _add_lander_stair_surface(habitat: Node3D, model: Node3D) -> void:
+	# A continuous surface keeps the capsule from catching on the steep, narrow treads.
+	# Derive endpoints from the imported bottom tread and upper landing so scaling follows the model.
+	var bottom := model.find_child("pCylinder233", true, false) as MeshInstance3D
+	var landing := model.find_child("pCube58", true, false) as MeshInstance3D
+	if bottom == null or landing == null:
+		push_error("Blue Moon staircase meshes are missing.")
+		return
+	var inverse := habitat.global_transform.affine_inverse()
+	var bottom_bounds: AABB = (inverse * bottom.global_transform) * bottom.get_aabb()
+	var landing_bounds: AABB = (inverse * landing.global_transform) * landing.get_aabb()
+	var low_x := bottom_bounds.end.x + 0.25
+	var high_x := landing_bounds.end.x - 0.18
+	var height := landing_bounds.end.y + 0.015
+	var left := bottom_bounds.position.z
+	var right := bottom_bounds.end.z
+	var shape := ConvexPolygonShape3D.new()
+	shape.points = PackedVector3Array([
+		Vector3(low_x, -0.05, left), Vector3(low_x, -0.05, right),
+		Vector3(low_x, 0.0, left), Vector3(low_x, 0.0, right),
+		Vector3(high_x, -0.05, left), Vector3(high_x, -0.05, right),
+		Vector3(high_x, height, left), Vector3(high_x, height, right),
+	])
+	var body := StaticBody3D.new()
+	body.name = "StairWalkingSurface"
+	var collision := CollisionShape3D.new()
+	collision.shape = shape
+	body.add_child(collision)
+	habitat.add_child(body)
 
 
 func _add_solar_array(parent: Node3D) -> void:
@@ -286,7 +340,7 @@ func _add_astronaut(parent: Node3D) -> void:
 	var collision := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
 	capsule.radius = 0.4
-	capsule.height = 1.7
+	capsule.height = ASTRONAUT_HEIGHT
 	collision.shape = capsule
 	collision.position.y = 0.85
 	astronaut.add_child(collision)

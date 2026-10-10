@@ -33,6 +33,9 @@ func jump_flight_time_s() -> float:
 
 
 func _ready() -> void:
+	# The lander's stair walking surface rises at approximately 48 degrees.
+	floor_snap_length = 0.4
+	floor_max_angle = deg_to_rad(50.0)
 	set_process_unhandled_input(true)
 	_sync_camera_rig()
 	var spring_arm := get_node_or_null("CameraPivot/SpringArm") as SpringArm3D
