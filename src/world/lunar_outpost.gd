@@ -5,7 +5,7 @@ extends Node3D
 ## Member 3 can bind its visuals to the authoritative MissionState contract.
 
 const ASTRONAUT_SCENE := preload("res://Assets/animated_astronaut/source/Walking astronaut.glb")
-const ROVER_SCENE := preload("res://Assets/mars_rover.glb")
+const ROVER_SCENE := preload("res://Assets/curiosity_rover.glb")
 const HABITAT_SCENE := preload("res://Assets/outpost/habitat.tscn")
 const SOLAR_SCENE := preload("res://Assets/outpost/solar_array.tscn")
 const LunarAstronautScript := preload("res://src/world/lunar_astronaut.gd")
