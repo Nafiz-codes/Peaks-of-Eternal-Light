@@ -5,10 +5,12 @@ extends CharacterBody3D
 ## imported animated astronaut's idle/moon-walk clips.
 
 const LUNAR_GRAVITY_MPS2 := 1.62
-const WALK_SPEED_MPS := 3.0
+const WALK_SPEED_MPS := 1.6
+const GROUND_ACCELERATION_MPS2 := 1.2
+const GROUND_BRAKING_MPS2 := 1.6
 const TURN_SPEED_RAD_PER_SEC := 7.0
-## Tuned for a roughly 1.5 m apex and 2.7 s airtime under lunar gravity.
-const JUMP_VELOCITY_MPS := 2.2
+## Moderate suited hop: approximately 0.60 m high and 1.73 s airborne.
+const JUMP_VELOCITY_MPS := 1.4
 const LOOK_SENSITIVITY := 0.003
 const MIN_CAMERA_PITCH := -0.75
 const MAX_CAMERA_PITCH := 0.5
@@ -93,33 +95,50 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if ui_blocked or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
-		jump_requested = false
-		velocity.x = 0.0
-		velocity.z = 0.0
-		_update_animation(false)
-		return
-	if not is_on_floor():
-		velocity.y -= LUNAR_GRAVITY_MPS2 * delta
-	if jump_requested and is_on_floor():
-		velocity.y = JUMP_VELOCITY_MPS
+	var controls_active := not ui_blocked and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	var input_vector := Vector2.ZERO
+	if controls_active:
+		input_vector = Vector2(
+			float(Input.is_key_pressed(KEY_D)) - float(Input.is_key_pressed(KEY_A)),
+			float(Input.is_key_pressed(KEY_S)) - float(Input.is_key_pressed(KEY_W))
+		)
+	_step_locomotion(delta, input_vector, controls_active and jump_requested)
 	jump_requested = false
 
-	var input_vector := Vector2(
-		float(Input.is_key_pressed(KEY_D)) - float(Input.is_key_pressed(KEY_A)),
-		float(Input.is_key_pressed(KEY_S)) - float(Input.is_key_pressed(KEY_W))
-	)
+
+func _step_locomotion(delta: float, input_vector: Vector2, wants_jump: bool) -> void:
+	var grounded := is_on_floor()
 	var movement := movement_direction_for_input(input_vector)
-	velocity.x = movement.x * WALK_SPEED_MPS
-	velocity.z = movement.z * WALK_SPEED_MPS
+	var horizontal := Vector2(velocity.x, velocity.z)
+	if grounded:
+		var target := Vector2(movement.x, movement.z) * WALK_SPEED_MPS
+		var acceleration := GROUND_ACCELERATION_MPS2 if not input_vector.is_zero_approx() else GROUND_BRAKING_MPS2
+		horizontal = horizontal.move_toward(target, acceleration * delta)
+		velocity.y = JUMP_VELOCITY_MPS if wants_jump else 0.0
+	# No airborne steering or drag in vacuum; preserve takeoff momentum.
+	velocity.x = horizontal.x
+	velocity.z = horizontal.y
+	var airborne := not grounded or wants_jump
+	if airborne:
+		velocity.y -= LUNAR_GRAVITY_MPS2 * delta * 0.5
+	# Stair snapping must not pull an airborne astronaut down before contact.
+	floor_snap_length = 0.0 if airborne else 0.4
 	if first_person:
 		rotation.y = camera_yaw
-	elif movement.length_squared() > 0.0025:
-		var target_yaw := atan2(-movement.x, -movement.z)
+	elif grounded and horizontal.length_squared() > 0.0025:
+		var target_yaw := atan2(-velocity.x, -velocity.z)
 		rotation.y = rotate_toward(rotation.y, target_yaw, TURN_SPEED_RAD_PER_SEC * delta)
-	_sync_camera_rig()
 	move_and_slide()
-	_update_animation(movement.length() > 0.05)
+	# Split gravity around movement for tick-rate-independent ballistic motion.
+	if airborne and not is_on_floor() and not is_on_ceiling():
+		velocity.y -= LUNAR_GRAVITY_MPS2 * delta * 0.5
+	_sync_camera_rig()
+	_update_animation(horizontal.length() > 0.05 or not is_on_floor())
+	if animation_player != null:
+		animation_player.speed_scale = clampf(horizontal.length() / WALK_SPEED_MPS, 0.25, 1.0) if moving else 1.0
+		# Continue the forward arm/leg cycle through the jump at a slower lunar cadence.
+		if not is_on_floor():
+			animation_player.speed_scale = 0.65
 
 func movement_direction_for_input(input_vector: Vector2) -> Vector3:
 	var local_direction := Vector3(input_vector.x, 0.0, input_vector.y).normalized()
@@ -159,7 +178,6 @@ func _update_animation(should_move: bool) -> void:
 		return
 	animation.loop_mode = Animation.LOOP_LINEAR
 	animation_player.play(animation_name, 0.18)
-
 
 func set_nearby_interactable(area: Area3D) -> void:
 	nearby_interactable = area

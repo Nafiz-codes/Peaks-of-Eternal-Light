@@ -72,8 +72,8 @@ func _run() -> void:
 	_assert(lowest_foot_bone_y >= -0.03 and lowest_foot_bone_y <= 0.1, "Animated boot toe bones sit on the lunar surface rather than below it.")
 	var jump_apex: float = astronaut.call("jump_apex_height_m")
 	var jump_airtime: float = astronaut.call("jump_flight_time_s")
-	_assert(jump_apex > 1.4 and jump_apex < 1.6, "The lunar jump reaches a high but controlled apex.")
-	_assert(jump_airtime > 2.6 and jump_airtime < 2.8, "Reduced lunar gravity gives the jump a floaty descent.")
+	_assert(jump_apex > 0.59 and jump_apex < 0.62, "The lunar jump reaches a moderate suited-hop apex.")
+	_assert(jump_airtime > 1.7 and jump_airtime < 1.8, "Reduced lunar gravity gives the jump a floaty descent.")
 	var jump_key := InputEventKey.new()
 	jump_key.keycode = KEY_SPACE
 	jump_key.pressed = true
