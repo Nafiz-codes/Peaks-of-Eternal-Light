@@ -27,7 +27,7 @@ func _ready() -> void:
 	name = "MissionHUD"
 	world = get_parent()
 	session = get_node("/root/MissionSession")
-	help_hint = UI.label("Alt: show mission / details\nEsc: release cursor · Click terrain: resume exploration", 15, UI.TEXT)
+	help_hint = UI.label("Alt: show mission / details\nV: first / third person · Esc: release cursor · Click terrain: resume exploration", 15, UI.TEXT)
 	help_hint.position = Vector2(18, 14)
 	help_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	help_hint.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -87,7 +87,7 @@ func _ready() -> void:
 	content.add_child(notice)
 	activity = UI.label("", 14, UI.MUTED)
 	content.add_child(activity)
-	content.add_child(UI.label("Alt: hide mission / details · Esc: cursor / pause walking · Click terrain: resume · WASD: move · Mouse: look · Space: jump · E: station · I: dashboard", 13, UI.MUTED))
+	content.add_child(UI.label("Alt: hide mission / details · Esc: cursor / pause walking · Click terrain: resume · V: first / third person · WASD: move · Mouse: look · Space: jump · E: station · I: dashboard", 13, UI.MUTED))
 	content.add_child(UI.label("Illustrative terrain and lighting · NASA coarse terrain samples inform the simulation; solar availability is modeled. Construction and rover operations are not yet available.", 13, UI.MUTED))
 	var copy: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/mission_copy.json"))
 	if copy is Dictionary:
@@ -115,7 +115,7 @@ func _input(event: InputEvent) -> void:
 		# Keep the decision dialog's cursor and focus until it is dismissed.
 		if not _modal_visible():
 			panel.visible = not panel.visible
-			help_hint.text = ("Alt: hide mission / details" if panel.visible else "Alt: show mission / details") + "\nEsc: release cursor · Click terrain: resume exploration"
+			help_hint.text = ("Alt: hide mission / details" if panel.visible else "Alt: show mission / details") + "\nV: first / third person · Esc: release cursor · Click terrain: resume exploration"
 			if panel.visible:
 				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 			else:

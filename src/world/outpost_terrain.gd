@@ -1,5 +1,7 @@
 extends RefCounted
 
+const TychoElevation = preload("res://src/world/tycho_elevation.gd")
+
 # Deterministic art direction per site, not a reconstruction of LOLA pixels.
 static func build(site: Dictionary) -> MeshInstance3D:
 	var seed_value := absi(str(site.get("site_id", "ridge_a")).hash())
@@ -17,6 +19,8 @@ static func build(site: Dictionary) -> MeshInstance3D:
 				var pz: float = (float(z) + offset.y) * 2.0
 				var blend := smoothstep(12.0, 27.0, Vector2(px, pz).length())
 				var height := blend * (1.5 + noise.get_noise_2d(px, pz) * amplitude)
+				if str(site.get("site_id", "")) == "crater_rim_b":
+					height = TychoElevation.height(px, pz)
 				points.append(Vector3(px, height, pz))
 			for index in [0, 1, 2, 1, 3, 2]:
 				surface.set_uv(Vector2(points[index].x, points[index].z) * 0.12)
@@ -25,22 +29,8 @@ static func build(site: Dictionary) -> MeshInstance3D:
 	var terrain := MeshInstance3D.new()
 	terrain.name = "LunarRegolith"
 	terrain.mesh = surface.commit()
-	var material := StandardMaterial3D.new()
-	var tones := [Color("666774"), Color("77716c"), Color("626875"), Color("817b70")]
-	material.albedo_color = tones[seed_value % tones.size()]
-	material.roughness = 0.98
-	var grain := NoiseTexture2D.new()
-	var grain_noise := FastNoiseLite.new()
-	grain_noise.seed = noise.seed
-	grain_noise.frequency = 0.12
-	grain.noise = grain_noise
-	var ramp := Gradient.new()
-	ramp.colors = PackedColorArray([Color(0.65, 0.65, 0.65), Color(0.9, 0.9, 0.9)])
-	grain.color_ramp = ramp
-	grain.width = 256
-	grain.height = 256
-	grain.seamless = true
-	material.albedo_texture = grain
+	var material := ShaderMaterial.new()
+	material.shader = preload("res://src/world/regolith.gdshader")
 	terrain.material_override = material
 	return terrain
 
@@ -70,6 +60,8 @@ static func build_surroundings(site: Dictionary, material: Material) -> MeshInst
 		for point in perimeter:
 			var p: Vector2 = point * (radius / 60.0)
 			var height := 1.5 + noise.get_noise_2d(p.x, p.y) * amplitude
+			if str(site.get("site_id", "")) == "crater_rim_b":
+				height = TychoElevation.height(p.x, p.y)
 			var distant_blend := smoothstep(60.0, 220.0, radius)
 			var relief := 1.5 + broad_noise.get_noise_2d(p.x, p.y) * 2.5
 			# Separate low ridges leave broad stretches of open plain between them.
@@ -108,8 +100,9 @@ static func build_surroundings(site: Dictionary, material: Material) -> MeshInst
 static func _add_rocky_hills(terrain: MeshInstance3D, sites: Array[Vector3], seed_value: int, material: Material) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value + 731
-	var stone_material := material.duplicate() as StandardMaterial3D
-	stone_material.albedo_color = stone_material.albedo_color.darkened(0.18)
+	var stone_material := StandardMaterial3D.new()
+	stone_material.albedo_color = Color("393733")
+	stone_material.roughness = 1.0
 	var sphere := SphereMesh.new()
 	sphere.radius = 1.0
 	sphere.height = 2.0
@@ -127,10 +120,10 @@ static func _add_rocky_hills(terrain: MeshInstance3D, sites: Array[Vector3], see
 	surface.create_from(rough_mesh, 0)
 	surface.generate_normals()
 	var stone_mesh := surface.commit()
-	for hill_index in range(24):
+	for hill_index in range(8):
 		# Actual triangle centers anchor the clusters to the rendered ground.
 		var center := sites[rng.randi_range(0, sites.size() - 1)]
-		for rock_index in range(5):
+		for rock_index in range(3):
 			var rock := MeshInstance3D.new()
 			rock.name = "StoneHill_%02d_Rock_%d" % [hill_index, rock_index]
 			rock.mesh = stone_mesh

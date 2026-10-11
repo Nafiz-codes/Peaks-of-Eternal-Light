@@ -83,7 +83,7 @@ func open_dashboard(from_scene_path: String) -> void:
 	if scene != null:
 		var player := scene.get_node_or_null("Outpost/Astronaut")
 		if player != null:
-			outpost_pose = {"site_id": selected_site_id, "transform": player.transform, "yaw": player.camera_yaw, "pitch": player.camera_pitch}
+			outpost_pose = {"site_id": selected_site_id, "transform": player.transform, "yaw": player.camera_yaw, "pitch": player.camera_pitch, "first_person": player.first_person}
 	get_tree().change_scene_to_file("res://scenes/mission_dashboard.tscn")
 
 

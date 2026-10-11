@@ -49,6 +49,7 @@ func _ready() -> void:
 		player.transform = session.outpost_pose.transform
 		player.camera_yaw = session.outpost_pose.yaw
 		player.camera_pitch = session.outpost_pose.pitch
+		player.set_first_person(bool(session.outpost_pose.get("first_person", false)))
 		player._sync_camera_rig()
 	_add_site_readout()
 	_add_feedback_nodes()
@@ -148,6 +149,7 @@ func _set_station_status(id: String, text: String, alert: bool) -> void:
 
 
 func toggle_overview() -> void:
+	get_node("Outpost/Astronaut").set_first_person(false)
 	overview = not overview
 	if camera_tween != null:
 		camera_tween.kill()
@@ -180,13 +182,19 @@ func _add_environment() -> void:
 	var ephemeris: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/earth_ephemeris.json"))
 	var earth: Dictionary = ephemeris.sites[str(site_record.site_id)]
 	var earth_direction := _sky_direction(float(earth.azimuth_deg), float(earth.elevation_deg))
+	var earth_size_scale := 1.0
+	if str(site_record.site_id) == "crater_rim_b":
+		# Authored Tycho sky composition: visible beside the lander from arrival.
+		earth_direction = _sky_direction(30.0, 18.0)
+		earth_size_scale = 1.15
 	starfield.set_shader_parameter("earth_position_km", earth_direction * float(earth.observer_to_earth_center_km) * EARTH_DISTANCE_SCALE)
-	starfield.set_shader_parameter("earth_radius_km", float(ephemeris.earth_equatorial_radius_km))
+	starfield.set_shader_parameter("earth_radius_km", float(ephemeris.earth_equatorial_radius_km) * earth_size_scale)
 	starfield.set_shader_parameter("earth_sun_direction", _sky_direction(float(earth.sun_azimuth_deg), float(earth.sun_elevation_deg)))
 	set_meta("earth_ephemeris_epoch_utc", ephemeris.epoch_utc)
 	set_meta("earth_distance_km", earth.observer_to_earth_center_km)
 	set_meta("earth_render_distance_km", float(earth.observer_to_earth_center_km) * EARTH_DISTANCE_SCALE)
 	set_meta("earth_elevation_deg", earth.elevation_deg)
+	set_meta("earth_render_elevation_deg", rad_to_deg(asin(earth_direction.y)))
 	sky.sky_material = starfield
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -222,20 +230,7 @@ func _add_terrain() -> void:
 	ground.get_child(0).name = "LunarSurfaceCollision"
 	_add_terrain_boundary(ground.get_aabb())
 	add_child(preload("res://src/world/outpost_terrain.gd").build_surroundings(site_record, ground.material_override))
-	var rng := RandomNumberGenerator.new()
-	rng.seed = absi(str(site_record.get("site_id", "ridge_a")).hash())
-	for index in range(32):
-		var rock := MeshInstance3D.new()
-		rock.name = "RegolithRock_%02d" % index
-		var mesh := SphereMesh.new()
-		mesh.radius = rng.randf_range(0.2, 0.7)
-		mesh.height = mesh.radius * 0.75
-		rock.mesh = mesh
-		rock.material_override = _material(LUNAR_REGOLITH.darkened(rng.randf_range(0.0, 0.2)), 1.0)
-		var angle := rng.randf_range(0.0, TAU)
-		var radius := rng.randf_range(9.0, 11.5)
-		rock.position = Vector3(cos(angle) * radius, mesh.height * 0.3, sin(angle) * radius)
-		add_child(rock)
+	add_child(preload("res://src/world/rock_scatter.gd").build(ground, str(site_record.site_id)))
 
 func _add_terrain_boundary(bounds: AABB) -> void:
 	# Invisible perimeter walls follow the rendered surface, including its corners.
@@ -274,6 +269,8 @@ func _add_outpost() -> void:
 
 func _add_habitat(parent: Node3D) -> void:
 	var habitat := HABITAT_SCENE.instantiate() as Node3D
+	if str(site_record.site_id) == "crater_rim_b":
+		habitat.position = Vector3(-12.0, 0.0, -14.0)
 	parent.add_child(habitat)
 	var model := habitat.get_node("BlueMoonLander") as Node3D
 	var bounds := AABB()
@@ -372,6 +369,13 @@ func _add_astronaut(parent: Node3D) -> void:
 	camera.far = 6000.0
 	camera.current = true
 	spring_arm.add_child(camera)
+	var first_camera := Camera3D.new()
+	first_camera.name = "FirstPersonCamera"
+	first_camera.position = Vector3(0.0, 0.12, -0.10)
+	first_camera.fov = 75.0
+	first_camera.near = 0.05
+	first_camera.far = 6000.0
+	camera_pivot.add_child(first_camera)
 	astronaut.interaction_requested.connect(_on_player_interaction)
 
 

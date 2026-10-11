@@ -32,6 +32,24 @@ func _run() -> void:
 	var astronaut: CharacterBody3D = outpost.get_node("Outpost/Astronaut")
 	_assert(astronaut.global_position.y >= -0.02, "The astronaut collision capsule settles on the lunar surface instead of below it.")
 	var visual_root: Node3D = astronaut.get_node("AnimatedAstronaut")
+	var switch_key := InputEventKey.new()
+	switch_key.keycode = KEY_V
+	switch_key.pressed = true
+	astronaut.call("_unhandled_input", switch_key)
+	_assert(astronaut.first_person and astronaut.get_node("CameraPivot/FirstPersonCamera").current and visual_root.visible, "First person preserves the animated hands and body.")
+	var eye: Camera3D = astronaut.get_node("CameraPivot/FirstPersonCamera")
+	var eye_position := eye.global_position
+	for pitch in [-1.45, 0.0, 0.5]:
+		astronaut.camera_pitch = pitch
+		astronaut._sync_camera_rig()
+		_assert(eye.global_position.is_equal_approx(eye_position), "Looking around does not orbit the eye into the suit.")
+	astronaut.camera_pitch = -0.22
+	switch_key.echo = true
+	astronaut.call("_unhandled_input", switch_key)
+	_assert(astronaut.first_person, "Holding V does not repeatedly switch views.")
+	switch_key.echo = false
+	astronaut.call("_unhandled_input", switch_key)
+	_assert(not astronaut.first_person and astronaut.get_node("CameraPivot/SpringArm/ThirdPersonCamera").current and visual_root.visible, "V returns to third person and restores the avatar.")
 	var animation_players := astronaut.get_node("AnimatedAstronaut").find_children("*", "AnimationPlayer", true, false)
 	_assert(not animation_players.is_empty(), "The astronaut scene exposes its animation player.")
 	var animation_player := animation_players[0] as AnimationPlayer

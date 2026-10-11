@@ -1,5 +1,10 @@
 # Earth from the lunar surface
 
+Tycho has an authored visibility override: Earth renders at azimuth 30 degrees,
+elevation 18 degrees, with radius multiplied by 1.15. The existing distance
+scale remains 0.525. These are visual composition choices; the source ephemeris
+is unchanged. `earth_render_elevation_deg` records the displayed elevation.
+
 The outpost uses a frozen NASA/JPL Horizons DE441 observer ephemeris for
 2026-10-05 00:00 UTC (06:00 Asia/Dhaka). It is not a live ephemeris and does not
 advance with mission sols. The date is explicit because there is no single
