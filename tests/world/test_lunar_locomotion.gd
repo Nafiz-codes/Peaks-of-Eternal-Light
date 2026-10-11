@@ -63,6 +63,14 @@ func run():
 			await physics_frame
 			player._step_locomotion(dt, Vector2.ZERO, false)
 		check(abs(player.velocity.z) < 0.001, "Ground braking stops the astronaut")
+		for i in range(hz * 3):
+			await physics_frame
+			player._step_locomotion(dt, Vector2(1, -1), false, true)
+		check(abs(Vector2(player.velocity.x, player.velocity.z).length() - 3.0) < 0.001, "Forward diagonal sprint reaches 3 m/s without a diagonal boost")
+		for i in range(hz * 2):
+			await physics_frame
+			player._step_locomotion(dt, Vector2(1, -1), false, false)
+		check(abs(Vector2(player.velocity.x, player.velocity.z).length() - 1.6) < 0.001, "Releasing sprint returns to walking speed")
 	player.position = Vector3(0, 10, 0)
 	player.velocity = Vector3(1, 0, 0)
 	player._step_locomotion(0.01, Vector2.ZERO, false)

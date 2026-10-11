@@ -87,7 +87,7 @@ func _ready() -> void:
 	content.add_child(notice)
 	activity = UI.label("", 14, UI.MUTED)
 	content.add_child(activity)
-	content.add_child(UI.label("Alt: hide mission / details · Esc: cursor / pause walking · Click terrain: resume · V: first / third person · WASD: move · Mouse: look · Space: jump · E: station · I: dashboard", 13, UI.MUTED))
+	content.add_child(UI.label("Alt: hide mission / details · Esc: cursor / pause walking · Click terrain: resume · V: first / third person · WASD: move · Shift + W: sprint · Mouse: look · Space: jump · E: station · I: dashboard", 13, UI.MUTED))
 	content.add_child(UI.label("Illustrative terrain and lighting · NASA coarse terrain samples inform the simulation; solar availability is modeled. Construction and rover operations are not yet available.", 13, UI.MUTED))
 	var copy: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/mission_copy.json"))
 	if copy is Dictionary:

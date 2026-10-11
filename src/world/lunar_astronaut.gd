@@ -6,6 +6,7 @@ extends CharacterBody3D
 
 const LUNAR_GRAVITY_MPS2 := 1.62
 const WALK_SPEED_MPS := 1.6
+const SPRINT_SPEED_MPS := 3.0
 const GROUND_ACCELERATION_MPS2 := 1.2
 const GROUND_BRAKING_MPS2 := 1.6
 const TURN_SPEED_RAD_PER_SEC := 7.0
@@ -27,6 +28,26 @@ var moving := false
 var jump_requested := false
 var ui_blocked := false
 var first_person := false
+var seated := false
+var seated_eye := Vector3.ZERO
+var seated_yaw := PI
+
+func set_seated(enabled: bool, eye: Vector3 = Vector3.ZERO) -> void:
+	seated = enabled
+	seated_eye = eye
+	velocity = Vector3.ZERO
+	jump_requested = false
+	if enabled:
+		camera_yaw = seated_yaw
+		camera_pitch = 0.35
+		set_first_person(true)
+	get_node("CameraPivot/FirstPersonCamera").fov = 75.0 if enabled else 90.0
+	# The imported couch surrounds the seated eye. Hide the standing full-body
+	# avatar in this first-person seat view to avoid helmet and torso clipping.
+	get_node("AnimatedAstronaut").visible = not enabled
+	if animation_player != null:
+		animation_player.speed_scale = 0.0 if enabled else 1.0
+	_sync_camera_rig()
 
 func set_first_person(enabled: bool) -> void:
 	first_person = enabled
@@ -39,7 +60,7 @@ func set_first_person(enabled: bool) -> void:
 			third_camera.make_current()
 	var visual := get_node_or_null("AnimatedAstronaut") as Node3D
 	if visual != null:
-		visual.visible = true
+		visual.visible = not seated
 	if first_person:
 		rotation.y = camera_yaw
 	else:
@@ -71,6 +92,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if ui_blocked:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
+		if seated and event.keycode in [KEY_SPACE, KEY_C, KEY_V]:
+			return
 		if event.keycode == KEY_ESCAPE:
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 		elif event.keycode == KEY_SPACE:
@@ -90,11 +113,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		camera_yaw = wrapf(camera_yaw - event.relative.x * LOOK_SENSITIVITY, -PI, PI)
-		camera_pitch = clampf(camera_pitch - event.relative.y * LOOK_SENSITIVITY, -1.45 if first_person else MIN_CAMERA_PITCH, MAX_CAMERA_PITCH)
+		camera_pitch = clampf(camera_pitch - event.relative.y * LOOK_SENSITIVITY, -0.25 if seated else (-1.45 if first_person else MIN_CAMERA_PITCH), 1.15 if seated else MAX_CAMERA_PITCH)
+		if seated:
+			camera_yaw = seated_yaw + clampf(wrapf(camera_yaw - seated_yaw, -PI, PI), -0.9, 0.9)
+			camera_pitch = clampf(camera_pitch, -0.25, 1.15)
 		_sync_camera_rig()
 
 
 func _physics_process(delta: float) -> void:
+	if seated:
+		return
 	var controls_active := not ui_blocked and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 	var input_vector := Vector2.ZERO
 	if controls_active:
@@ -102,16 +130,18 @@ func _physics_process(delta: float) -> void:
 			float(Input.is_key_pressed(KEY_D)) - float(Input.is_key_pressed(KEY_A)),
 			float(Input.is_key_pressed(KEY_S)) - float(Input.is_key_pressed(KEY_W))
 		)
-	_step_locomotion(delta, input_vector, controls_active and jump_requested)
+	var wants_sprint := controls_active and Input.is_key_pressed(KEY_SHIFT) and input_vector.y < 0.0
+	_step_locomotion(delta, input_vector, controls_active and jump_requested, wants_sprint)
 	jump_requested = false
 
 
-func _step_locomotion(delta: float, input_vector: Vector2, wants_jump: bool) -> void:
+func _step_locomotion(delta: float, input_vector: Vector2, wants_jump: bool, wants_sprint: bool = false) -> void:
 	var grounded := is_on_floor()
 	var movement := movement_direction_for_input(input_vector)
 	var horizontal := Vector2(velocity.x, velocity.z)
 	if grounded:
-		var target := Vector2(movement.x, movement.z) * WALK_SPEED_MPS
+		var speed := SPRINT_SPEED_MPS if wants_sprint and input_vector.y < 0.0 else WALK_SPEED_MPS
+		var target := Vector2(movement.x, movement.z) * speed
 		var acceleration := GROUND_ACCELERATION_MPS2 if not input_vector.is_zero_approx() else GROUND_BRAKING_MPS2
 		horizontal = horizontal.move_toward(target, acceleration * delta)
 		velocity.y = JUMP_VELOCITY_MPS if wants_jump else 0.0
@@ -135,7 +165,7 @@ func _step_locomotion(delta: float, input_vector: Vector2, wants_jump: bool) -> 
 	_sync_camera_rig()
 	_update_animation(horizontal.length() > 0.05 or not is_on_floor())
 	if animation_player != null:
-		animation_player.speed_scale = clampf(horizontal.length() / WALK_SPEED_MPS, 0.25, 1.0) if moving else 1.0
+		animation_player.speed_scale = clampf(horizontal.length() / WALK_SPEED_MPS, 0.25, SPRINT_SPEED_MPS / WALK_SPEED_MPS) if moving else 1.0
 		# Continue the forward arm/leg cycle through the jump at a slower lunar cadence.
 		if not is_on_floor():
 			animation_player.speed_scale = 0.65
@@ -155,7 +185,7 @@ func _sync_camera_rig() -> void:
 		pivot.rotation = Vector3(camera_pitch, camera_yaw - rotation.y, 0.0)
 		if first_person:
 			var camera := get_node("CameraPivot/FirstPersonCamera") as Camera3D
-			camera.global_position = global_transform * FIRST_PERSON_EYE
+			camera.global_position = seated_eye if seated else global_transform * FIRST_PERSON_EYE
 
 
 func set_animation_player(player: AnimationPlayer) -> void:
