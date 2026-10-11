@@ -371,9 +371,9 @@ func _add_astronaut(parent: Node3D) -> void:
 	spring_arm.add_child(camera)
 	var first_camera := Camera3D.new()
 	first_camera.name = "FirstPersonCamera"
-	first_camera.position = Vector3(0.0, 0.12, -0.10)
-	first_camera.fov = 75.0
-	first_camera.near = 0.05
+	first_camera.position = LunarAstronautScript.FIRST_PERSON_EYE - camera_pivot.position
+	first_camera.fov = 90.0
+	first_camera.near = 0.02
 	first_camera.far = 6000.0
 	camera_pivot.add_child(first_camera)
 	astronaut.interaction_requested.connect(_on_player_interaction)

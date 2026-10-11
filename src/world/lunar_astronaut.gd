@@ -12,6 +12,8 @@ const JUMP_VELOCITY_MPS := 2.2
 const LOOK_SENSITIVITY := 0.003
 const MIN_CAMERA_PITCH := -0.75
 const MAX_CAMERA_PITCH := 0.5
+# Keep the eye ahead of the visor/chest; pitch rotates the view, not this offset.
+const FIRST_PERSON_EYE := Vector3(0.0, 1.70, -0.48)
 
 signal interaction_requested(interaction_id: String)
 
@@ -36,28 +38,6 @@ func set_first_person(enabled: bool) -> void:
 	var visual := get_node_or_null("AnimatedAstronaut") as Node3D
 	if visual != null:
 		visual.visible = true
-		for mesh in visual.find_children("*", "MeshInstance3D", true, false):
-			for surface in range(mesh.mesh.get_surface_count()):
-				var key := "original_material_%d" % surface
-				if not mesh.has_meta(key):
-					mesh.set_meta(key, mesh.get_active_material(surface))
-				if first_person:
-					var original := mesh.get_meta(key) as StandardMaterial3D
-					var material := ShaderMaterial.new()
-					material.shader = preload("res://src/world/first_person_suit.gdshader")
-					if original != null:
-						material.set_shader_parameter("suit_color", original.albedo_color)
-						material.set_shader_parameter("has_texture", original.albedo_texture != null)
-						material.set_shader_parameter("suit_texture", original.albedo_texture)
-					mesh.set_surface_override_material(surface, material)
-				else:
-					mesh.set_surface_override_material(surface, mesh.get_meta(key))
-		for skeleton in visual.find_children("*", "Skeleton3D", true, false):
-			for bone in range(skeleton.get_bone_count()):
-				if str(skeleton.get_bone_name(bone)).to_lower().begins_with("head"):
-					var pose: Transform3D = skeleton.get_bone_global_pose_no_override(bone)
-					pose.basis = pose.basis.scaled(Vector3.ONE * 0.001)
-					skeleton.set_bone_global_pose_override(bone, pose, 1.0 if first_person else 0.0, true)
 	if first_person:
 		rotation.y = camera_yaw
 	else:
@@ -149,18 +129,14 @@ func movement_direction_for_input(input_vector: Vector2) -> Vector3:
 
 
 func _sync_camera_rig() -> void:
+	if first_person:
+		rotation.y = camera_yaw
 	var pivot := get_node_or_null("CameraPivot") as Node3D
 	if pivot != null:
 		pivot.rotation = Vector3(camera_pitch, camera_yaw - rotation.y, 0.0)
 		if first_person:
 			var camera := get_node("CameraPivot/FirstPersonCamera") as Camera3D
-			# Eye position must not orbit into the chest when looking down.
-			camera.global_position = global_transform * Vector3(0.0, 1.57, -0.10)
-			for mesh in get_node("AnimatedAstronaut").find_children("*", "MeshInstance3D", true, false):
-				for surface in range(mesh.mesh.get_surface_count()):
-					var material := mesh.get_surface_override_material(surface) as ShaderMaterial
-					if material != null:
-						material.set_shader_parameter("world_to_body", global_transform.affine_inverse())
+			camera.global_position = global_transform * FIRST_PERSON_EYE
 
 
 func set_animation_player(player: AnimationPlayer) -> void:
