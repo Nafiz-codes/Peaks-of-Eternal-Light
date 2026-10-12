@@ -17,6 +17,7 @@ const MIN_CAMERA_PITCH := -0.75
 const MAX_CAMERA_PITCH := 0.5
 # Keep the eye ahead of the visor/chest; pitch rotates the view, not this offset.
 const FIRST_PERSON_EYE := Vector3(0.0, 1.70, -0.48)
+const FIRST_PERSON_FOV := 90.0
 
 signal interaction_requested(interaction_id: String)
 
@@ -31,22 +32,33 @@ var first_person := false
 var seated := false
 var seated_eye := Vector3.ZERO
 var seated_yaw := PI
+var seated_pose: RefCounted
 
 func set_seated(enabled: bool, eye: Vector3 = Vector3.ZERO) -> void:
+	var visual := get_node("AnimatedAstronaut") as Node3D
+	if seated_pose != null:
+		seated_pose.restore(visual)
+		seated_pose = null
 	seated = enabled
 	seated_eye = eye
 	velocity = Vector3.ZERO
 	jump_requested = false
 	if enabled:
 		camera_yaw = seated_yaw
-		camera_pitch = 0.35
+		camera_pitch = -0.22
 		set_first_person(true)
-	get_node("CameraPivot/FirstPersonCamera").fov = 75.0 if enabled else 90.0
-	# The imported couch surrounds the seated eye. Hide the standing full-body
-	# avatar in this first-person seat view to avoid helmet and torso clipping.
-	get_node("AnimatedAstronaut").visible = not enabled
+	get_node("CameraPivot/FirstPersonCamera").fov = FIRST_PERSON_FOV
+	visual.visible = true
 	if animation_player != null:
-		animation_player.speed_scale = 0.0 if enabled else 1.0
+		animation_player.speed_scale = 1.0
+		animation_player.play("idle", 0.0)
+		animation_player.advance(0.0)
+		moving = false
+		if enabled:
+			animation_player.pause()
+	if enabled:
+		seated_pose = preload("res://src/world/astronaut_seated_pose.gd").new()
+		seated_pose.apply(visual, self)
 	_sync_camera_rig()
 
 func set_first_person(enabled: bool) -> void:
@@ -60,9 +72,9 @@ func set_first_person(enabled: bool) -> void:
 			third_camera.make_current()
 	var visual := get_node_or_null("AnimatedAstronaut") as Node3D
 	if visual != null:
-		visual.visible = not seated
+		visual.visible = true
 	if first_person:
-		rotation.y = camera_yaw
+		rotation.y = seated_yaw if seated else camera_yaw
 	else:
 		camera_pitch = clampf(camera_pitch, MIN_CAMERA_PITCH, MAX_CAMERA_PITCH)
 	_sync_camera_rig()
@@ -112,12 +124,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		camera_yaw = wrapf(camera_yaw - event.relative.x * LOOK_SENSITIVITY, -PI, PI)
-		camera_pitch = clampf(camera_pitch - event.relative.y * LOOK_SENSITIVITY, -0.25 if seated else (-1.45 if first_person else MIN_CAMERA_PITCH), 1.15 if seated else MAX_CAMERA_PITCH)
-		if seated:
-			camera_yaw = seated_yaw + clampf(wrapf(camera_yaw - seated_yaw, -PI, PI), -0.9, 0.9)
-			camera_pitch = clampf(camera_pitch, -0.25, 1.15)
-		_sync_camera_rig()
+		_apply_mouse_look(event.relative)
+
+
+func _apply_mouse_look(relative: Vector2) -> void:
+	camera_yaw = wrapf(camera_yaw - relative.x * LOOK_SENSITIVITY, -PI, PI)
+	camera_pitch = clampf(camera_pitch - relative.y * LOOK_SENSITIVITY, -1.45 if first_person else MIN_CAMERA_PITCH, MAX_CAMERA_PITCH)
+	_sync_camera_rig()
 
 
 func _physics_process(delta: float) -> void:
@@ -179,7 +192,7 @@ func movement_direction_for_input(input_vector: Vector2) -> Vector3:
 
 func _sync_camera_rig() -> void:
 	if first_person:
-		rotation.y = camera_yaw
+		rotation.y = seated_yaw if seated else camera_yaw
 	var pivot := get_node_or_null("CameraPivot") as Node3D
 	if pivot != null:
 		pivot.rotation = Vector3(camera_pitch, camera_yaw - rotation.y, 0.0)

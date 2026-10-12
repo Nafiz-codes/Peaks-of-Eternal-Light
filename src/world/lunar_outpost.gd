@@ -274,10 +274,21 @@ func _add_habitat(parent: Node3D) -> void:
 	if str(site_record.site_id) == "crater_rim_b":
 		habitat.position = Vector3(-12.0, 0.0, -14.0)
 	parent.add_child(habitat)
-	var model := habitat.get_node("ApolloCommandModule") as Node3D
-	# The imported heat shield / pressure shell supplies the exterior collision.
-	var hull := model.find_child("Object_2", true, false) as MeshInstance3D
-	hull.create_trimesh_collision()
+	# A low-complexity capsule hull avoids collision against the scanned 90k-triangle
+	# shell. Entry is a fade transfer, so the collider need not reproduce the hatch.
+	var hull := StaticBody3D.new()
+	hull.name = "CapsuleHull"
+	var collision := CollisionShape3D.new()
+	var shape := ConvexPolygonShape3D.new()
+	var points := PackedVector3Array()
+	for ring in [Vector2(2.65, 0.0), Vector2(1.3, 2.85), Vector2(1.1, 3.73)]:
+		for index in range(16):
+			var angle := TAU * index / 16.0
+			points.append(Vector3(cos(angle) * ring.x, ring.y, sin(angle) * ring.x))
+	shape.points = points
+	collision.shape = shape
+	hull.add_child(collision)
+	habitat.add_child(hull)
 
 
 func _add_solar_array(parent: Node3D) -> void:

@@ -1,23 +1,22 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="PackedScene" path="res://Assets/apollo/command_module.glb" id="1_lander"]
+[ext_resource type="PackedScene" path="res://Assets/apollo/command_module_optimized.scn" id="1_lander"]
 
 [node name="Habitat" type="Node3D"]
 position = Vector3(-1.2, 0, -12)
 
 [node name="ApolloCommandModule" parent="." instance=ExtResource("1_lander")]
-position = Vector3(0, -0.444507, 0)
-scale = Vector3(0.75, 0.75, 0.75)
+position = Vector3(0, -0.592676, 0)
 
 [node name="HatchApproach" type="Marker3D" parent="."]
-position = Vector3(0, 0.08, 2.25)
+position = Vector3(0, 0.08, 3.1)
 
 [node name="SeatedEye" type="Marker3D" parent="."]
-position = Vector3(0, 1.243, 0)
-rotation = Vector3(0.35, 3.141593, 0)
+position = Vector3(0, 2.15, 0)
+rotation = Vector3(-0.22, 3.141593, 0)
 
 [node name="CabinLight" type="OmniLight3D" parent="."]
-position = Vector3(0, 1.5, 0.3)
+position = Vector3(0, 2.0, 0.4)
 light_color = Color(1, 0.94, 0.84, 1)
 light_energy = 0.7
-omni_range = 2.4
+omni_range = 3.2
