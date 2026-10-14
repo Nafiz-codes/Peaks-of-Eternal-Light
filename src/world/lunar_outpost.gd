@@ -192,6 +192,13 @@ func _add_environment() -> void:
 	starfield.set_shader_parameter("earth_position_km", earth_direction * float(earth.observer_to_earth_center_km) * EARTH_DISTANCE_SCALE)
 	starfield.set_shader_parameter("earth_radius_km", float(ephemeris.earth_equatorial_radius_km) * earth_size_scale)
 	starfield.set_shader_parameter("earth_sun_direction", _sky_direction(float(earth.sun_azimuth_deg), float(earth.sun_elevation_deg)))
+	# Decorative daytime Sun: a real NASA position at a separate date per site.
+	# This does not drive the existing lights or Earth's frozen phase.
+	var sun_display: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/sun_display.json"))
+	var display_sun: Dictionary = sun_display.sites[str(site_record.site_id)]
+	starfield.set_shader_parameter("display_sun_direction", _sky_direction(float(display_sun.azimuth_deg), float(display_sun.elevation_deg)))
+	starfield.set_shader_parameter("sun_angular_radius", deg_to_rad(float(display_sun.angular_diameter_deg) * 0.5))
+	set_meta("sun_display_epoch_utc", display_sun.epoch_utc)
 	set_meta("earth_ephemeris_epoch_utc", ephemeris.epoch_utc)
 	set_meta("earth_distance_km", earth.observer_to_earth_center_km)
 	set_meta("earth_render_distance_km", float(earth.observer_to_earth_center_km) * EARTH_DISTANCE_SCALE)

@@ -44,6 +44,29 @@ and detailed lighting remain visual approximations; they are not satellite
 imagery for the chosen date. Site coordinate and terrain sampling precision also
 limit accuracy. The lunar terrain lighting retains its existing gameplay setup.
 
+The decorative Sun uses NASA/JPL Horizons target 10, with independent daylight
+snapshots for all four outposts. `Resources/sun_display.json` stores each date,
+azimuth, elevation, angular diameter, observer coordinates, and request URL. Raw
+responses are in `Resources/sun_display/`; reproduce them with
+`python3 tools/prepare_sun_display.py`. The selection rule chooses the first hourly
+sample on or after October 5, 2026 with elevation at least 20 degrees, so the disk
+clears the illustrative terrain. No direction or physical disk size is invented.
+
+| Outpost | Sun snapshot (UTC) | Azimuth | Elevation |
+| --- | --- | --- | --- |
+| Tranquility Base | 2026-10-18 04:00 | 91.64° | 20.13° |
+| Aristarchus | 2026-10-05 00:00 | 256.66° | 28.80° |
+| Tycho | 2026-10-21 14:00 | 71.73° | 20.22° |
+| Tsiolkovskiy | 2026-10-09 16:00 | 83.35° | 20.43° |
+
+This is an authored composition of separate NASA snapshots, not a simultaneous
+Earth/Sun sky or a live mission clock. Earth's existing appearance and lighting
+remain on their original setup. The white core and golden camera glare are artistic;
+the solar disk's angular radius comes from the selected NASA row. The Sun is
+excluded from the sky radiance cubemap, so it adds no illumination or reflections.
+Existing lights, shadows, ambient fill, and power simulation are unchanged. Terrain
+and foreground objects occlude the Sun normally.
+
 Sources:
 - https://ssd-api.jpl.nasa.gov/doc/horizons.html
 - https://ssd.jpl.nasa.gov/horizons/manual.html (quantities 4, 13, 20)

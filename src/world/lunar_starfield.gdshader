@@ -9,6 +9,26 @@ uniform vec3 earth_position_km;
 uniform float earth_radius_km = 6378.137;
 uniform float earth_longitude : hint_range(-180.0, 180.0) = 20.0;
 uniform vec3 earth_sun_direction = vec3(-0.65, 0.35, 0.68);
+// Separate NASA daylight snapshot for the decorative Sun at each outpost.
+uniform vec3 display_sun_direction = vec3(0.0, 0.5, -0.8660254);
+// Runtime uses the snapshot's angular radius; glow is artistic camera glare.
+uniform float sun_angular_radius = 0.004653;
+
+vec3 visible_sun(vec3 ray) {
+	vec3 sun_direction = normalize(display_sun_direction);
+	// Respect the frozen NASA horizon; no glow leaking from a nighttime Sun.
+	if (sun_direction.y <= 0.0 || ray.y <= 0.0 || dot(ray, sun_direction) <= 0.0) {
+		return vec3(0.0);
+	}
+	float separation = length(cross(ray, sun_direction));
+	float radius = sin(sun_angular_radius);
+	float aa = max(fwidth(separation), 0.00001);
+	float disk = 1.0 - smoothstep(radius - aa, radius + aa, separation);
+	float solar_radii = separation / radius;
+	float halo = exp(-solar_radii * 0.45) * 0.65;
+	halo *= 1.0 - smoothstep(10.0, 18.0, solar_radii);
+	return vec3(1.0, 0.98, 0.90) * disk * 5.0 + vec3(1.0, 0.74, 0.32) * halo;
+}
 
 vec3 earth_color(vec3 ray, vec3 center, float radius) {
 	float projection = dot(ray, center);
@@ -60,6 +80,10 @@ void sky() {
 	float star = (1.0 - smoothstep(max(0.0, radius - aa), radius + aa, distance)) * step(0.9985, chance);
 	vec3 tint = mix(vec3(0.80, 0.87, 1.0), vec3(1.0, 0.94, 0.83), hash(cell + 53.0));
 	COLOR = vec3(0.0003, 0.0004, 0.0007) + tint * star * mix(0.45, 1.8, hash(cell + 71.0));
+	// Display only: exclude the Sun from sky radiance/reflections and scene lighting.
+	if (!AT_CUBEMAP_PASS) {
+		COLOR += visible_sun(direction);
+	}
 	vec3 earth_relative_km = earth_position_km - POSITION * 0.001;
 	vec3 earth_center = normalize(earth_relative_km);
 	// Normalize the ray/sphere calculation to avoid astronomical float precision loss.
