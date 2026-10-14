@@ -42,7 +42,7 @@ direction is taken from the same observer/date. Earth is represented as a sphere
 rather than an oblate ellipsoid. Continent orientation, cloud pattern, atmosphere,
 and detailed lighting remain visual approximations; they are not satellite
 imagery for the chosen date. Site coordinate and terrain sampling precision also
-limit accuracy. The lunar terrain lighting retains its existing gameplay setup.
+limit accuracy. The lunar terrain light now follows the displayed Sun direction.
 
 The decorative Sun uses NASA/JPL Horizons target 10, with independent daylight
 snapshots for all four outposts. `Resources/sun_display.json` stores each date,
@@ -63,9 +63,12 @@ This is an authored composition of separate NASA snapshots, not a simultaneous
 Earth/Sun sky or a live mission clock. Earth's existing appearance and lighting
 remain on their original setup. The white core and golden camera glare are artistic;
 the solar disk's angular radius comes from the selected NASA row. The Sun is
-excluded from the sky radiance cubemap, so it adds no illumination or reflections.
-Existing lights, shadows, ambient fill, and power simulation are unchanged. Terrain
-and foreground objects occlude the Sun normally.
+excluded from the sky radiance cubemap, so the disk adds no extra illumination or
+reflections. The existing directional light uses the exact same direction as the
+displayed Sun, with rays traveling away from it and shadows falling opposite it.
+Its brightness (1.1), warm color, and enabled shadows are retained. Ambient fill
+and power simulation are unchanged. Terrain and foreground objects occlude the Sun
+normally.
 
 Sources:
 - https://ssd-api.jpl.nasa.gov/doc/horizons.html

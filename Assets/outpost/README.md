@@ -6,4 +6,12 @@ The outpost also instantiates the existing `Assets/mars_rover.glb` and `Assets/a
 
 These assets represent the initial scene only. Placement does not imply simulation construction completion, rover operation, or resource production. Those require authoritative runtime actions in later tasks.
 
+The four interaction stations use copies of the playable astronaut's exact GLB,
+with the same suit materials, scale, grounding offset, and idle animation.
+`src/world/station_astronaut.gd` attaches colored bands to both upper-arm bones:
+blue for energy, green for food, cyan for water, and purple for crew briefing.
+The bands follow the idle pose; the original model and suit textures are unchanged.
+Each crew member has a capsule collider and retains the station's existing E-key
+interaction area, status label, and mission data binding.
+
 The Day 11 pass adds habitat windows and identification, solar cell divisions, and collision hulls in the world. `src/world/outpost_terrain.gd` supplies deterministic site-seeded terrain, regolith texture and peripheral rocks, with a flat playable pad. Its mesh is illustrative art, not a local LOLA reconstruction. Solar indicator light intensity is a visual cue; only the HUD and station kWh readings report the simulator's numeric output.

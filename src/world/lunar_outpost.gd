@@ -193,7 +193,7 @@ func _add_environment() -> void:
 	starfield.set_shader_parameter("earth_radius_km", float(ephemeris.earth_equatorial_radius_km) * earth_size_scale)
 	starfield.set_shader_parameter("earth_sun_direction", _sky_direction(float(earth.sun_azimuth_deg), float(earth.sun_elevation_deg)))
 	# Decorative daytime Sun: a real NASA position at a separate date per site.
-	# This does not drive the existing lights or Earth's frozen phase.
+	# The existing directional light shares this direction; Earth's phase stays frozen.
 	var sun_display: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/sun_display.json"))
 	var display_sun: Dictionary = sun_display.sites[str(site_record.site_id)]
 	starfield.set_shader_parameter("display_sun_direction", _sky_direction(float(display_sun.azimuth_deg), float(display_sun.elevation_deg)))
@@ -228,8 +228,11 @@ func _add_lighting() -> void:
 	sun.light_color = Color("ffe5bd")
 	sun.light_energy = 1.1
 	sun.shadow_enabled = true
-	sun.rotation_degrees = Vector3(-32.0, -58.0, 0.0)
 	add_child(sun)
+	var sky_material: ShaderMaterial = get_node("LunarEnvironment").environment.sky.sky_material
+	var sun_direction: Vector3 = sky_material.get_shader_parameter("display_sun_direction")
+	# Godot emits directional light along -Z: rays travel FROM the visible Sun.
+	sun.look_at(sun.global_position - sun_direction, Vector3.FORWARD if absf(sun_direction.y) > 0.999 else Vector3.UP)
 
 
 func _add_terrain() -> void:
@@ -382,13 +385,9 @@ func _add_interaction_station(parent: Node3D, interaction_id: String, label_text
 	station.name = interaction_id
 	station.position = position_
 	parent.add_child(station)
-	var terminal := MeshInstance3D.new()
-	var terminal_mesh := BoxMesh.new()
-	terminal_mesh.size = Vector3(0.8, 1.25, 0.6)
-	terminal.mesh = terminal_mesh
-	terminal.material_override = _material(color, 0.45)
-	terminal.position.y = 0.625
-	station.add_child(terminal)
+	preload("res://src/world/station_astronaut.gd").populate(station, ASTRONAUT_SCENE, color)
+	# Face the arrival area so the crew greet the player rather than face away.
+	station.look_at(parent.to_global(Vector3(3.4, 0.0, 6.5)), Vector3.UP)
 	var label := Label3D.new()
 	label.name = "StatusLabel"
 	label.text = label_text + "  [E]"
@@ -397,7 +396,7 @@ func _add_interaction_station(parent: Node3D, interaction_id: String, label_text
 	label.pixel_size = 0.008
 	label.outline_size = 4
 	label.modulate = Color("f1f3fa")
-	label.position = Vector3(0.0, 1.7, 0.0)
+	label.position = Vector3(0.0, 2.3, 0.0)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	station.add_child(label)
 	var area := Area3D.new()
