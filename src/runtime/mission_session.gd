@@ -13,6 +13,7 @@ var action_busy := false
 var reduce_motion := false
 var outpost_pose: Dictionary = {}
 var sol_checkpoint: Dictionary = {}
+var crew_read_reports: Dictionary = {}
 const Save = preload("res://src/runtime/mission_save.gd")
 
 func remember_pose() -> void:
@@ -54,6 +55,7 @@ func restart_current_sol() -> Error:
 	return Save.restore(self, sol_checkpoint)
 
 func reset_current_mission() -> Error:
+	crew_read_reports = {}
 	dashboard_state = null
 	dashboard_last_tick = {}
 	outpost_pose = {}
@@ -116,6 +118,7 @@ func resolve_decision(event_id: String, choice_id: String) -> Dictionary:
 
 func select_landing_site(site_id: String) -> void:
 	if selected_site_id != site_id:
+		crew_read_reports = {}
 		outpost_pose = {}
 		sol_checkpoint = {}
 	# A different destination must not resume another site's mission.

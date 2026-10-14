@@ -18,7 +18,7 @@ static func capture(session: Node) -> Dictionary:
 	tick.erase("state")
 	return {"version": VERSION, "saved_at": Time.get_datetime_string_from_system(),
 		"site_id": session.selected_site_id, "state": state_data(session.dashboard_state),
-		"last_tick": tick, "pose": session.outpost_pose.duplicate(true)}
+		"last_tick": tick, "pose": session.outpost_pose.duplicate(true), "crew_read_reports": session.crew_read_reports.duplicate(true)}
 
 static func decode(data: Variant) -> Dictionary:
 	if not data is Dictionary or data.get("version") != VERSION:
@@ -26,6 +26,12 @@ static func decode(data: Variant) -> Dictionary:
 	if not data.get("site_id") is String or not data.get("state") is Dictionary or not data.get("pose") is Dictionary or not data.get("last_tick") is Dictionary:
 		return {}
 	var simulator := Simulator.new()
+	var read_reports: Variant = data.get("crew_read_reports", {})
+	if not read_reports is Dictionary:
+		return {}
+	for key in read_reports:
+		if not key is String or not read_reports[key] is String:
+			return {}
 	if simulator.load_contracts() != OK:
 		return {}
 	var valid_site := false
@@ -64,7 +70,7 @@ static func decode(data: Variant) -> Dictionary:
 		if not pose.transform.is_finite() or not is_finite(pose.yaw) or not is_finite(pose.pitch):
 			return {}
 	return {"simulator": simulator, "state": state, "site_id": data.site_id,
-		"pose": pose.duplicate(true), "last_tick": data.last_tick.duplicate(true)}
+		"pose": pose.duplicate(true), "last_tick": data.last_tick.duplicate(true), "crew_read_reports": read_reports.duplicate(true)}
 
 static func restore(session: Node, data: Dictionary) -> Error:
 	var restored := decode(data)
@@ -77,6 +83,7 @@ static func restore(session: Node, data: Dictionary) -> Error:
 	if restored.state != null and not restored.last_tick.is_empty():
 		session.dashboard_last_tick["state"] = restored.state
 	session.outpost_pose = restored.pose
+	session.crew_read_reports = restored.crew_read_reports
 	session.action_busy = false
 	session.return_scene_path = ""
 	return OK

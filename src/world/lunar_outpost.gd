@@ -145,6 +145,11 @@ func refresh_feedback() -> void:
 func _set_station_status(id: String, text: String, alert: bool) -> void:
 	var label := get_node("Outpost/" + id + "/StatusLabel") as Label3D
 	label.text = str(label.get_meta("station_title")) + " [E]\n" + text
+	var session := get_node("/root/MissionSession")
+	var events: Array = [] if session.dashboard_simulator == null else session.dashboard_simulator.events
+	var report := preload("res://src/ui/crew_report.gd").build(id, session.dashboard_state, events)
+	if session.crew_read_reports.get(id, "") != report.signature:
+		label.text += "\n● NEW UPDATE"
 	label.modulate = Color("ffd18a") if alert else Color("d9e9ff")
 
 

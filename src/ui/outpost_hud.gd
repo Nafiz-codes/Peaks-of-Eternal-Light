@@ -22,6 +22,7 @@ var operations: AcceptDialog
 var activity: Label
 var clear_preview_button: Button
 var reading_tween: Tween
+var crew_dialogue: AcceptDialog
 
 func _ready() -> void:
 	name = "MissionHUD"
@@ -101,6 +102,11 @@ func _ready() -> void:
 	operations = preload("res://src/ui/operations_panel.gd").new()
 	add_child(operations)
 	operations.visibility_changed.connect(_dialog_visibility_changed)
+	crew_dialogue = preload("res://src/ui/crew_dialogue.gd").new()
+	add_child(crew_dialogue)
+	crew_dialogue.visibility_changed.connect(_dialog_visibility_changed)
+	crew_dialogue.report_read.connect(world.refresh_feedback)
+	crew_dialogue.action_requested.connect(_crew_action)
 	operations.placement_preview_requested.connect(func(id: String):
 		var catalog := _construction_contract()
 		if world.construction_view.show_preview(id, catalog.get("structures", [])):
@@ -204,25 +210,27 @@ func _dialog_visibility_changed() -> void:
 	refresh()
 
 func inspect_station(id: String) -> void:
-	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-	var state: Variant = session.dashboard_state
-	if state == null:
-		notice.text = "Start the mission to inspect live station readings."
-		return
-	match id:
-		"power_console": notice.text = "Solar generation %.2f kWh / consumption %.2f kWh / balance %+.2f kWh last sol." % [state.power_generated_kwh, state.power_consumed_kwh, state.power_balance_kwh]
-		"water_recycler": notice.text = "Water %.2f L / recovered %.2f L last sol / %s." % [state.water_l, state.water_recovered_l, state.life_support_status.get("water", "unavailable")]
-		"food_storage": notice.text = "Food %.2f kg / consumed %.2f kg last sol / %s." % [state.food_kg, state.food_consumed_kg, state.life_support_status.get("food", "unavailable")]
-		"crew_briefing":
-			notice.text = "Crew %d / modeled accumulated dose %.3f mSv. Rover and construction controls await their action systems." % [state.crew_size, state.radiation_msv]
-			open_pending_event()
+	if not _modal_visible():
+		crew_dialogue.open_conversation(id)
+
+func _crew_action(kind: String, event_id: String) -> void:
+	if kind == "dashboard":
+		open_dashboard()
+	elif kind == "decision":
+		var state: Variant = session.dashboard_state
+		if state == null or state.mission_outcome.get("status") != "in_progress" or session.action_busy:
+			return
+		for event in state.pending_events:
+			if event.event_id == event_id:
+				event_dialog.open_preview(event, event_button, true)
+				return
 
 func open_dashboard() -> void:
 	if not _modal_visible():
 		session.open_dashboard(world.scene_file_path)
 
 func _modal_visible() -> bool:
-	return (is_instance_valid(event_dialog) and event_dialog.visible) or (is_instance_valid(operations) and operations.visible)
+	return (is_instance_valid(event_dialog) and event_dialog.visible) or (is_instance_valid(operations) and operations.visible) or (is_instance_valid(crew_dialogue) and crew_dialogue.visible)
 
 func _construction_contract() -> Dictionary:
 	if session.dashboard_simulator != null:

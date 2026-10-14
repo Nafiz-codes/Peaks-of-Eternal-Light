@@ -417,6 +417,7 @@ func reset_mission() -> void:
 		session.set("dashboard_state", null)
 		session.set("dashboard_last_tick", {})
 		session.sol_checkpoint = {}
+		session.crew_read_reports = {}
 	show_sites()
 
 func _model_notes() -> String:
