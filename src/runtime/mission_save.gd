@@ -1,0 +1,101 @@
+extends RefCounted
+## Save data is plain Variant data, never serialized executable objects.
+const State = preload("res://src/simulation/mission_state.gd")
+const Simulator = preload("res://src/simulation/mission_simulator.gd")
+const VERSION := 1
+const MAX_BYTES := 8 * 1024 * 1024
+
+static func state_data(state: RefCounted) -> Dictionary:
+	var result := {}
+	if state != null:
+		for property in state.get_property_list():
+			if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+				result[property.name] = state.get(property.name)
+	return result.duplicate(true)
+
+static func capture(session: Node) -> Dictionary:
+	var tick: Dictionary = session.dashboard_last_tick.duplicate(true)
+	tick.erase("state")
+	return {"version": VERSION, "saved_at": Time.get_datetime_string_from_system(),
+		"site_id": session.selected_site_id, "state": state_data(session.dashboard_state),
+		"last_tick": tick, "pose": session.outpost_pose.duplicate(true)}
+
+static func decode(data: Variant) -> Dictionary:
+	if not data is Dictionary or data.get("version") != VERSION:
+		return {}
+	if not data.get("site_id") is String or not data.get("state") is Dictionary or not data.get("pose") is Dictionary or not data.get("last_tick") is Dictionary:
+		return {}
+	var simulator := Simulator.new()
+	if simulator.load_contracts() != OK:
+		return {}
+	var valid_site := false
+	for site in simulator.sites:
+		valid_site = valid_site or site.site_id == data.site_id
+	if not valid_site:
+		return {}
+	var state: RefCounted = null
+	if not data.state.is_empty():
+		state = State.new()
+		for property in state.get_property_list():
+			if (property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE) == 0:
+				continue
+			var key: String = property.name
+			if not data.state.has(key) or typeof(data.state[key]) != property.type:
+				return {}
+			var value: Variant = data.state[key]
+			if value is float and not is_finite(value):
+				return {}
+			if value is Array:
+				var target: Array = state.get(key)
+				for item in value:
+					if typeof(item) != target.get_typed_builtin():
+						return {}
+				target.assign(value.duplicate(true))
+			else:
+				state.set(key, value.duplicate(true) if value is Dictionary else value)
+		if state.site_id != data.site_id or state.sol < 0 or state.sol > state.mission_length_sols or state.mission_length_sols < 1:
+			return {}
+		if not state.mission_outcome.get("status", "") in ["in_progress", "success", "failure"]:
+			return {}
+	var pose: Dictionary = data.pose
+	if not pose.is_empty():
+		if pose.get("site_id") != data.site_id or not pose.get("transform") is Transform3D or not pose.get("yaw") is float or not pose.get("pitch") is float:
+			return {}
+		if not pose.transform.is_finite() or not is_finite(pose.yaw) or not is_finite(pose.pitch):
+			return {}
+	return {"simulator": simulator, "state": state, "site_id": data.site_id,
+		"pose": pose.duplicate(true), "last_tick": data.last_tick.duplicate(true)}
+
+static func restore(session: Node, data: Dictionary) -> Error:
+	var restored := decode(data)
+	if restored.is_empty():
+		return ERR_INVALID_DATA
+	session.selected_site_id = restored.site_id
+	session.dashboard_simulator = restored.simulator
+	session.dashboard_state = restored.state
+	session.dashboard_last_tick = restored.last_tick
+	if restored.state != null and not restored.last_tick.is_empty():
+		session.dashboard_last_tick["state"] = restored.state
+	session.outpost_pose = restored.pose
+	session.action_busy = false
+	session.return_scene_path = ""
+	return OK
+
+static func write_file(path: String, data: Dictionary) -> Error:
+	var file := FileAccess.open(path + ".tmp", FileAccess.WRITE)
+	if file == null:
+		return FileAccess.get_open_error()
+	file.store_var(data, false)
+	file.flush()
+	var error := file.get_error()
+	file.close()
+	if error != OK:
+		return error
+	return DirAccess.rename_absolute(path + ".tmp", path)
+
+static func read_file(path: String) -> Dictionary:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null or file.get_length() > MAX_BYTES or file.get_length() < 4:
+		return {}
+	var value: Variant = file.get_var(false)
+	return value if value is Dictionary else {}

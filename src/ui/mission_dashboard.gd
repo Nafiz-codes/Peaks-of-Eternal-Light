@@ -251,6 +251,7 @@ func start_mission() -> void:
 		session.set("dashboard_simulator", simulator)
 		session.set("dashboard_state", state)
 		session.set("dashboard_last_tick", last_tick)
+		session.capture_sol_checkpoint()
 	show_dashboard()
 
 func show_dashboard() -> void:
@@ -348,6 +349,7 @@ func advance_turn() -> void:
 	if session != null:
 		session.set("dashboard_state", state)
 		session.set("dashboard_last_tick", last_tick)
+		session.capture_sol_checkpoint()
 	if state.mission_outcome.get("status", "") in ["success", "failure"]:
 		show_report()
 	else:
@@ -414,6 +416,7 @@ func reset_mission() -> void:
 	if session != null:
 		session.set("dashboard_state", null)
 		session.set("dashboard_last_tick", {})
+		session.sol_checkpoint = {}
 	show_sites()
 
 func _model_notes() -> String:

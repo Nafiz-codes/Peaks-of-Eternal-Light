@@ -12,6 +12,54 @@ signal state_changed
 var action_busy := false
 var reduce_motion := false
 var outpost_pose: Dictionary = {}
+var sol_checkpoint: Dictionary = {}
+const Save = preload("res://src/runtime/mission_save.gd")
+
+func remember_pose() -> void:
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
+	var player := scene.get_node_or_null("Outpost/Astronaut")
+	if player != null:
+		outpost_pose = {"site_id": selected_site_id, "transform": player.transform,
+			"yaw": float(player.camera_yaw), "pitch": float(player.camera_pitch), "first_person": player.first_person}
+
+func capture_sol_checkpoint() -> void:
+	remember_pose()
+	sol_checkpoint = Save.capture(self)
+
+func save_slot(path: String) -> Error:
+	remember_pose()
+	var data := Save.capture(self)
+	if Save.decode(data).is_empty():
+		return ERR_INVALID_DATA
+	data["checkpoint"] = sol_checkpoint.duplicate(true)
+	return Save.write_file(path, data)
+
+func load_slot(path: String) -> Error:
+	var data := Save.read_file(path)
+	if not data.get("checkpoint", {}) is Dictionary:
+		return ERR_INVALID_DATA
+	var checkpoint: Dictionary = data.get("checkpoint", {})
+	if not checkpoint.is_empty() and (checkpoint.get("site_id") != data.get("site_id") or Save.decode(checkpoint).is_empty()):
+		return ERR_INVALID_DATA
+	var error := Save.restore(self, data)
+	if error == OK:
+		sol_checkpoint = checkpoint.duplicate(true)
+	return error
+
+func restart_current_sol() -> Error:
+	if sol_checkpoint.is_empty():
+		return ERR_UNAVAILABLE
+	return Save.restore(self, sol_checkpoint)
+
+func reset_current_mission() -> Error:
+	dashboard_state = null
+	dashboard_last_tick = {}
+	outpost_pose = {}
+	sol_checkpoint = {}
+	action_busy = false
+	return start_selected_mission()
 
 
 func start_selected_mission() -> Error:
@@ -30,6 +78,7 @@ func start_selected_mission() -> Error:
 	dashboard_simulator = simulator
 	dashboard_state = simulator.begin_mission(selected_site_id)
 	dashboard_last_tick = {}
+	capture_sol_checkpoint()
 	state_changed.emit()
 	return OK
 
@@ -44,6 +93,7 @@ func advance_mission() -> bool:
 	action_busy = true
 	dashboard_last_tick = dashboard_simulator.advance_sol(dashboard_state)
 	dashboard_state = dashboard_last_tick.state
+	capture_sol_checkpoint()
 	state_changed.emit()
 	call_deferred("_unlock_action")
 	return true
@@ -67,6 +117,7 @@ func resolve_decision(event_id: String, choice_id: String) -> Dictionary:
 func select_landing_site(site_id: String) -> void:
 	if selected_site_id != site_id:
 		outpost_pose = {}
+		sol_checkpoint = {}
 	# A different destination must not resume another site's mission.
 	if dashboard_state != null and str(dashboard_state.site_id) != site_id:
 		dashboard_state = null

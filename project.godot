@@ -17,6 +17,8 @@ config/features=PackedStringArray("4.7")
 [autoload]
 
 MissionSession="*res://src/runtime/mission_session.gd"
+GameSettings="*res://src/runtime/game_settings.gd"
+GameMenu="*res://src/ui/game_menu.gd"
 
 [display]
 

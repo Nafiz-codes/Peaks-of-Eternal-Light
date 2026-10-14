@@ -128,8 +128,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _apply_mouse_look(relative: Vector2) -> void:
-	camera_yaw = wrapf(camera_yaw - relative.x * LOOK_SENSITIVITY, -PI, PI)
-	camera_pitch = clampf(camera_pitch - relative.y * LOOK_SENSITIVITY, -1.45 if first_person else MIN_CAMERA_PITCH, MAX_CAMERA_PITCH)
+	var settings := get_node_or_null("/root/GameSettings")
+	var sensitivity: float = LOOK_SENSITIVITY * (float(settings.values.sensitivity) if settings != null else 1.0)
+	var vertical := -1.0 if settings != null and settings.values.invert_y else 1.0
+	camera_yaw = wrapf(camera_yaw - relative.x * sensitivity, -PI, PI)
+	camera_pitch = clampf(camera_pitch - relative.y * sensitivity * vertical, -1.45 if first_person else MIN_CAMERA_PITCH, MAX_CAMERA_PITCH)
 	_sync_camera_rig()
 
 

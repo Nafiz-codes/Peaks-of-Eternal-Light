@@ -46,7 +46,7 @@ func door_available() -> bool:
 func _process(_delta: float) -> void:
 	button.visible = not busy and not player.ui_blocked and door_available()
 	button.text = "Get outside  [E]" if inside else "Get inside  [E]"
-	button.tooltip_text = "Press E, or Esc to release the cursor and click."
+	button.tooltip_text = "Press E to enter or exit. Esc opens the pause menu."
 
 func _input(event: InputEvent) -> void:
 	if busy:
