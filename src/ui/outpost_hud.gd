@@ -90,7 +90,7 @@ func _ready() -> void:
 	activity = UI.label("", 14, UI.MUTED)
 	content.add_child(activity)
 	content.add_child(UI.label("Alt: hide mission / details · Esc: pause menu / back · V: first / third person · WASD: move · Shift + W: sprint · Mouse: look · Space: jump · E: station · I: dashboard", 13, UI.MUTED))
-	content.add_child(UI.label("Illustrative terrain and lighting · NASA coarse terrain samples inform the simulation; solar availability is modeled. Construction and rover operations are not yet available.", 13, UI.MUTED))
+	content.add_child(UI.label("Illustrative terrain and lighting · NASA coarse terrain samples inform the simulation; solar availability is modeled. Construction and rover operations use authoritative mission results.", 13, UI.MUTED))
 	var copy: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/mission_copy.json"))
 	if copy is Dictionary:
 		var brief: Dictionary = copy.get("mission_briefing", {})
@@ -101,6 +101,7 @@ func _ready() -> void:
 	event_dialog.visibility_changed.connect(_dialog_visibility_changed)
 	operations = preload("res://src/ui/operations_panel.gd").new()
 	add_child(operations)
+	operations.operation_requested.connect(_run_operation)
 	operations.visibility_changed.connect(_dialog_visibility_changed)
 	crew_dialogue = preload("res://src/ui/crew_dialogue.gd").new()
 	add_child(crew_dialogue)
@@ -240,4 +241,12 @@ func _construction_contract() -> Dictionary:
 
 func open_operations(kind: String, invoker: Control = null) -> void:
 	if not _modal_visible():
-		operations.open_operations(kind, session.dashboard_state, _construction_contract(), invoker, true)
+		operations.open_operations(kind, session.dashboard_state, _construction_contract(), invoker, true, true)
+
+
+func _run_operation(kind: String, operation_id: String, distance_km: float) -> void:
+	var result: Dictionary = session.queue_structure(operation_id) if kind == "build" else session.send_rover(operation_id, distance_km)
+	notice.text = ("Operation recorded: " + operation_id.replace("_", " ")) if result.get("ok", false) else ("Operation unavailable: " + str(result.get("error", "unknown")))
+	if result.get("ok", false):
+		world.refresh_feedback()
+	refresh()

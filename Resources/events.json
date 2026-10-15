@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "description": "Event table, owned by Member 2. The completed table contains 19 events across hazard, discovery, crew, equipment, and opportunity categories. Trigger rates and numeric effects are editable gameplay-balance values for the 7–10-sol mission; Member 1 owns deterministic trigger-system integration."
+    "description": "Event table, owned by Member 2. The completed table contains 21 events across hazard, discovery, crew, equipment, and opportunity categories. Trigger rates and numeric effects are editable gameplay-balance values for the 7–10-sol mission; Member 1 owns deterministic trigger-system integration."
   },
   "events": [
     {
@@ -428,6 +428,28 @@
           "text": "Keep the current alignment",
           "effects": {}
         }
+      ]
+    },
+    {
+      "event_id": "rover_sample_cache",
+      "category": "discovery",
+      "trigger_condition": "volatile_prospect_status: investigated AND rover_action: prospecting",
+      "effects": { "materials": "+6" },
+      "text": "The rover returns a compact sample cache from the investigated prospect. Its contents are useful for planning, but do not confirm recoverable water.",
+      "choices": [
+        { "choice_id": "catalog_samples", "text": "Catalogue the samples for a future extraction decision", "effects": { "volatile_prospect_status": "extraction_candidate" } },
+        { "choice_id": "store_samples", "text": "Store the samples and continue operations", "effects": { "crew_stress": "+0.01" } }
+      ]
+    },
+    {
+      "event_id": "crew_recovery_window",
+      "category": "crew",
+      "trigger_condition": "crew_stress_avg >= 0.5 AND sol >= 3",
+      "effects": { "crew_stress": "-0.06" },
+      "text": "A quiet operations window gives the crew time to reset routines before fatigue becomes a larger problem.",
+      "choices": [
+        { "choice_id": "protect_rest_window", "text": "Protect the recovery window", "effects": { "crew_stress": "-0.12" } },
+        { "choice_id": "keep_working", "text": "Keep the current work schedule", "effects": { "crew_stress": "+0.02" } }
       ]
     },
     {

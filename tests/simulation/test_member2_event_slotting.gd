@@ -15,7 +15,7 @@ func check(condition: bool, message: String) -> void:
 func _run() -> void:
 	var simulator := MissionSimulator.new()
 	check(simulator.load_contracts() == OK, "Event and resource contracts load.")
-	check(simulator.events.size() == 19, "All nineteen authored events are available to the runtime.")
+	check(simulator.events.size() == 21, "All twenty-one authored events are available to the runtime.")
 
 	var state: Object = simulator.begin_mission("ridge_a", 10)
 	var initial_radiation: float = state.radiation_msv

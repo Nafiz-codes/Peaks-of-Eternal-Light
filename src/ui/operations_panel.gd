@@ -3,6 +3,7 @@ extends AcceptDialog
 ## Read-only catalog and runtime inspection, shared by world and dashboard.
 const UI = preload("res://src/ui/ui_style.gd")
 signal placement_preview_requested(structure_id: String)
+signal operation_requested(kind: String, operation_id: String, distance_km: float)
 var content: VBoxContainer
 var return_focus: WeakRef
 
@@ -27,14 +28,14 @@ func _ready() -> void:
 		if not visible and return_focus != null and is_instance_valid(return_focus.get_ref()):
 			return_focus.get_ref().grab_focus())
 
-func open_operations(kind: String, state: Variant, contract: Dictionary, invoker: Control = null, allow_preview: bool = false) -> void:
+func open_operations(kind: String, state: Variant, contract: Dictionary, invoker: Control = null, allow_preview: bool = false, allow_operations: bool = false) -> void:
 	return_focus = weakref(invoker) if invoker != null else null
 	for child in content.get_children():
 		content.remove_child(child)
 		child.queue_free()
 	title = "Construction planning" if kind == "build" else "Rover operations"
 	content.add_child(UI.label(title.to_upper(), 22, UI.BLUE))
-	content.add_child(UI.label("Planning and inspection only. Operations are unavailable in this build.", 15, UI.AMBER))
+	content.add_child(UI.label("Choose an operation. Costs, progress, and results are applied by the authoritative mission simulation." if allow_operations else "Planning and inspection only.", 15, UI.AMBER))
 	if kind == "build":
 		var structures: Array = contract.get("structures", [])
 		if structures.is_empty():
@@ -47,8 +48,14 @@ func open_operations(kind: String, state: Variant, contract: Dictionary, invoker
 			card.add_child(UI.label("Materials: %s units · Energy: %s kWh · Build time: %s sols" % [cost.get("materials", "Unavailable"), cost.get("power", "Unavailable"), structure.get("build_time_sols", "Unavailable")], 14, UI.BLUE))
 			card.add_child(UI.label(str(structure.get("effect", "Effect description unavailable.")), 14))
 			var built: bool = state != null and state.built_structures.has(id)
-			card.add_child(UI.label("Completed / recorded by simulation" if built else "Not recorded as completed", 14, UI.PURPLE))
-			card.add_child(UI.button("Build unavailable", Callable(), true))
+			var queued: bool = false if state == null else state.construction_queue.any(func(job): return str(job.get("structure_id", "")) == id)
+			card.add_child(UI.label("Completed / recorded by simulation" if built else ("Construction in progress" if queued else "Ready to queue"), 14, UI.PURPLE))
+			if allow_operations:
+				card.add_child(UI.button("Build completed" if built else ("Build in progress" if queued else "Queue construction"), func():
+					operation_requested.emit("build", id, 0.0)
+					hide(), built or queued or state == null))
+			else:
+				card.add_child(UI.button("Build unavailable", Callable(), true))
 			if allow_preview and not built:
 				card.add_child(UI.button("Preview illustrative placement", func():
 					placement_preview_requested.emit(id)
@@ -58,8 +65,11 @@ func open_operations(kind: String, state: Variant, contract: Dictionary, invoker
 		content.add_child(UI.label("Travel energy: %s kWh/km\nDistance cap: %s km/sol\nDiscovery chance: %s%% per new km" % [rover.get("move_cost_power_per_km", "Unavailable"), rover.get("max_distance_per_sol_km", "Unavailable"), rover.get("discovery_chance_pct_per_km", "Unavailable")]))
 		content.add_child(UI.label("Last recorded action: " + ("None" if state == null or str(state.last_rover_action).is_empty() else str(state.last_rover_action)), 16, UI.BLUE))
 		content.add_child(UI.label("Prospect: " + ("No mission" if state == null else str(state.volatile_prospect_status)), 16))
-		content.add_child(UI.label("No confirmed route is available. The rover remains parked.", 14, UI.AMBER))
-		content.add_child(UI.button("Dispatch unavailable", Callable(), true))
+		content.add_child(UI.label("Dispatches use a fixed 3 km leg from this panel; the simulator enforces energy and remaining sol range.", 14, UI.AMBER))
+		for entry in [["Survey nearby terrain", "survey"], ["Traverse route", "traverse"], ["Prospect signal", "prospecting"], ["Return to base", "return"], ["Haul regolith", "haul_regolith"]]:
+			content.add_child(UI.button(entry[0] + " / 3 km", func():
+				operation_requested.emit("rover", entry[1], 3.0)
+				hide(), not allow_operations or state == null))
 		UI.disclosure(content, "Parameter sources and assumptions", str(rover.get("notes", "Source notes unavailable.")))
 	popup_centered_clamped(Vector2i(740, 620), 0.9)
 	get_ok_button().grab_focus()

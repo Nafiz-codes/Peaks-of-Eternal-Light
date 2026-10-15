@@ -22,6 +22,14 @@ func labels(node: Node) -> String:
 		text += labels(child)
 	return text
 
+func button_texts(node: Node) -> String:
+	var text := ""
+	if node is Button:
+		text += node.text + "\n"
+	for child in node.get_children():
+		text += button_texts(child)
+	return text
+
 func shot(filename: String) -> void:
 	if not capture:
 		return
@@ -58,9 +66,7 @@ func _run() -> void:
 	alt.pressed = true
 	hud._input(alt)
 	check(hud.panel.visible, "Alt cannot dismiss the HUD through an operations modal.")
-	for button in hud.operations.content.find_children("*", "Button", true, false):
-		if button.text == "Build unavailable":
-			check(button.disabled, "Unavailable build commands remain disabled.")
+	check(button_texts(hud.operations).contains("Queue construction"), "Construction panel offers authoritative queue actions.")
 	await shot("construction-desktop")
 	root.size = Vector2i(520, 900)
 	hud.operations.hide()
@@ -97,7 +103,7 @@ func _run() -> void:
 	world.refresh_feedback()
 	check(world.construction_view.completed.is_empty(), "Removed/reset structures disappear.")
 	hud.open_operations("rover", hud.run_button)
-	check(labels(hud.operations).contains("0.55") and labels(hud.operations).contains("remains parked"), "Rover panel uses real parameters and discloses unavailable movement.")
+	check(labels(hud.operations).contains("0.55") and button_texts(hud.operations).contains("Survey nearby terrain"), "Rover panel uses real parameters and offers authoritative dispatch actions.")
 	await shot("rover-panel")
 	hud.operations.hide()
 	check(not world.get_node("Outpost/Astronaut").ui_blocked, "Closing operations restores exploration input.")
@@ -195,5 +201,5 @@ func _run() -> void:
 	check(not dashboard.run_button.disabled, "Dashboard sol commands recover after closing operations.")
 	dashboard.queue_free()
 	await process_frame
-	print("Member 3 Days 14–20: %d failures / %d assertions. Fixtures do not certify missing gameplay APIs." % [failures, assertions])
+	print("Member 3 Days 14–20: %d failures / %d assertions. Presentation checks complement the Member 2 gameplay-systems suite." % [failures, assertions])
 	quit(1 if failures else 0)

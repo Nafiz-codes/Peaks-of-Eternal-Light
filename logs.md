@@ -236,6 +236,78 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Issues / blockers: Structure, rover, damage, productivity, warning, battery-capacity, and several duration/trigger behaviors are not yet authoritative runtime APIs. Their events are documented as deferred rather than claimed as integrated.
 - Notes for teammates: `docs/member2_day12_event_slotting.md` lists the exact verified and deferred paths. Keep `events.json` as authored data; runtime handlers must consume the data rather than recreate narrative content in code.
 
+### Day 13 — Oct 15 — Finish event slotting
+- Status: ✅ Done
+- What was completed: Added authoritative construction, rover, damage/output, warning, shelter-response, battery-capacity, and aggregate-productivity state/action handlers. All 19 authored records remain data-owned by `events.json`; their supported runtime behavior is now exercised through the simulator rather than UI fixtures.
+- Issues / blockers: None for the current 7–10-sol content scope.
+- Notes for teammates: Use `MissionSimulator.queue_construction()` and `dispatch_rover()` (or the matching `MissionSession` methods); do not mutate structure or rover state from presentation code.
+
+### Day 14 — Oct 15 — Test & Integration #2 (Member 2 contribution)
+- Status: ✅ Done
+- What was completed: Re-ran the four-site, ten-sol integration path after connecting the Member 2 systems. All four sites still complete their first-choice route successfully, and the event/content contract remains compatible with dashboard and outpost presentation.
+- Issues / blockers: None.
+- Notes for teammates: The Day 14 run is regression evidence for the current build; Day 21 remains the next shared vertical-slice checkpoint.
+
+### Day 15 — Oct 15 — Event/trigger fixes and content tuning
+- Status: ✅ Done
+- What was completed: Connected structure outputs and damage, rover range/power effects, material discount, battery-capacity effects, communications warning behavior, and timed output modifiers to their authored event fields.
+- Issues / blockers: None.
+- Notes for teammates: Timed effects retain their full configured duration and resolve through the simulator's active-event state.
+
+### Day 16 — Oct 15 — Difficulty-curve pass
+- Status: ✅ Done
+- What was completed: Applied the authored construction costs/times, rover 0.55 kWh/km cost, six-kilometre per-sol cap, and discovery chance to live mission actions. The current all-site first-choice baseline remains successful through Sol 10.
+- Issues / blockers: Balance values remain editable gameplay assumptions, as labelled in the content contract.
+- Notes for teammates: Use the operations panels to test build/rover trade-offs; their results are reflected in the mission HUD and report state.
+
+### Day 17 — Oct 15 — Crew stress/productivity tuning
+- Status: ✅ Done
+- What was completed: Initialized aggregate productivity from the authored crew values and apply it to construction progress. Habitat stress mitigation, crew-stress effects, and timed productivity modifiers now affect authoritative state without introducing a separate per-person health model.
+- Issues / blockers: None.
+- Notes for teammates: Crew names/roles stay authored in `crew.json`; UI should show aggregate metrics only.
+
+### Day 18 — Oct 15 — Content polish
+- Status: ✅ Done
+- What was completed: Finished event-side handling for automatic/unwarned solar-particle outcomes, structure damage/output behavior, and the authored prospect/extraction progression while retaining the sourced-versus-gameplay wording.
+- Issues / blockers: None.
+- Notes for teammates: A volatile prospect remains a gameplay prospect until the authored confirmation route marks it an extraction candidate.
+
+### Day 19 — Oct 15 — In-game text consistency review
+- Status: ✅ Done
+- What was completed: Updated operations-panel, dashboard, and outpost-HUD copy to describe live, simulation-owned construction and rover operations rather than planning-only placeholders.
+- Issues / blockers: None.
+- Notes for teammates: Mission report wording still reads authoritative simulator outcomes and resource history.
+
+### Day 20 — Oct 15 — Member 2 regression and solo playtest
+- Status: ✅ Done
+- What was completed: Added `tests/simulation/test_member2_systems.gd` and ran 11 Godot suites covering simulation, event slotting, Member 2 construction/rover/crew/event systems, dashboard, landing, outpost, four-site integration, navigation, and presentation.
+- Issues / blockers: Godot emits a restricted-environment `user://logs/godot.log` write diagnostic only; all assertions pass.
+- Notes for teammates: Run the Member 2 systems test before changing `crew.json`, `construction.json`, or Member 2 event effects.
+
+### Day 21 — Oct 16 — Test & Integration #3 (Member 2 contribution)
+- Status: ✅ Done
+- What was completed: Re-ran the real four-site ten-sol route and verified event choices still resolve through the shared simulator without state divergence.
+- Issues / blockers: None found in the Member 2 contract path.
+- Notes for teammates: Construction and rover actions use the simulator APIs; presentation must not mutate their state directly.
+
+### Day 22 — Oct 17 — Event/difficulty pass
+- Status: ✅ Done
+- What was completed: Reviewed the short-mission curve against live build and rover costs. Retained one-new-event-per-sol pacing and focused new content on recovery/prospect decisions rather than additional random hazards.
+- Issues / blockers: None.
+- Notes for teammates: Current probabilities and numeric values remain labelled gameplay balance, not scientific forecasts.
+
+### Day 23 — Oct 18 — Add two events
+- Status: ✅ Done
+- What was completed: Added `rover_sample_cache` and `crew_recovery_window` to `events.json`, bringing the authored table to 21 events. Both use existing authoritative prospect/stress state and preserve the distinction between an extraction candidate and confirmed water.
+- Issues / blockers: None.
+- Notes for teammates: The two new IDs are handled in the simulator trigger contract and require no UI-side logic.
+
+### Day 24 — Oct 19 — Bug-fixing from Day 22–23 changes
+- Status: ✅ Done
+- What was completed: Updated event-count expectations and verified simulation, Member 2 event-slotting, and four-site integration coverage after the new events were added.
+- Issues / blockers: Godot may print a restricted-environment `user://logs/godot.log` diagnostic only.
+- Notes for teammates: Run the simulation and Member 2 slotting suites after changing event IDs, effects, or construction/rover content.
+
 ---
 
 ## Member 3 — Presentation & Integration Log

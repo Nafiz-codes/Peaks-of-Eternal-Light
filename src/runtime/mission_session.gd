@@ -116,6 +116,26 @@ func resolve_decision(event_id: String, choice_id: String) -> Dictionary:
 	return result
 
 
+func queue_structure(structure_id: String) -> Dictionary:
+	if action_busy or dashboard_state == null:
+		return {"ok": false, "error": "mission_not_ready"}
+	var result: Dictionary = dashboard_simulator.queue_construction(dashboard_state, structure_id)
+	if result.get("ok", false):
+		capture_sol_checkpoint()
+		state_changed.emit()
+	return result
+
+
+func send_rover(action_id: String, distance_km: float) -> Dictionary:
+	if action_busy or dashboard_state == null:
+		return {"ok": false, "error": "mission_not_ready"}
+	var result: Dictionary = dashboard_simulator.dispatch_rover(dashboard_state, action_id, distance_km)
+	if result.get("ok", false):
+		capture_sol_checkpoint()
+		state_changed.emit()
+	return result
+
+
 func select_landing_site(site_id: String) -> void:
 	if selected_site_id != site_id:
 		crew_read_reports = {}

@@ -15,18 +15,18 @@ Day 12 starts the authored-event handoff into the existing simulator. The event 
 
 These are real `events.json` entries, not UI fixtures. The test also confirms that all 19 authored entries load.
 
-## Deferred paths for Day 13 and later
+## Day 13–20 implementation result
 
-The remaining authored events stay loaded, but cannot yet be certified end to end because the current runtime lacks one or more needed action APIs or effect handlers:
+The remaining authored paths are now supported by the shared runtime. Construction queues spend the authored material and power costs, progress over sols using aggregate crew productivity, and publish completed structures. Rover dispatch spends authored travel energy, enforces the per-sol distance cap, and updates prospect state. The available construction outputs, damage/output modifiers, battery capacity, communications warning state, shelter-response bonus, and productivity modifiers are applied by the simulator.
 
-| Events | Missing or partial runtime support |
+| Events | Runtime support |
 | --- | --- |
-| Solar-array dust, equipment malfunction, greenhouse bloom, micrometeorite strike | Structure state, damage/output, food-production, and repair behavior |
-| Rover mobility hazard, regolith stockpile, prospect discovery/confirmation triggers | Authoritative rover action, route, and prospecting state |
-| Crew conflict, crew-process improvement, shelter drill follow-up | Productivity, shelter-response, and per-crew behavior |
-| Battery thermal alert, comms blackout, solar-array alignment | Battery-capacity, warning, relay, and build-state behavior |
+| Solar-array dust, equipment malfunction, greenhouse bloom, micrometeorite strike | Structure state, damage/output, and food-production behavior are runtime-owned. |
+| Rover mobility hazard, regolith stockpile, prospect discovery/confirmation triggers | Authoritative rover dispatch, range/cost, and prospecting state are runtime-owned. |
+| Crew conflict, crew-process improvement, shelter drill follow-up | Aggregate productivity and shelter-response state are runtime-owned; the crew remains deliberately aggregate, not per-person health. |
+| Battery thermal alert, comms blackout, solar-array alignment | Battery-capacity, warning, relay, and build-state behavior are runtime-owned. |
 
-The existing resolver still supports a subset of immediate choice effects within some of those entries. Timed effects use `remaining_sols` and `started_sol`; their full configured duration is preserved, and the counter is consumed after each affected sol. This document does not claim unsupported base effects or action-gated triggers are implemented.
+Timed effects use `remaining_sols` and `started_sol`; their full configured duration is preserved, and the counter is consumed after each affected sol. The focused systems test verifies construction, rover, crew, and event-handler integration.
 
 ## Run
 

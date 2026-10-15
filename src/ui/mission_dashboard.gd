@@ -47,6 +47,7 @@ func _ready() -> void:
 	add_child(restart_dialog)
 	operations = preload("res://src/ui/operations_panel.gd").new()
 	add_child(operations)
+	operations.operation_requested.connect(_run_operation)
 	operations.visibility_changed.connect(func():
 		if is_instance_valid(run_button):
 			run_button.disabled = not _can_advance())
@@ -187,7 +188,7 @@ func show_sites() -> void:
 		details.add_child(UI.label("Solar availability is an ideal-horizon lunar-day estimate. NASA hydrogen coverage does not include these landing coordinates.", 14, UI.AMBER))
 		if not _valid_site(selected):
 			details.add_child(UI.label("Required numeric site data is missing. This site cannot start a mission.", 14, UI.AMBER))
-	column.add_child(UI.label("Development build: construction and rover actions are not available yet. Events use the current simulator effect support. The modeled solar average is not a site-specific lighting forecast.", 14, UI.AMBER))
+	column.add_child(UI.label("Construction and rover operations use authored costs and simulation-owned results. The modeled solar average is not a site-specific lighting forecast.", 14, UI.AMBER))
 	start_button = UI.button("Establish outpost", start_mission, not _valid_site(selected))
 	column.add_child(start_button)
 	_add_previews()
@@ -276,7 +277,7 @@ func show_dashboard() -> void:
 	terrain.add_child(UI.label("Habitat · Solar array · Rover / Placement is illustrative", 14, UI.MUTED))
 	for entry in [["Construction planning", "build"], ["Rover operations", "rover"]]:
 		var button := UI.button(entry[0], Callable())
-		button.pressed.connect(func(): operations.open_operations(entry[1], state, simulator.construction, button))
+		button.pressed.connect(func(): operations.open_operations(entry[1], state, simulator.construction, button, false, true))
 		left.add_child(button)
 	var crew := UI.panel(right)
 	crew.add_child(UI.label("CREW / %d" % state.crew_size, 18))
@@ -284,7 +285,7 @@ func show_dashboard() -> void:
 		var name_: String = str(member.get("name", ""))
 		var role := str(member.get("role", "Role unavailable"))
 		crew.add_child(UI.label(role if name_.is_empty() or name_ == "TBD" else name_ + " / " + role, 15))
-	crew.add_child(UI.label("Live crew health and modifiers are not available yet.", 14, UI.MUTED))
+	crew.add_child(UI.label("Aggregate productivity: %.2f · Stress: %.2f" % [state.crew_productivity, state.crew_stress_avg], 14, UI.MUTED))
 	var activity := UI.panel(right)
 	activity.add_child(UI.label("MISSION ACTIVITY", 18))
 	activity.add_child(UI.label("No pending decisions." if state.pending_events.is_empty() else "%d event decision(s) need attention." % state.pending_events.size(), 15, UI.AMBER))
@@ -356,6 +357,20 @@ func advance_turn() -> void:
 		show_dashboard()
 	_finish_turn.call_deferred()
 
+
+func _run_operation(kind: String, operation_id: String, distance_km: float) -> void:
+	if state == null or state.mission_outcome.get("status", "") != "in_progress":
+		return
+	var result: Dictionary = simulator.queue_construction(state, operation_id) if kind == "build" else simulator.dispatch_rover(state, operation_id, distance_km)
+	if not result.get("ok", false):
+		show_dashboard()
+		return
+	var session := get_node_or_null("/root/MissionSession")
+	if session != null:
+		session.set("dashboard_state", state)
+		session.capture_sol_checkpoint()
+	show_dashboard()
+
 func _finish_turn() -> void:
 	busy = false
 	if is_instance_valid(run_button):
@@ -389,7 +404,7 @@ func show_report() -> void:
 		construction.add_child(UI.label("OUTPOST RECORD", 18))
 		construction.add_child(UI.label("Completed structures recorded: %d\nLast rover action: %s" % [state.built_structures.size(), "None" if str(state.last_rover_action).is_empty() else str(state.last_rover_action)], 15))
 		UI.disclosure(column, "Source measurements and model assumptions", _site_sources(_site(state.site_id)) + "\n\n" + _model_notes())
-	column.add_child(UI.label("Construction and independence metrics require build and rover actions.", 14, UI.MUTED))
+	column.add_child(UI.label("Construction and rover activity is included in the outpost record above.", 14, UI.MUTED))
 	var restart := UI.button("Choose a new mission" if state != null else "Back to site selection", _request_restart)
 	column.add_child(restart)
 	_resize()

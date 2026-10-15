@@ -30,10 +30,16 @@ var pending_events: Array[Dictionary] = []
 var resolved_events: Array[Dictionary] = []
 var triggered_event_ids: Array[String] = []
 var built_structures: Dictionary = {}
+var construction_queue: Array[Dictionary] = []
+var damaged_structures: Dictionary = {}
 var last_rover_action: String = ""
+var rover_distance_this_sol_km: float = 0.0
+var rover_total_distance_km: float = 0.0
 var crew_stress_avg: float = 0.25
+var crew_productivity: float = 1.0
 var volatile_prospect_found: bool = false
 var volatile_prospect_status: String = "none"
+var event_warning_disabled: bool = false
 var report_data: Dictionary = {}
 var history: Array[Dictionary] = []
 var consecutive_power_depleted_sols: int = 0
@@ -66,9 +72,17 @@ func snapshot() -> Dictionary:
 		"active_events": active_events.duplicate(true),
 		"pending_events": pending_events.duplicate(true),
 		"resolved_events": resolved_events.duplicate(true),
+		"built_structures": built_structures.duplicate(true),
+		"construction_queue": construction_queue.duplicate(true),
+		"damaged_structures": damaged_structures.duplicate(true),
+		"last_rover_action": last_rover_action,
+		"rover_distance_this_sol_km": rover_distance_this_sol_km,
+		"rover_total_distance_km": rover_total_distance_km,
 		"crew_stress_avg": crew_stress_avg,
+		"crew_productivity": crew_productivity,
 		"volatile_prospect_found": volatile_prospect_found,
 		"volatile_prospect_status": volatile_prospect_status,
+		"event_warning_disabled": event_warning_disabled,
 		"consecutive_power_depleted_sols": consecutive_power_depleted_sols,
 		"mission_outcome": mission_outcome.duplicate(true),
 		"report_data": report_data.duplicate(true)
