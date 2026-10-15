@@ -120,6 +120,8 @@ func _run() -> void:
 	route.action_id = "fixture_route_2"
 	route.presentation_route = [rover.position, parked]
 	check(world.rover_view.play_confirmed_route(rover, hull, route, true) and rover.position.is_equal_approx(parked), "Reduced-motion route immediately displays the confirmed destination.")
+	check(is_equal_approx(rover.rotation.y, atan2(-2.0, -1.0)), "Reduced motion preserves the final travel heading.")
+	check(not world.rover_view.play_confirmed_route(rover, hull, {"ok": true, "action_id": "fixture_route_1", "presentation_route": [parked, parked + Vector3(9, 0, 0)]}, true), "An older confirmed action cannot replay after a newer action.")
 	route.action_id = "fixture_route_3"
 	route.presentation_route = [parked, parked + Vector3(1, 0, 0), parked + Vector3(2, 0, 1)]
 	check(world.rover_view.play_confirmed_route(rover, hull, route, false), "A new confirmed action can animate.")

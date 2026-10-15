@@ -1,5 +1,15 @@
 # Member 3: Days 14–20 implementation and handoff
 
+## October 15, 2026 audit
+
+Checked the Day 1–20 workflow against the current presentation code and runtime interfaces. The available Member 3 UI, world, event, and report work is implemented. Days 16, 17, and 20 remain incomplete end to end: `MissionSimulator` and `MissionSession` still expose no rover dispatch or construction request/queue API. Existing route animation and completed-structure fixtures cannot certify those missing gameplay paths. Team acceptance and physical input playtesting remain unrecorded.
+
+Fixed the regression runner's default Godot directory to match the installed `.tools/godot` executable, with a clear missing-executable diagnostic. Fixed rover animation to reject previously consumed action IDs even after subsequent actions and to preserve the final travel heading when reduced motion completes a route. Added two regression assertions for these cases.
+
+Validation: the default `tools/test_member3.ps1` command passes all nine suites on Godot 4.7.2, including 58 assertions in the Days 14–20 suite. This audit used headless checks; the earlier screenshots were not recaptured.
+
+The original implementation record below is historical. Outcome guidance is now wired into the dashboard, and simulation-owned shielding-wall dose handling now exists; construction requests and rover routes are still missing.
+
 Implemented and checked October 5, 2026. The user explicitly retained Member 3 scope: presentation, UI, animation and integration. No simulation formulas, resource costs, event effects, balance values or authored content were changed.
 
 ## Schedule status

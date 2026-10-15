@@ -240,6 +240,12 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 
 ## Member 3 — Presentation & Integration Log
 
+### Oct 15, 2026 — Day 20 audit and regression fixes
+- Reviewed the Day 1–20 schedule, current presentation implementation, and simulation/session interfaces. Live rover dispatch and construction APIs remain absent; Days 16/17/20 cannot be marked complete end to end within Member 3 scope.
+- Corrected the default Godot executable path in the Member 3 runner and added a missing-executable diagnostic.
+- Fixed replay of older rover action IDs after newer actions and final rover heading under reduced motion; added regression assertions for both.
+- Validation: all nine suites pass using the default runner; the Days 14–20 suite passes 58 assertions. No new rendered or physical input checks were performed. Current status is recorded in `docs/member3_days14_20.md`.
+
 *(entries go here, oldest first)*
 
 ### Day 1 — Sep 27, 2026 (scheduled Sep 26) — Kickoff review + first visual direction

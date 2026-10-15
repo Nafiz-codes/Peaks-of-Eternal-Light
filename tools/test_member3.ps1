@@ -1,8 +1,11 @@
 param(
-    [string]$GodotPath = (Join-Path $PSScriptRoot '../.tools/Godot_v4.7.2/Godot_v4.7.2-stable_win64_console.exe')
+    [string]$GodotPath = (Join-Path $PSScriptRoot '../.tools/godot/Godot_v4.7.2-stable_win64_console.exe')
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not (Test-Path -LiteralPath $GodotPath -PathType Leaf)) {
+    throw "Godot executable not found: $GodotPath. Supply -GodotPath with the installed console executable."
+}
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $logDirectory = Join-Path $projectRoot '.tools/day20/test-logs'
 New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
