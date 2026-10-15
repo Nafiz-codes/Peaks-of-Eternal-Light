@@ -1,0 +1,76 @@
+{
+  "_meta": {
+    "description": "Coordinate samples from the legacy NASA PDS Lunar Prospector hydrogen half-degree grid. Preserved as historical comparison only; not used as current site hydrogen values.",
+    "source_id": "nasa_lunar_prospector_legacy_hydrogen_2001",
+    "source_product": "hydrogenhd.txt",
+    "source_product_date": "2001-12",
+    "grid_sampled_on": "2026-10-15",
+    "source_file": "Resources/source_data/hydrogenhd.txt",
+    "source_file_md5": "7e747df203c320828c644408bb6112ec",
+    "method": "Selected the row whose min-inclusive/max-exclusive latitude and longitude bounds contain the site coordinate. For sites whose contract longitude exceeds 180 degrees east, subtracted 360 degrees to match the source grid's -180 to +180 east-positive longitudes. Reported the exact source cell bounds and source value without clipping or adjustment.",
+    "limitations": [
+      "The PDS source identifies this as a special product, not a peer-reviewed PDS archive product.",
+      "The PDS page warns that hydrogen estimates may be unreliable in regions with high thorium and rare-earth element abundances.",
+      "The file supplies no per-cell standard deviation.",
+      "Two sampled site values are negative ppm and therefore cannot be interpreted as physical hydrogen abundance.",
+      "The newer 2022 global map is still the preferred candidate for site estimates, but has not yet been retrieved and sampled."
+    ],
+    "status": "legacy_reference_only"
+  },
+  "samples": [
+    {
+      "site_id": "ridge_a",
+      "latitude_deg": 0.67416,
+      "longitude_deg_east": 23.47314,
+      "source_cell": {
+        "latitude_min_deg": 0.5,
+        "latitude_max_deg": 1.0,
+        "longitude_min_deg_east": 23.0,
+        "longitude_max_deg_east": 23.5
+      },
+      "raw_hydrogen_ppm": 28.424,
+      "usable_as_current_site_estimate": false
+    },
+    {
+      "site_id": "shadow_zone",
+      "latitude_deg": 20.7,
+      "longitude_deg_east": 312.6,
+      "source_coordinate_longitude_deg_east": -47.4,
+      "source_cell": {
+        "latitude_min_deg": 20.5,
+        "latitude_max_deg": 21.0,
+        "longitude_min_deg_east": -47.5,
+        "longitude_max_deg_east": -47.0
+      },
+      "raw_hydrogen_ppm": 36.312,
+      "usable_as_current_site_estimate": false
+    },
+    {
+      "site_id": "crater_rim_b",
+      "latitude_deg": -43.37,
+      "longitude_deg_east": 348.68,
+      "source_coordinate_longitude_deg_east": -11.32,
+      "source_cell": {
+        "latitude_min_deg": -43.5,
+        "latitude_max_deg": -43.0,
+        "longitude_min_deg_east": -11.5,
+        "longitude_max_deg_east": -11.0
+      },
+      "raw_hydrogen_ppm": -2.6386,
+      "usable_as_current_site_estimate": false
+    },
+    {
+      "site_id": "plateau_d",
+      "latitude_deg": -20.5,
+      "longitude_deg_east": 128.5,
+      "source_cell": {
+        "latitude_min_deg": -20.5,
+        "latitude_max_deg": -20.0,
+        "longitude_min_deg_east": 128.5,
+        "longitude_max_deg_east": 129.0
+      },
+      "raw_hydrogen_ppm": -7.9688,
+      "usable_as_current_site_estimate": false
+    }
+  ]
+}

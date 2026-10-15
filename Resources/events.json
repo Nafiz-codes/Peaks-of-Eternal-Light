@@ -243,7 +243,9 @@
         {
           "choice_id": "continue_survey",
           "text": "Keep the rover on its current survey",
-          "effects": {}
+          "effects": {
+            "shielding_wall_material_discount": 0
+          }
         }
       ]
     },

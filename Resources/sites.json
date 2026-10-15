@@ -1,16 +1,16 @@
 {
   "_meta": {
-    "description": "Four geographically separated lunar sites with sourced coordinates. Elevation is sampled from global NASA LOLA LDEM_4; slope from global LDSM_16; illumination is an explicit ideal-horizon gameplay model; polar LEND hydrogen is unavailable at these coordinates.",
-    "dataset_revision": "2026-09-30",
-    "frozen_on": "2026-09-30",
-    "freeze_scope": "Site identities and coordinates, NASA LOLA elevation/slope samples, and field provenance are frozen for this build snapshot. Illumination remains a disclosed ideal-horizon model and LEND hydrogen remains unavailable at these nonpolar coordinates. When source data changes, create a new dataset revision and preserve the prior snapshot in version control.",
-    "how_to_fill": "Refresh NASA LOLA elevation/slope when newer or finer global products are selected. For illumination, record a NASA layer, period, coordinate, and sampling method or replace the disclosed geometric model. Do not infer polar LEND hydrogen values at nonpolar sites."
+    "description": "Four geographically separated lunar sites with sourced coordinates. Elevation is sampled from global NASA LOLA LDEM_4; slope from global LDSM_16; illumination is an explicit ideal-horizon gameplay model; bulk hydrogen has a published global Lunar Prospector-derived map but site estimates have not yet been sampled.",
+    "dataset_revision": "2026-10-15",
+    "frozen_on": "2026-10-15",
+    "freeze_scope": "Site identities, coordinates, NASA LOLA elevation/slope samples, and field provenance are frozen for this build snapshot. Illumination remains a disclosed ideal-horizon model. A global Lunar Prospector-derived hydrogen map is now recorded as a source, but no coordinate estimate is assigned until its archived grid is sampled with footprint and uncertainty metadata. When source data changes, create a new dataset revision and preserve prior snapshots in version control.",
+    "how_to_fill": "Refresh NASA LOLA elevation/slope when newer or finer global products are selected. For illumination, record a NASA layer, period, coordinate, and sampling method or replace the disclosed geometric model. For bulk hydrogen, sample the published global Lunar Prospector map at a declared footprint and retain its spatial scale and systematic uncertainty; do not substitute a broad regional range for a site sample."
   },
   "sites": [
     {
       "site_id": "ridge_a",
       "name": "Tranquility Base (Apollo 11)",
-      "description": "Historic Apollo 11 landing location in Mare Tranquillitatis. Global LOLA terrain values are sampled at the documented coordinate; illumination is modeled and polar hydrogen data are unavailable here.",
+      "description": "Historic Apollo 11 landing location in Mare Tranquillitatis. Global LOLA terrain values are sampled at the documented coordinate; illumination is modeled and a global hydrogen product is identified but has not yet been sampled at this site.",
       "coordinates": {
         "latitude_deg": 0.67416,
         "longitude_deg": 23.47314,
@@ -73,16 +73,16 @@
       "hydrogen_ppm": {
         "available": false,
         "verified": false,
-        "source_id": "nasa_lend_polar_hydrogen_2018",
-        "availability_note": "No applicable LEND polar estimate at this latitude",
-        "source": "Not available: the cited NASA LEND regional near-surface hydrogen estimate covers latitudes above 88° north or south; these site coordinates are outside that region. No point value is inferred.",
-        "date_read": "2026-09-30"
+        "availability_note": "Current global estimate not sampled; legacy comparison is archived separately",
+        "source": "No current site estimate assigned yet. The 2022 global Lunar Prospector neutron-derived map has not been sampled at this coordinate. A legacy 2001 NASA PDS grid sample is preserved in Resources/source_data/lunar_prospector_legacy_samples.json for comparison only; its limitations prevent use as the current site value. The cited polar-only LEND result is not applicable. No point value is inferred.",
+        "date_read": "2026-10-15",
+        "source_id": "lunar_prospector_global_hydrogen_2022"
       }
     },
     {
       "site_id": "shadow_zone",
       "name": "Aristarchus Plateau",
-      "description": "Candidate site south of the Aristarchus Plateau identified in NASA’s Lunar Geophysical Network study. Global LOLA terrain values are sampled at the documented coordinate; illumination is modeled and polar hydrogen data are unavailable here.",
+      "description": "Candidate site south of the Aristarchus Plateau identified in NASA’s Lunar Geophysical Network study. Global LOLA terrain values are sampled at the documented coordinate; illumination is modeled and a global hydrogen product is identified but has not yet been sampled at this site.",
       "coordinates": {
         "latitude_deg": 20.7,
         "longitude_deg": 312.6,
@@ -145,16 +145,16 @@
       "hydrogen_ppm": {
         "available": false,
         "verified": false,
-        "source_id": "nasa_lend_polar_hydrogen_2018",
-        "availability_note": "No applicable LEND polar estimate at this latitude",
-        "source": "Not available: the cited NASA LEND regional near-surface hydrogen estimate covers latitudes above 88° north or south; these site coordinates are outside that region. No point value is inferred.",
-        "date_read": "2026-09-30"
+        "availability_note": "Current global estimate not sampled; legacy comparison is archived separately",
+        "source": "No current site estimate assigned yet. The 2022 global Lunar Prospector neutron-derived map has not been sampled at this coordinate. A legacy 2001 NASA PDS grid sample is preserved in Resources/source_data/lunar_prospector_legacy_samples.json for comparison only; its limitations prevent use as the current site value. The cited polar-only LEND result is not applicable. No point value is inferred.",
+        "date_read": "2026-10-15",
+        "source_id": "lunar_prospector_global_hydrogen_2022"
       }
     },
     {
       "site_id": "crater_rim_b",
       "name": "Tycho Crater",
-      "description": "NASA-documented center coordinate for Tycho Crater, a prominent southern lunar impact crater. Global LOLA terrain values are sampled at this coordinate; illumination is modeled and polar hydrogen data are unavailable here.",
+      "description": "NASA-documented center coordinate for Tycho Crater, a prominent southern lunar impact crater. Global LOLA terrain values are sampled at this coordinate; illumination is modeled and a global hydrogen product is identified but has not yet been sampled at this site.",
       "coordinates": {
         "latitude_deg": -43.37,
         "longitude_deg": 348.68,
@@ -217,16 +217,16 @@
       "hydrogen_ppm": {
         "available": false,
         "verified": false,
-        "source_id": "nasa_lend_polar_hydrogen_2018",
-        "availability_note": "No applicable LEND polar estimate at this latitude",
-        "source": "Not available: the cited NASA LEND regional near-surface hydrogen estimate covers latitudes above 88° north or south; these site coordinates are outside that region. No point value is inferred.",
-        "date_read": "2026-09-30"
+        "availability_note": "Current global estimate not sampled; legacy comparison is archived separately",
+        "source": "No current site estimate assigned yet. The 2022 global Lunar Prospector neutron-derived map has not been sampled at this coordinate. A legacy 2001 NASA PDS grid sample is preserved in Resources/source_data/lunar_prospector_legacy_samples.json for comparison only; its limitations prevent use as the current site value. The cited polar-only LEND result is not applicable. No point value is inferred.",
+        "date_read": "2026-10-15",
+        "source_id": "lunar_prospector_global_hydrogen_2022"
       }
     },
     {
       "site_id": "plateau_d",
       "name": "Tsiolkovskiy Crater",
-      "description": "Approximate NASA-reported center coordinate for far-side Tsiolkovskiy Crater. Global LOLA terrain values are sampled at this coordinate; illumination is modeled and polar hydrogen data are unavailable here.",
+      "description": "Approximate NASA-reported center coordinate for far-side Tsiolkovskiy Crater. Global LOLA terrain values are sampled at this coordinate; illumination is modeled and a global hydrogen product is identified but has not yet been sampled at this site.",
       "coordinates": {
         "latitude_deg": -20.5,
         "longitude_deg": 128.5,
@@ -289,10 +289,10 @@
       "hydrogen_ppm": {
         "available": false,
         "verified": false,
-        "source_id": "nasa_lend_polar_hydrogen_2018",
-        "availability_note": "No applicable LEND polar estimate at this latitude",
-        "source": "Not available: the cited NASA LEND regional near-surface hydrogen estimate covers latitudes above 88° north or south; these site coordinates are outside that region. No point value is inferred.",
-        "date_read": "2026-09-30"
+        "availability_note": "Current global estimate not sampled; legacy comparison is archived separately",
+        "source": "No current site estimate assigned yet. The 2022 global Lunar Prospector neutron-derived map has not been sampled at this coordinate. A legacy 2001 NASA PDS grid sample is preserved in Resources/source_data/lunar_prospector_legacy_samples.json for comparison only; its limitations prevent use as the current site value. The cited polar-only LEND result is not applicable. No point value is inferred.",
+        "date_read": "2026-10-15",
+        "source_id": "lunar_prospector_global_hydrogen_2022"
       }
     }
   ]

@@ -92,10 +92,49 @@
       "data_kind": "LEND model-derived regional hydrogen abundance",
       "version_or_coverage": "Livengood et al., Planetary and Space Science 162 (2018); approximately 140 ppmw H above 88° north or south latitude, 0.13 ± 0.02 wt% WEH",
       "retrieved_on": "2026-09-28",
+      "used_by": [],
+      "measurement_note": "Coverage evidence only: this particular polar regional result does not cover the current sites. A separate global Lunar Prospector-derived map was published in 2022 and is recorded under lunar_prospector_global_hydrogen_2022."
+    },
+    {
+      "source_id": "lunar_prospector_global_hydrogen_2022",
+      "agency": "NASA Lunar Prospector data; analysis by JHU/APL and NASA Ames authors",
+      "mission_or_program": "Lunar Prospector Neutron Spectrometer",
+      "title": "Global Hydrogen Abundances on the Lunar Surface",
+      "url": "https://doi.org/10.1029/2022JE007197",
+      "data_repository": "https://doi.org/10.48732/GRC2-4B57",
+      "repository_file": {
+        "filename": "figure6.txt",
+        "file_id": "16635",
+        "version": "1",
+        "reported_size": "10.6 MB",
+        "md5": "ed174cc5b25857e6c88f6d9d815922c5",
+        "download_url": "https://archive.data.jhu.edu/api/access/datafile/16635",
+        "access_status_checked": "2026-10-15: repository metadata page identifies the file as public under CC BY 4.0; repeated direct API requests returned Cloudflare's access-block page (latest Ray ID a4b0a52b0848fc24), and the in-app browser returned ERR_BLOCKED_BY_CLIENT. No data bytes were retrieved."
+      },
+      "data_kind": "Global neutron-derived bulk hydrogen abundance map",
+      "version_or_coverage": "Lawrence et al. (2022), Journal of Geophysical Research: Planets 127, e2022JE007197; global map calibrated to Apollo sample abundances; source archive V1",
+      "retrieved_on": "2026-10-15",
+      "used_by": [],
+      "measurement_note": "The map estimates bulk hydrogen to tens of centimeters depth from Lunar Prospector neutron data. Paper reports ~50 km effective spatial resolution for the neutron data and ~10 ppm systematic uncertainty; it must not be represented as an in-situ measurement or a landing-pad-scale point value. Sample the archived global grid at a documented footprint before assigning any site estimate. The paper identifies a 50–68 ppm enhancement on Aristarchus Plateau, but that regional range is not assigned to the current site south of the plateau without coordinate sampling."
+    },
+    {
+      "source_id": "nasa_lunar_prospector_legacy_hydrogen_2001",
+      "agency": "NASA PDS Geosciences Node / Lunar Prospector Science Team",
+      "mission_or_program": "Lunar Prospector Neutron Spectrometer",
+      "title": "Lunar Prospector Hydrogen Half-Degree Data Product",
+      "url": "https://pds-geosciences.wustl.edu/missions/lunarp/reduced_special.html",
+      "product_file": "hydrogenhd.txt",
+      "download_url": "https://pds-geosciences.wustl.edu/missions/lunarp/reduced/hydrogenhd.txt",
+      "local_file": "Resources/source_data/hydrogenhd.txt",
+      "data_kind": "Legacy neutron-derived hydrogen abundance grid",
+      "version_or_coverage": "December 2001 product; generated 2002-01-03; 259,200 global 0.5° × 0.5° latitude/longitude cells; values in ppm H by weight",
+      "retrieved_on": "2026-10-15",
+      "file_size_bytes": 14256401,
+      "md5": "7e747df203c320828c644408bb6112ec",
       "used_by": [
-        "sites.json hydrogen_ppm coverage status"
+        "Resources/source_data/lunar_prospector_legacy_samples.json"
       ],
-      "measurement_note": "Coverage evidence only: the cited approximately 140 ppmw regional result applies above 88° north or south latitude and does not cover any of the current four landing coordinates. It supports marking these point values unavailable, not assigning a hydrogen value."
+      "measurement_note": "This is an older NASA-hosted Lunar Prospector-derived special product, explicitly not a peer-reviewed PDS archive product. The PDS page warns that abundances may be unreliable in regions with high thorium and rare-earth elements. Its files provide no per-cell standard deviation, and sampled values include negative ppm results, which are not physically meaningful abundances. Samples are retained for comparison only and do not populate the active hydrogen_ppm fields."
     },
     {
       "source_id": "nasa_lro_crater",
@@ -149,7 +188,9 @@
       "data_kind": "landing-site coordinates",
       "version_or_coverage": "Apollo 11 / Mare Tranquillitatis; 0.67416°N, 23.47314°E",
       "retrieved_on": "2026-09-30",
-      "used_by": ["sites.json coordinates.ridge_a"],
+      "used_by": [
+        "sites.json coordinates.ridge_a"
+      ],
       "measurement_note": "NASA-published landing-site coordinate; stored in planetocentric latitude and east longitude."
     },
     {
@@ -161,7 +202,9 @@
       "data_kind": "candidate-site coordinates",
       "version_or_coverage": "PKT site south of Aristarchus Plateau; 20.7°N, 47.4°W, converted to 312.6°E",
       "retrieved_on": "2026-09-30",
-      "used_by": ["sites.json coordinates.shadow_zone"],
+      "used_by": [
+        "sites.json coordinates.shadow_zone"
+      ],
       "measurement_note": "The west longitude is normalized to the contract's 0–360° east-positive convention."
     },
     {
@@ -173,7 +216,9 @@
       "data_kind": "lunar feature coordinates",
       "version_or_coverage": "Tycho Crater center; 43.37°S, 348.68°E",
       "retrieved_on": "2026-09-30",
-      "used_by": ["sites.json coordinates.crater_rim_b"],
+      "used_by": [
+        "sites.json coordinates.crater_rim_b"
+      ],
       "measurement_note": "NASA Science feature-center coordinate; selection denotes the crater feature location, not a certified landing pad."
     },
     {
@@ -185,7 +230,9 @@
       "data_kind": "approximate lunar feature coordinates",
       "version_or_coverage": "Tsiolkovskiy Crater; approximately 20.5°S, 128.5°E",
       "retrieved_on": "2026-09-30",
-      "used_by": ["sites.json coordinates.plateau_d"],
+      "used_by": [
+        "sites.json coordinates.plateau_d"
+      ],
       "measurement_note": "Approximate feature-center coordinate from NASA Science; it is not a surveyed landing point."
     }
   ]

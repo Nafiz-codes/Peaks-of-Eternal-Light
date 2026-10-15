@@ -1,6 +1,7 @@
 extends SceneTree
 
 const MissionSimulator = preload("res://src/simulation/mission_simulator.gd")
+const MissionSave = preload("res://src/runtime/mission_save.gd")
 
 var failures := 0
 
@@ -30,6 +31,17 @@ func _run() -> void:
 	state = simulator.begin_mission("ridge_a", 10)
 	check(_resolve(simulator, state, "volatile_prospect_detected", "mark_for_later"), "Prospect choice resolves.")
 	check(state.volatile_prospect_status == "deferred", "Prospect choice uses the authored status value.")
+	var full_event_table: Array[Dictionary] = simulator.events.duplicate(true)
+	state = simulator.begin_mission("ridge_a", 10)
+	state.volatile_prospect_found = true
+	state.volatile_prospect_status = "uninvestigated"
+	state.last_rover_action = "survey"
+	simulator.events = [_event(simulator, "volatile_prospect_detected")]
+	simulator.call("_evaluate_event_triggers", state)
+	check(not state.pending_events.is_empty() and state.pending_events[0].event_id == "volatile_prospect_detected", "A successfully found, uninvestigated survey prospect can trigger its decision event.")
+	check(_resolve(simulator, state, "volatile_prospect_detected", "investigate_prospect"), "Prospect investigation choice resolves.")
+	check(state.volatile_prospect_found and state.volatile_prospect_status == "uninvestigated" and state.last_rover_action == "prospecting", "Scheduling prospecting preserves the default found prospect state.")
+	simulator.events = full_event_table
 
 	state = simulator.begin_mission("ridge_a", 10)
 	initial_stress = state.crew_stress_avg
@@ -66,6 +78,33 @@ func _run() -> void:
 	check(_resolve(simulator, state, "resupply_window"), "Automatic resupply resolves.")
 	check(is_equal_approx(state.materials, initial_materials + 30.0), "Automatic resupply applies its authored materials grant.")
 
+	state = simulator.begin_mission("ridge_a", 10)
+	check(_resolve(simulator, state, "regolith_stockpile", "stockpile_regolith"), "Regolith stockpile choice resolves.")
+	check(state.shielding_wall_material_discount == 20.0, "Regolith opportunity stores its shielding-wall discount.")
+	var wall_discount := simulator.queue_construction(state, "shielding_wall")
+	check(wall_discount.ok and wall_discount.materials_cost == 35.0, "The stored stockpile discount is applied to the later shielding-wall build.")
+	state = simulator.begin_mission("ridge_a", 10)
+	check(_resolve(simulator, state, "regolith_stockpile", "continue_survey"), "Continue-survey choice resolves.")
+	check(state.shielding_wall_material_discount == 0.0, "Declining to stockpile does not grant the default discount.")
+
+	state = simulator.begin_mission("ridge_a", 10)
+	state.built_structures["habitat_module"] = 0
+	state.built_structures["solar_array"] = 1
+	simulator.call("_apply_event_effects", state, "equipment_malfunction", {"structural_damage": true, "affected_structure": "solar_array"})
+	check(state.damaged_structures.has("solar_array") and not state.damaged_structures.has("habitat_module"), "Structural damage honors the authored target.")
+	state.damaged_structures.clear()
+	simulator.call("_apply_event_effects", state, "equipment_malfunction", {"structural_damage": true, "affected_structure": "random"})
+	var first_random_target: String = state.damaged_structures.keys()[0]
+	state.damaged_structures.clear()
+	simulator.call("_apply_event_effects", state, "equipment_malfunction", {"structural_damage": true, "affected_structure": "random"})
+	check(state.damaged_structures.keys()[0] == first_random_target, "Random structure damage is deterministic for the mission event.")
+
+	state = simulator.begin_mission("ridge_a", 10)
+	var old_state_data: Dictionary = MissionSave.state_data(state)
+	old_state_data.erase("shielding_wall_material_discount")
+	var decoded := MissionSave.decode({"version": 1, "site_id": "ridge_a", "state": old_state_data, "pose": {}, "last_tick": {}})
+	check(not decoded.is_empty() and decoded.state.shielding_wall_material_discount == 0.0, "Existing version-one saves default the newly persisted discount to zero.")
+
 	print("Member 2 Day 12 event slotting: %d failures; supported authored resolutions checked." % failures)
 	quit(1 if failures else 0)
 
@@ -77,3 +116,9 @@ func _resolve(simulator: RefCounted, state: Object, event_id: String, choice_id:
 			return result.get("ok", false)
 	push_error("Missing authored event: " + event_id)
 	return false
+
+func _event(simulator: RefCounted, event_id: String) -> Dictionary:
+	for event in simulator.events:
+		if str(event.get("event_id", "")) == event_id:
+			return event.duplicate(true)
+	return {}

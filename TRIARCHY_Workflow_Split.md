@@ -52,7 +52,7 @@ The five shared contracts live under `Resources/`. Their fields are established;
 
 1. **Sim state contract** (Member 1 → Member 3): a single object/struct representing "current mission state" (resources, sol number, crew status, active events) that the UI reads every tick — this is generated at runtime by Member 1's code, not a file anyone hand-authors
 2. **Event/content contract** (Member 2 → Member 1 & 3): `events.json` — now 19 events using the agreed fields; runtime trigger/effect resolution remains pending
-3. **Site data contract** (Member 1 → Member 2 & 3): `sites.json` — four geographically separated, NASA-referenced coordinates; global LOLA elevation/slope samples are verified with pixel-level provenance; illumination is a disclosed model; polar LEND hydrogen is unavailable at these nonpolar coordinates
+3. **Site data contract** (Member 1 → Member 2 & 3): `sites.json` — four geographically separated, NASA-referenced coordinates; global LOLA elevation/slope samples are verified with pixel-level provenance; illumination remains a disclosed ideal-horizon model; the 2022 global Lunar Prospector-derived bulk-hydrogen map is recorded but not yet sampled at the current coordinates, so no site value is assigned
 4. **Life-support constants** (Member 1 internal): `bvad_constants.json` — sourced consumption values and an ISS recovery proxy, with remaining unverified model choices labeled individually
 5. **Crew & construction contracts** (Member 2 → Member 1 & 3): `crew.json` and `construction.json` — named crew and retuned balance data; runtime modifiers/actions remain pending
 
@@ -65,6 +65,8 @@ Member 2 also supplies `Resources/mission_copy.json`. Member 3 reads its briefin
 ### Member 3 progress — Sep 29, 2026
 
 Update Oct 15, 2026: Re-audited work through Day 20. Available presentation features are implemented; corrected the test runner path and rover replay/reduced-motion heading defects. Days 16/17/20 still require simulation-owned dispatch and construction APIs for end-to-end completion. See `docs/member3_days14_20.md` for the current audit.
+
+Update Oct 15, 2026: Member 1 closed its Day 15 event-integration partial after the authoritative construction/rover APIs landed: choice overrides preserve event defaults, prospect discovery routes into its decision, regolith discounts persist, and structural damage honors deterministic targets. Member 1's only remaining partial is the global site-data refresh: a legacy NASA PDS hydrogen grid has been downloaded and sampled into a separate comparison sidecar, but quality limitations (including negative samples) prevent using it as current site data. The preferred 2022 Lunar Prospector-derived map remains unsampled after the archive download was blocked; selected nonpolar locations still use modeled illumination. The file metadata, checksums, samples, blockers and import notes are in `Resources/`. See `logs.md` for the audit.
 
 Update Oct 5, 2026: Days 14–20 Member 3 presentation work now includes shared rover/construction inspection, explicit placement previews, confirmed-structure visuals, a tested rover route-animation adapter, shared activity history and responsive report charts. Nine suites pass. Days 16/17/20 still need Member 1/2 action APIs for live end-to-end completion; no gameplay or balance implementation was added. See `docs/member3_days14_20.md` for the day-by-day status and complete handoff.
 

@@ -47,6 +47,10 @@ static func decode(data: Variant) -> Dictionary:
 				continue
 			var key: String = property.name
 			if not data.state.has(key) or typeof(data.state[key]) != property.type:
+				# Version 1 saves predate the persistent regolith discount field.
+				# The state default is zero, so preserve compatibility by leaving it.
+				if key == "shielding_wall_material_discount" and not data.state.has(key):
+					continue
 				return {}
 			var value: Variant = data.state[key]
 			if value is float and not is_finite(value):

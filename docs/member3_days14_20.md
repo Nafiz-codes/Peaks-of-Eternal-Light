@@ -121,7 +121,7 @@ Run from the repository in PowerShell:
 
 ```powershell
 .\tools\test_member3.ps1
-& .\.tools\godot\Godot_v4.7.2-stable_win64_console.exe --path . --rendering-method gl_compatibility --script tests/world/test_member3_days14_20.gd -- --capture
+& .\.tools\Godot_v4.7.2\Godot_v4.7.2-stable_win64_console.exe --path . --rendering-method gl_compatibility --script tests/world/test_member3_days14_20.gd -- --capture
 ```
 
 Logs and screenshots are under `.tools/day20/` (local, ignored by Git). The screenshots whose names include `fixture` contain test-injected completion state, not gameplay-produced builds.

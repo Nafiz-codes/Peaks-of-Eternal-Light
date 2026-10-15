@@ -146,12 +146,17 @@ func resolve_event_choice(state: Variant, event_id: String, choice_id: String = 
 		var event: Dictionary = state.pending_events[index]
 		if str(event.get("event_id", "")) != event_id:
 			continue
+		# Event-level effects describe the default outcome; a selected choice
+		# overrides only the keys it specifies. This preserves shared duration,
+		# hazard, and discovery effects while allowing choices to mitigate them.
 		var selected_effects: Dictionary = event.get("effects", {}).duplicate(true)
 		if event.get("choices") is Array and not event.choices.is_empty():
 			var found_choice := false
 			for choice in event.choices:
 				if str(choice.get("choice_id", "")) == choice_id:
-					selected_effects = choice.get("effects", {}).duplicate(true)
+					var choice_effects: Dictionary = choice.get("effects", {})
+					for key in choice_effects:
+						selected_effects[key] = choice_effects[key]
 					found_choice = true
 					break
 			if not found_choice:
@@ -172,7 +177,7 @@ func resolve_event_choice(state: Variant, event_id: String, choice_id: String = 
 func queue_construction(state: Variant, structure_id: String) -> Dictionary:
 	if state == null:
 		return {"ok": false, "error": "missing_mission_state"}
-	if state.mission_outcome.get("status", "") != "in_progress":
+	if state.mission_outcome.get("status", "") != "in_progress" or not state.pending_events.is_empty():
 		return {"ok": false, "error": "mission_not_ready"}
 	if state.built_structures.has(structure_id) or _construction_is_queued(state, structure_id):
 		return {"ok": false, "error": "structure_already_started"}
@@ -180,7 +185,7 @@ func queue_construction(state: Variant, structure_id: String) -> Dictionary:
 	if structure.is_empty():
 		return {"ok": false, "error": "unknown_structure"}
 	var cost: Dictionary = structure.get("build_cost", {})
-	var materials_cost := float(cost.get("materials", 0.0)) - _structure_material_discount(state, structure_id)
+	var materials_cost := maxf(0.0, float(cost.get("materials", 0.0)) - _structure_material_discount(state, structure_id))
 	var power_cost := float(cost.get("power", 0.0))
 	if state.materials < materials_cost:
 		return {"ok": false, "error": "insufficient_materials"}
@@ -189,7 +194,7 @@ func queue_construction(state: Variant, structure_id: String) -> Dictionary:
 	state.materials -= materials_cost
 	state.power_kwh -= power_cost
 	state.construction_queue.append({"structure_id": structure_id, "remaining_work": float(structure.get("build_time_sols", 1)), "started_sol": state.sol})
-	_update_report_data(state)
+	_publish_action_state(state)
 	return {"ok": true, "structure_id": structure_id, "materials_cost": materials_cost, "power_cost": power_cost}
 
 
@@ -198,7 +203,7 @@ func dispatch_rover(state: Variant, action_id: String, distance_km: float) -> Di
 		return {"ok": false, "error": "missing_mission_state"}
 	if state.mission_outcome.get("status", "") != "in_progress" or not state.pending_events.is_empty():
 		return {"ok": false, "error": "mission_not_ready"}
-	if action_id not in ["traverse", "survey", "prospecting", "return", "haul_regolith"] or distance_km <= 0.0:
+	if action_id not in ["traverse", "survey", "prospecting", "return", "haul_regolith"] or not is_finite(distance_km) or distance_km <= 0.0:
 		return {"ok": false, "error": "invalid_rover_action"}
 	var rover: Dictionary = construction.get("vehicles", {}).get("rover", {})
 	var range := float(rover.get("max_distance_per_sol_km", 0.0)) * _active_effect_multiplier_for(state.active_events, "rover_range_multiplier")
@@ -220,8 +225,18 @@ func dispatch_rover(state: Variant, action_id: String, distance_km: float) -> Di
 			state.volatile_prospect_status = "uninvestigated"
 	if action_id == "prospecting" and state.volatile_prospect_found:
 		state.volatile_prospect_status = "investigated"
-	_update_report_data(state)
+	_publish_action_state(state)
 	return {"ok": true, "action_id": action_id, "distance_km": distance_km, "power_cost_kwh": energy_cost}
+
+
+func _publish_action_state(state: Variant) -> void:
+	# Build and rover actions happen between sol ticks. Keep the current-sol
+	# snapshot and report aligned with any immediately spent resources/state.
+	state.life_support_status = _life_support_status(state, maxf(0.0, -state.water_balance_l), state.oxygen_consumed_kg, state.food_consumed_kg)
+	state.mission_outcome = _evaluate_mission_outcome(state)
+	_update_report_data(state)
+	if not state.history.is_empty():
+		state.history[state.history.size() - 1] = state.snapshot()
 
 
 func _evaluate_event_triggers(state: Variant) -> void:
@@ -253,7 +268,7 @@ func _event_condition_met(event_id: String, state: Variant) -> bool:
 	match event_id:
 		"solar_array_dust_accumulation": return state.sol > 3 and _has_rover_or_eva_activity(state)
 		"solar_particle_event": return true
-		"volatile_prospect_detected": return _has_rover_or_eva_activity(state) and not state.volatile_prospect_found
+		"volatile_prospect_detected": return state.volatile_prospect_found and state.volatile_prospect_status == "uninvestigated" and state.last_rover_action in ["survey", "traverse"]
 		"equipment_malfunction": return state.sol >= 3 and not state.built_structures.is_empty()
 		"crew_conflict": return state.crew_stress_avg > 0.6
 		"greenhouse_bloom": return _structure_age(state, "greenhouse") >= 2
@@ -304,10 +319,12 @@ func _apply_event_effects(state: Variant, event_id: String, effects: Dictionary)
 		state.crew_stress_avg = clampf(state.crew_stress_avg + stress_change, 0.0, 1.0)
 	if effects.has("rover_task"):
 		state.last_rover_action = str(effects.rover_task)
+	if effects.has("shielding_wall_material_discount"):
+		state.shielding_wall_material_discount = maxf(state.shielding_wall_material_discount, float(effects.shielding_wall_material_discount))
 	if effects.has("event_warning_disabled"):
 		state.event_warning_disabled = bool(effects.event_warning_disabled)
 	if effects.get("structural_damage", false):
-		var damaged := _first_undamaged_structure(state)
+		var damaged := _choose_undamaged_structure(state, event_id, str(effects.get("affected_structure", "random")))
 		if not damaged.is_empty():
 			state.damaged_structures[damaged] = true
 	if effects.get("volatile_prospect_found", false):
@@ -392,18 +409,22 @@ func _advance_construction(state: Variant) -> void:
 func _structure_material_discount(state: Variant, structure_id: String) -> float:
 	if structure_id != "shielding_wall":
 		return 0.0
-	for event in state.active_events:
-		var effects: Dictionary = event.get("effects", {})
-		if effects.has("shielding_wall_material_discount"):
-			return float(effects.shielding_wall_material_discount)
-	return 0.0
+	return maxf(0.0, state.shielding_wall_material_discount)
 
 
-func _first_undamaged_structure(state: Variant) -> String:
+func _choose_undamaged_structure(state: Variant, event_id: String, requested: String) -> String:
+	var candidates: Array[String] = []
 	for structure_id in state.built_structures:
 		if not state.damaged_structures.has(structure_id):
-			return str(structure_id)
-	return ""
+			candidates.append(str(structure_id))
+	candidates.sort()
+	if candidates.is_empty():
+		return ""
+	if requested != "random":
+		return requested if candidates.has(requested) else ""
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("structure_damage:%s:%d:%s" % [state.site_id, state.sol, event_id])
+	return candidates[rng.randi_range(0, candidates.size() - 1)]
 
 
 func _battery_capacity(state: Variant) -> float:

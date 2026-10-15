@@ -185,7 +185,7 @@ func show_sites() -> void:
 		if coordinates is Dictionary and coordinates.has("latitude_deg") and coordinates.has("longitude_deg"):
 			details.add_child(UI.label("Coordinates: %s°, %s° east" % [coordinates.latitude_deg, coordinates.longitude_deg], 14, UI.MUTED))
 		UI.disclosure(details, "Measurement sources and reading dates", _site_sources(selected))
-		details.add_child(UI.label("Solar availability is an ideal-horizon lunar-day estimate. NASA hydrogen coverage does not include these landing coordinates.", 14, UI.AMBER))
+		details.add_child(UI.label("Solar availability is an ideal-horizon lunar-day estimate. Current site hydrogen estimates are unavailable: the recorded global map has not been sampled at these coordinates.", 14, UI.AMBER))
 		if not _valid_site(selected):
 			details.add_child(UI.label("Required numeric site data is missing. This site cannot start a mission.", 14, UI.AMBER))
 	column.add_child(UI.label("Construction and rover operations use authored costs and simulation-owned results. The modeled solar average is not a site-specific lighting forecast.", 14, UI.AMBER))

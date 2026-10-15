@@ -1,5 +1,5 @@
 param(
-    [string]$GodotPath = (Join-Path $PSScriptRoot '../.tools/godot/Godot_v4.7.2-stable_win64_console.exe')
+    [string]$GodotPath = (Join-Path $PSScriptRoot '../.tools/Godot_v4.7.2/Godot_v4.7.2-stable_win64_console.exe')
 )
 
 $ErrorActionPreference = 'Stop'

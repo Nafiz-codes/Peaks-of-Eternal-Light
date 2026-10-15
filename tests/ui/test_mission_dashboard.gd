@@ -24,9 +24,14 @@ func _verify() -> void:
 	await process_frame
 	check(app.screen == "sites", "Project should open at site selection")
 	check(app.start_button.disabled, "Mission start requires an explicit site selection")
-	check(app.simulator.sites.size() == 4 and app.simulator.events.size() == 19, "Current teammate contracts must load")
+	check(app.simulator.sites.size() == 4 and app.simulator.events.size() == 21, "Current teammate contracts must load")
 	app.select_site("not_a_site")
 	check(app.selected_site_id.is_empty(), "Invalid site IDs must not reach simulator assertions")
+	app.select_site("ridge_a")
+	var source_disclosure := ""
+	for label in app.find_children("*", "Label", true, false):
+		source_disclosure += str(label.text) + "\n"
+	check(source_disclosure.contains("recorded global map has not been sampled"), "Site screen must not imply the recorded global hydrogen map excludes these coordinates")
 	check(app.field_text({}, "slope_deg").contains("Unavailable"), "Missing site values must be labeled")
 	check(app.field_text({"slope_deg": {"value": 3, "verified": false}}, "slope_deg").contains("Model estimate"), "Unverified values must remain labeled")
 	check(app.field_text({"hydrogen_ppm": {"available": false, "verified": false, "availability_note": "No applicable LEND coverage"}}, "hydrogen_ppm").contains("Not available"), "Unavailable hydrogen coverage must remain labeled")

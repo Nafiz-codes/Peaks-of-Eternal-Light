@@ -31,7 +31,7 @@ OpenGL screenshots were inspected at 1360×820 and 520×900, plus live modal and
 Example PowerShell command from the repository:
 
 ```powershell
-& .\.tools\godot\Godot_v4.7.2-stable_win64_console.exe --headless --path . --script tests/world/test_outpost_integration.gd
+& .\.tools\Godot_v4.7.2\Godot_v4.7.2-stable_win64_console.exe --headless --path . --script tests/world/test_outpost_integration.gd
 ```
 
 ## Integration fix and remaining dependencies

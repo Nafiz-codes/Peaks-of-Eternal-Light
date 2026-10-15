@@ -25,6 +25,7 @@ var radiation_msv: float = 0.0
 var radiation_this_sol_msv: float = 0.0
 var terrain_shielding_factor: float = 0.0
 var materials: float = 0.0
+var shielding_wall_material_discount: float = 0.0
 var active_events: Array[Dictionary] = []
 var pending_events: Array[Dictionary] = []
 var resolved_events: Array[Dictionary] = []
@@ -69,6 +70,7 @@ func snapshot() -> Dictionary:
 		"radiation_this_sol_msv": radiation_this_sol_msv,
 		"terrain_shielding_factor": terrain_shielding_factor,
 		"materials": materials,
+		"shielding_wall_material_discount": shielding_wall_material_discount,
 		"active_events": active_events.duplicate(true),
 		"pending_events": pending_events.duplicate(true),
 		"resolved_events": resolved_events.duplicate(true),
