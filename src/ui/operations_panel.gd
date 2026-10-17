@@ -1,11 +1,25 @@
 extends AcceptDialog
 
-## Read-only catalog and runtime inspection, shared by world and dashboard.
+## Shared catalog, authoritative action requests, and runtime inspection.
 const UI = preload("res://src/ui/ui_style.gd")
 signal placement_preview_requested(structure_id: String)
 signal operation_requested(kind: String, operation_id: String, distance_km: float)
+signal mission_start_requested(kind: String)
 var content: VBoxContainer
 var return_focus: WeakRef
+var result_label: Label
+
+func show_operation_error(code: String) -> void:
+	var messages := {
+		"lander_control_required": "Enter the lander and press R to drive the rover with WASD.",
+		"mission_not_ready": "Finish any pending decision, or start a new mission if this one has ended.",
+		"rover_range_exceeded": "No range remains for this trip. Close this panel and run the next sol before dispatching again.",
+		"insufficient_power": "Not enough energy for this operation.",
+		"insufficient_materials": "Not enough materials for this structure.",
+		"structure_already_started": "This structure is already queued or completed."
+	}
+	result_label.text = str(messages.get(code, "Operation could not be completed: " + code.replace("_", " ")))
+	(content.get_parent() as ScrollContainer).scroll_vertical = 0
 
 func _ready() -> void:
 	title = "Outpost operations"
@@ -35,6 +49,11 @@ func open_operations(kind: String, state: Variant, contract: Dictionary, invoker
 		child.queue_free()
 	title = "Construction planning" if kind == "build" else "Rover operations"
 	content.add_child(UI.label(title.to_upper(), 22, UI.BLUE))
+	result_label = UI.label("", 16, UI.AMBER)
+	content.add_child(result_label)
+	if state == null and allow_operations:
+		result_label.text = "Start a mission at this site to enable operations."
+		content.add_child(UI.button("Start mission", func(): mission_start_requested.emit(kind)))
 	content.add_child(UI.label("Choose an operation. Costs, progress, and results are applied by the authoritative mission simulation." if allow_operations else "Planning and inspection only.", 15, UI.AMBER))
 	if kind == "build":
 		var structures: Array = contract.get("structures", [])
@@ -52,8 +71,7 @@ func open_operations(kind: String, state: Variant, contract: Dictionary, invoker
 			card.add_child(UI.label("Completed / recorded by simulation" if built else ("Construction in progress" if queued else "Ready to queue"), 14, UI.PURPLE))
 			if allow_operations:
 				card.add_child(UI.button("Build completed" if built else ("Build in progress" if queued else "Queue construction"), func():
-					operation_requested.emit("build", id, 0.0)
-					hide(), built or queued or state == null))
+					operation_requested.emit("build", id, 0.0), built or queued or state == null))
 			else:
 				card.add_child(UI.button("Build unavailable", Callable(), true))
 			if allow_preview and not built:
@@ -65,11 +83,7 @@ func open_operations(kind: String, state: Variant, contract: Dictionary, invoker
 		content.add_child(UI.label("Travel energy: %s kWh/km\nDistance cap: %s km/sol\nDiscovery chance: %s%% per new km" % [rover.get("move_cost_power_per_km", "Unavailable"), rover.get("max_distance_per_sol_km", "Unavailable"), rover.get("discovery_chance_pct_per_km", "Unavailable")]))
 		content.add_child(UI.label("Last recorded action: " + ("None" if state == null or str(state.last_rover_action).is_empty() else str(state.last_rover_action)), 16, UI.BLUE))
 		content.add_child(UI.label("Prospect: " + ("No mission" if state == null else str(state.volatile_prospect_status)), 16))
-		content.add_child(UI.label("Dispatches use a fixed 3 km leg from this panel; the simulator enforces energy and remaining sol range.", 14, UI.AMBER))
-		for entry in [["Survey nearby terrain", "survey"], ["Traverse route", "traverse"], ["Prospect signal", "prospecting"], ["Return to base", "return"], ["Haul regolith", "haul_regolith"]]:
-			content.add_child(UI.button(entry[0] + " / 3 km", func():
-				operation_requested.emit("rover", entry[1], 3.0)
-				hide(), not allow_operations or state == null))
+		content.add_child(UI.label("Rover control is available only inside the lander. Enter through its hatch, then press R for the remote camera. W/S drives forward or reverse, A/D steers, Space brakes, and R returns to the crew seat. Energy and range are charged for actual distance driven.", 14, UI.AMBER))
 		UI.disclosure(content, "Parameter sources and assumptions", str(rover.get("notes", "Source notes unavailable.")))
 	popup_centered_clamped(Vector2i(740, 620), 0.9)
 	get_ok_button().grab_focus()

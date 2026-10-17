@@ -328,6 +328,7 @@ func _slider(entry: Array) -> void:
 	body.add_child(slider)
 
 func _controls() -> void:
+	body.add_child(UI.label("Inside lander: R — Control rover / return to seat. Rover: W/S — forward/reverse, A/D — steer, Space — brake. Esc pauses remote driving.", 17, UI.BLUE))
 	for text_ in ["Esc — Open pause menu; go back; resume", "W A S D — Move", "Shift + W — Sprint forward", "Mouse — Look / orbit", "Space — Jump", "E — Talk to station crew / enter or exit the lander", "V — First / third person", "C — Front / rear orbit view", "Alt — Show / hide mission details and release cursor", "I — Mission dashboard / return", "Tab / Shift + Tab — Navigate menu controls", "Enter / Space — Activate a focused button", "Landing globe: right-drag to orbit, wheel to zoom, click a site to land"]:
 		body.add_child(UI.label(text_, 17))
 
@@ -337,7 +338,7 @@ func _help() -> void:
 	for step in copy.tutorial_steps:
 		body.add_child(UI.label(step.title, 19))
 		body.add_child(UI.label(step.body, 16, UI.MUTED))
-	body.add_child(UI.label("Current build: construction and rover actions are planning previews. Advance the mission with Run the sol; resolve each pending decision before continuing.", 16, UI.AMBER))
+	body.add_child(UI.label("Queue structures in Construction planning. Drive the rover from inside the lander with R and WASD. Advance the mission with Run the sol; resolve pending decisions before continuing.", 16, UI.AMBER))
 
 func _science() -> void:
 	heading.text = "SCIENCE & SOURCES"

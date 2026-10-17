@@ -36,6 +36,7 @@ var damaged_structures: Dictionary = {}
 var last_rover_action: String = ""
 var rover_distance_this_sol_km: float = 0.0
 var rover_total_distance_km: float = 0.0
+var rover_pose: Dictionary = {}
 var crew_stress_avg: float = 0.25
 var crew_productivity: float = 1.0
 var volatile_prospect_found: bool = false

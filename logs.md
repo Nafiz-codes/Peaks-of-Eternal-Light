@@ -2,6 +2,28 @@
 
 Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 
+## Current cross-member audit — October 17, 2026
+
+### Lander-only manual rover control — October 17
+
+- Replaced production dispatch-loop animation with lander-seat remote driving. R enters/leaves the remote camera, W/S drives/reverses, A/D steers and Space brakes; astronaut stays seated. Exterior and dashboard controls are inspection-only and session commands enforce the lander restriction.
+- Added kinematic collision, acceleration/braking, slower reverse, curved steering, gravity and terrain-aligned chassis feedback. Actual distance uses existing simulator energy/range rules. Rover pose persists in saves with backward compatibility; pause, reset and return-to-seat restore expected control.
+- Combined 13-suite regression and rendered remote-driving test passed. See `docs/rover_control.md` for controls, tuning and verification scope. Earlier automatic-loop entries below are superseded by this requested behavior.
+
+### Rover visibility follow-up — October 17
+
+- Second report investigation found two untested paths: fresh landings have no active mission (operation buttons disabled), and rejected operations closed the dialog while writing the reason into a hidden HUD. The operations dialog now offers Start mission on fresh landings, closes only after successful actions, and keeps plain-language rejection/recovery instructions visible at the top. Dashboard rejection feedback is also retained.
+- Validation: the 12-suite run passes. The strengthened live-operations test additionally passes 219 assertions using mouse press/release input on scrolled, embedded dialog buttons across all four sites, starting with no mission and testing rejected commands with the HUD hidden. These checks replace the earlier assumption that pre-started missions and direct button-signal emission sufficiently covered the player flow.
+
+- User reported no visible rover movement. Code review found that the original outpost loop returned to its starting position in 1.95 seconds, while full-dashboard actions have no active world animation and reduced motion skips travel.
+- Lengthened the production loop to 7.5 seconds and added a world-space operation label. The live regression checks that movement continues beyond the previous two-second window. Full-dashboard commands still apply immediately without replaying on scene return; use the rover's E interaction or outpost panel to see travel. This does not establish which path caused the user's observation.
+
+- Completed the remaining Day 16/20 rover action-to-world connection and proximity interaction; Day 17 construction now has live UI-to-completion verification across all four sites. Reduced motion, repeated/rejected dispatches, collision and mission reset are covered.
+- Member 1 runtime regressions and Member 2 event/system checks pass. Member 2's historical Day 7 runtime-interface partial is superseded by this combined automated integration result. Corrected mission briefing/tutorial provenance wording.
+- Repaired the default runner and expanded it to 12 suites: all pass. The new live-operations suite passes 207 assertions over four successful ten-sol routes with real construction, rover dispatch and authored choices. OpenGL presentation capture passes 60 assertions; current narrow construction/report layouts and rover panel were visually inspected.
+- Remaining: Member 1 global hydrogen sampling is externally blocked (public archive API returns HTTP 403 on October 17). Illumination remains explicitly modeled. Human playtesting and team sign-off are not claimed by these automated checks.
+- Current detailed status and reproduction commands: [Day 20 completion audit](docs/day20_completion.md). Older entries below are historical and may describe APIs that have since landed.
+
 **How this works:** after you finish your task for a given day, add one entry under your own section below, using the template. If you're using an AI assistant (Codex, Claude, etc.) to help you build, have it write the entry for you once the day's task is actually done — not before. On 🔗 Test & Integration days, all three members log, since the outcome affects everyone.
 
 **Note on Day 1:** the five data-file scaffolds (`sites.json`, `bvad_constants.json`, `crew.json`, `construction.json`, `events.json`) already existed going into kickoff — Day 1's log entries should say "reviewed scaffold," not "created," so the history stays accurate.
@@ -232,7 +254,8 @@ Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 - Notes for teammates: The prospect-confirmation event preserves the NASA-data distinction between a hydrogen signal and a confirmed extraction candidate. Member 1 should determine authoritative state names and effect application when wiring triggers.
 
 ### Day 7 — Oct 2 — Test & Integration #1
-- Status: ⚠️ Partial
+- Status: ✅ Automated runtime integration closed October 17; human sign-off unrecorded
+- Closure: The combined 12-suite regression run now covers all members' interfaces, including Member 2 event/system tests and four live construction/rover/choice routes. The original blockers below describe the October 2 state and are superseded; see `docs/day20_completion.md`.
 - What was completed: Member 2's event and content contracts are prepared for the shared test: `events.json` contains 19 validated events, while crew and construction content remains in the agreed JSON contracts.
 - Issues / blockers: The shared headless multi-sol integration test has not been run or recorded by all members. Construction, rover, crew-modifier, and event-effect behavior is not yet wired into the simulator, so Member 2 cannot independently verify the intended end-to-end content interfaces.
 - Notes for teammates: Complete this entry only after Member 1 runs the headless multi-sol test and the team confirms the current runtime state/event interfaces. Do not mark this shared integration day as passed from JSON validation alone.

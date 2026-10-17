@@ -13,7 +13,7 @@ Day 12 starts the authored-event handoff into the existing simulator. The event 
 - Greenhouse nutrient recalibration: one-time power cost.
 - Resupply window: automatic materials grant.
 
-These are real `events.json` entries, not UI fixtures. The test also confirms that all 19 authored entries load.
+These are real `events.json` entries, not UI fixtures. The current table has 21 authored entries after the later content additions. On October 17, the combined 12-suite run passed, including this test, Member 2 systems and live four-site action/choice integration. See [current audit](day20_completion.md).
 
 ## Day 13–20 implementation result
 
@@ -31,5 +31,5 @@ Timed effects use `remaining_sols` and `started_sol`; their full configured dura
 ## Run
 
 ```powershell
-& 'E:\CS\Godot_v4.7.2-stable_win64.exe' --headless --path . --script tests/simulation/test_member2_event_slotting.gd
+& .\.tools\godot\Godot_v4.7.2-stable_win64_console.exe --headless --path . --script tests/simulation/test_member2_event_slotting.gd
 ```

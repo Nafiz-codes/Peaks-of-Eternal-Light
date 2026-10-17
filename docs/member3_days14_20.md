@@ -1,5 +1,13 @@
 # Member 3: Days 14–20 implementation and handoff
 
+**Latest rover behavior:** The user-requested lander-only WASD controller now supersedes the automatic dispatch loop. See [current controls and tests](rover_control.md). The combined runner now passes 13 suites.
+
+## Current result — October 17, 2026
+
+The missing live integration described below is now implemented and tested. Successful simulation rover dispatches animate an illustrative round trip with collision and reduced-motion handling; rover proximity opens the operations panel. The new live-operations test uses real UI actions and verifies construction queues, completed structures, shielding-wall collision, resets and successful ten-sol routes at all four sites (207 assertions). The repaired combined runner passes all 12 suites; OpenGL presentation capture passes 60 assertions. Human playtest/team sign-off remains separate. See [current cross-member audit](day20_completion.md) for evidence and the unresolved external data dependency.
+
+The October 15 audit and subsequent implementation notes below are preserved as historical records, not current missing-API claims.
+
 ## October 15, 2026 audit
 
 Checked the Day 1–20 workflow against the current presentation code and runtime interfaces. The available Member 3 UI, world, event, and report work is implemented. Days 16, 17, and 20 remain incomplete end to end: `MissionSimulator` and `MissionSession` still expose no rover dispatch or construction request/queue API. Existing route animation and completed-structure fixtures cannot certify those missing gameplay paths. Team acceptance and physical input playtesting remain unrecorded.
@@ -121,7 +129,7 @@ Run from the repository in PowerShell:
 
 ```powershell
 .\tools\test_member3.ps1
-& .\.tools\Godot_v4.7.2\Godot_v4.7.2-stable_win64_console.exe --path . --rendering-method gl_compatibility --script tests/world/test_member3_days14_20.gd -- --capture
+& .\.tools\godot\Godot_v4.7.2-stable_win64_console.exe --path . --rendering-method gl_compatibility --script tests/world/test_member3_days14_20.gd -- --capture
 ```
 
 Logs and screenshots are under `.tools/day20/` (local, ignored by Git). The screenshots whose names include `fixture` contain test-injected completion state, not gameplay-produced builds.

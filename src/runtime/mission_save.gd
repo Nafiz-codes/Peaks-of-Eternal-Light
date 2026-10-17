@@ -49,7 +49,7 @@ static func decode(data: Variant) -> Dictionary:
 			if not data.state.has(key) or typeof(data.state[key]) != property.type:
 				# Version 1 saves predate the persistent regolith discount field.
 				# The state default is zero, so preserve compatibility by leaving it.
-				if key == "shielding_wall_material_discount" and not data.state.has(key):
+				if key in ["shielding_wall_material_discount", "rover_pose"] and not data.state.has(key):
 					continue
 				return {}
 			var value: Variant = data.state[key]
@@ -65,6 +65,11 @@ static func decode(data: Variant) -> Dictionary:
 				state.set(key, value.duplicate(true) if value is Dictionary else value)
 		if state.site_id != data.site_id or state.sol < 0 or state.sol > state.mission_length_sols or state.mission_length_sols < 1:
 			return {}
+		if not state.rover_pose.is_empty():
+			if not state.rover_pose.get("position") is Vector3 or not state.rover_pose.get("heading") is float:
+				return {}
+			if not state.rover_pose.position.is_finite() or not is_finite(state.rover_pose.heading):
+				return {}
 		if not state.mission_outcome.get("status", "") in ["in_progress", "success", "failure"]:
 			return {}
 	var pose: Dictionary = data.pose

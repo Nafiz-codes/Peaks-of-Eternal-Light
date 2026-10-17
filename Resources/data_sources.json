@@ -109,7 +109,7 @@
         "reported_size": "10.6 MB",
         "md5": "ed174cc5b25857e6c88f6d9d815922c5",
         "download_url": "https://archive.data.jhu.edu/api/access/datafile/16635",
-        "access_status_checked": "2026-10-15: repository metadata page identifies the file as public under CC BY 4.0; repeated direct API requests returned Cloudflare's access-block page (latest Ray ID a4b0a52b0848fc24), and the in-app browser returned ERR_BLOCKED_BY_CLIENT. No data bytes were retrieved."
+        "access_status_checked": "2026-10-17: retried the public API download outside the restricted network environment using curl --fail; the archive returned HTTP 403. Web retrieval was also unavailable. No data bytes were retrieved. Prior 2026-10-15 requests returned a Cloudflare access-block page. The expected file checksum remains required before sampling."
       },
       "data_kind": "Global neutron-derived bulk hydrogen abundance map",
       "version_or_coverage": "Lawrence et al. (2022), Journal of Geophysical Research: Planets 127, e2022JE007197; global map calibrated to Apollo sample abundances; source archive V1",

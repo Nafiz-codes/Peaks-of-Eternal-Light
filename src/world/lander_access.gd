@@ -8,6 +8,7 @@ var fade: ColorRect
 var busy := false
 var inside := false
 var exterior_first_person := false
+var rover_button: Button
 
 func _ready() -> void:
 	player = get_parent().get_node("Outpost/Astronaut")
@@ -30,6 +31,12 @@ func _ready() -> void:
 	button.pressed.connect(transfer)
 	button.hide()
 	layer.add_child(button)
+	rover_button = Button.new()
+	rover_button.position = Vector2(20, 110)
+	rover_button.custom_minimum_size = Vector2(380, 52)
+	rover_button.text = "Control rover  [R]"
+	rover_button.pressed.connect(func(): get_parent().get_node("RoverHull").start_control())
+	layer.add_child(rover_button)
 	fade = ColorRect.new()
 	fade.color = Color.BLACK
 	fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -44,11 +51,18 @@ func door_available() -> bool:
 	return absf(offset.y) < 0.75 and Vector2(offset.x, offset.z).length() < 1.1
 
 func _process(_delta: float) -> void:
+	var driving: bool = get_parent().get_node("RoverHull").active
+	rover_button.visible = inside and not busy and not driving and not player.ui_blocked
+	var session := get_node("/root/MissionSession")
+	rover_button.disabled = session.dashboard_state != null and not session.can_advance()
+	rover_button.text = "Start mission + control rover  [R]" if session.dashboard_state == null else ("Resolve mission decisions before driving" if rover_button.disabled else "Control rover  [R]")
 	button.visible = not busy and not player.ui_blocked and door_available()
 	button.text = "Get outside  [E]" if inside else "Get inside  [E]"
 	button.tooltip_text = "Press E to enter or exit. Esc opens the pause menu."
 
 func _input(event: InputEvent) -> void:
+	if get_parent().get_node("RoverHull").active:
+		return
 	if busy:
 		get_viewport().set_input_as_handled()
 		return
@@ -61,7 +75,7 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 func transfer() -> void:
-	if busy or player.ui_blocked or not door_available():
+	if busy or player.ui_blocked or get_parent().get_node("RoverHull").active or not door_available():
 		return
 	busy = true
 	button.hide()

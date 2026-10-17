@@ -64,7 +64,7 @@ func _ready() -> void:
 	actions.add_child(event_button)
 	report_button = UI.button("Dashboard / report", open_dashboard)
 	actions.add_child(report_button)
-	for entry in [["Construction planning", "build"], ["Rover operations", "rover"]]:
+	for entry in [["Construction planning", "build"], ["Rover status", "rover"]]:
 		var button := UI.button(entry[0], Callable())
 		button.pressed.connect(func(): open_operations(entry[1], button))
 		actions.add_child(button)
@@ -102,6 +102,11 @@ func _ready() -> void:
 	operations = preload("res://src/ui/operations_panel.gd").new()
 	add_child(operations)
 	operations.operation_requested.connect(_run_operation)
+	operations.mission_start_requested.connect(func(kind: String):
+		if session.start_selected_mission() != OK:
+			operations.show_operation_error("mission_data_unavailable")
+			return
+		operations.open_operations(kind, session.dashboard_state, _construction_contract(), null, true, true))
 	operations.visibility_changed.connect(_dialog_visibility_changed)
 	crew_dialogue = preload("res://src/ui/crew_dialogue.gd").new()
 	add_child(crew_dialogue)
@@ -241,12 +246,18 @@ func _construction_contract() -> Dictionary:
 
 func open_operations(kind: String, invoker: Control = null) -> void:
 	if not _modal_visible():
-		operations.open_operations(kind, session.dashboard_state, _construction_contract(), invoker, true, true)
+		operations.open_operations(kind, session.dashboard_state, _construction_contract(), invoker, true, kind != "rover")
 
 
 func _run_operation(kind: String, operation_id: String, distance_km: float) -> void:
+	if kind == "rover":
+		operations.show_operation_error("lander_control_required")
+		return
 	var result: Dictionary = session.queue_structure(operation_id) if kind == "build" else session.send_rover(operation_id, distance_km)
 	notice.text = ("Operation recorded: " + operation_id.replace("_", " ")) if result.get("ok", false) else ("Operation unavailable: " + str(result.get("error", "unknown")))
 	if result.get("ok", false):
+		operations.hide()
 		world.refresh_feedback()
+	else:
+		operations.show_operation_error(str(result.get("error", "unknown")))
 	refresh()

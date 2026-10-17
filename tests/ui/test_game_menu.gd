@@ -1,7 +1,7 @@
 extends SceneTree
 const Save = preload("res://src/runtime/mission_save.gd")
 var failures := 0
-var temporary := "user://menu_test_%d" % Time.get_ticks_usec()
+var temporary := "res://.tools/menu_test_%d" % Time.get_ticks_usec()
 
 func _init() -> void:
 	call_deferred("_run")

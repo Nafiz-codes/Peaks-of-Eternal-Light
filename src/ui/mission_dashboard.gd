@@ -275,9 +275,9 @@ func show_dashboard() -> void:
 	terrain.add_child(UI.label("OUTPOST / SCHEMATIC", 16))
 	terrain.add_child(OutpostPreview.new())
 	terrain.add_child(UI.label("Habitat · Solar array · Rover / Placement is illustrative", 14, UI.MUTED))
-	for entry in [["Construction planning", "build"], ["Rover operations", "rover"]]:
+	for entry in [["Construction planning", "build"], ["Rover status", "rover"]]:
 		var button := UI.button(entry[0], Callable())
-		button.pressed.connect(func(): operations.open_operations(entry[1], state, simulator.construction, button, false, true))
+		button.pressed.connect(func(): operations.open_operations(entry[1], state, simulator.construction, button, false, entry[1] != "rover"))
 		left.add_child(button)
 	var crew := UI.panel(right)
 	crew.add_child(UI.label("CREW / %d" % state.crew_size, 18))
@@ -359,12 +359,17 @@ func advance_turn() -> void:
 
 
 func _run_operation(kind: String, operation_id: String, distance_km: float) -> void:
+	if kind == "rover":
+		operations.show_operation_error("lander_control_required")
+		return
 	if state == null or state.mission_outcome.get("status", "") != "in_progress":
+		operations.show_operation_error("mission_not_ready")
 		return
 	var result: Dictionary = simulator.queue_construction(state, operation_id) if kind == "build" else simulator.dispatch_rover(state, operation_id, distance_km)
 	if not result.get("ok", false):
-		show_dashboard()
+		operations.show_operation_error(str(result.get("error", "unknown")))
 		return
+	operations.hide()
 	var session := get_node_or_null("/root/MissionSession")
 	if session != null:
 		session.set("dashboard_state", state)

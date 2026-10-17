@@ -2,6 +2,8 @@
 
 **Game title:** Peaks of Eternal Light · **Team:** TRIARCHY
 
+**Current Day 1–20 status — October 17, 2026:** Runtime/content/presentation implementation and automated integration are complete, including live rover animation and construction completion checks. The combined runner passes 12 suites. Member 1's global hydrogen sampling remains blocked by archive HTTP 403; illumination stays explicitly modeled under the revised Day 11 contract. Human playtest/team acceptance remains unrecorded. See [current audit](docs/day20_completion.md); the dated progress notes below describe earlier builds.
+
 **Timeline:** Sept 26 – Oct 31 (~5 weeks) · Local qualifier the day before the main Nov 14–15 event
 
 Each teammate owns a **distinct domain end-to-end**, not a slice of the same task. Work meets at defined interfaces (below), so nobody is blocked waiting on someone else's half of the same feature.

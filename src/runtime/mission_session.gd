@@ -127,12 +127,15 @@ func queue_structure(structure_id: String) -> Dictionary:
 
 
 func send_rover(action_id: String, distance_km: float) -> Dictionary:
+	var scene := get_tree().current_scene
+	var driver := null if scene == null else scene.get_node_or_null("RoverHull")
+	if driver == null or not driver.get("active") or not driver.available():
+		return {"ok": false, "error": "lander_control_required"}
 	if action_busy or dashboard_state == null:
 		return {"ok": false, "error": "mission_not_ready"}
 	var result: Dictionary = dashboard_simulator.dispatch_rover(dashboard_state, action_id, distance_km)
-	if result.get("ok", false):
-		capture_sol_checkpoint()
-		state_changed.emit()
+	# Remote driving publishes at 4 Hz and checkpoints on release, rather than
+	# copying the mission history on every physics frame.
 	return result
 
 

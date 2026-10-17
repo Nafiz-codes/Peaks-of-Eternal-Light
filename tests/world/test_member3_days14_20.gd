@@ -103,7 +103,7 @@ func _run() -> void:
 	world.refresh_feedback()
 	check(world.construction_view.completed.is_empty(), "Removed/reset structures disappear.")
 	hud.open_operations("rover", hud.run_button)
-	check(labels(hud.operations).contains("0.55") and button_texts(hud.operations).contains("Survey nearby terrain"), "Rover panel uses real parameters and offers authoritative dispatch actions.")
+	check(labels(hud.operations).contains("0.55") and labels(hud.operations).contains("only inside the lander") and not button_texts(hud.operations).contains("Survey nearby terrain"), "Rover inspection shows parameters and restricts driving to lander.")
 	await shot("rover-panel")
 	hud.operations.hide()
 	check(not world.get_node("Outpost/Astronaut").ui_blocked, "Closing operations restores exploration input.")

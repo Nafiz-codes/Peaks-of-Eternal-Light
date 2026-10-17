@@ -1,5 +1,7 @@
 # Game menu
 
+The Controls page includes lander-only rover driving: R enters/leaves the remote camera, WASD drives/steers and Space brakes. Esc pauses driving. Saves also preserve the rover's position and heading; saves made before this addition remain compatible.
+
 Press **Esc** to pause. Esc returns from a submenu to the main menu, then resumes
 play. Existing decision dialogs handle Esc before the pause menu. Tab moves focus;
 Enter activates buttons. Movement, camera motion, and NPC animation stop while paused.

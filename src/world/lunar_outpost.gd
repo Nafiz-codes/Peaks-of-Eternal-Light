@@ -68,7 +68,7 @@ func _ready() -> void:
 func _add_prop_collisions() -> void:
 	# Simple hulls keep walking/camera collision predictable around imported art.
 	for entry in [["RoverHull", Vector3(5.2, 0.65, -2.8), Vector3(3.0, 1.3, 3.0)], ["SolarHull", Vector3(-6, 0.5, -5.5), Vector3(6.5, 1.0, 2.6)]]:
-		var body := StaticBody3D.new()
+		var body: PhysicsBody3D = preload("res://src/world/rover_drive.gd").new() if entry[0] == "RoverHull" else StaticBody3D.new()
 		body.name = entry[0]
 		body.position = entry[1]
 		var collision := CollisionShape3D.new()
@@ -102,6 +102,7 @@ func refresh_feedback() -> void:
 	var state: Variant = session.dashboard_state
 	var catalog: Dictionary = {} if session.dashboard_simulator == null else session.dashboard_simulator.construction
 	construction_view.sync_completed({} if state == null else state.built_structures, catalog.get("structures", []))
+	_sync_rover_action(state, session.reduce_motion)
 	if session.reduce_motion:
 		rover_view.finish_immediately(get_node("Outpost/Rover"), get_node("RoverHull"))
 		if camera_tween != null and camera_tween.is_running():
@@ -140,6 +141,10 @@ func refresh_feedback() -> void:
 		if event_beacon.visible:
 			feedback_tween.tween_property(event_beacon, "scale", Vector3.ONE * 1.35, 0.4)
 			feedback_tween.tween_property(event_beacon, "scale", Vector3.ONE, 0.4)
+
+
+func _sync_rover_action(_state: Variant, _reduced_motion: bool) -> void:
+	get_node("RoverHull").sync_state()
 
 
 func _set_station_status(id: String, text: String, alert: bool) -> void:
@@ -429,6 +434,9 @@ func _on_interaction_area_exited(body: Node3D, area: Area3D) -> void:
 
 
 func _on_player_interaction(interaction_id: String) -> void:
+	if interaction_id == "rover_operations":
+		get_node("MissionHUD").open_operations("rover")
+		return
 	# Inspect authoritative readings; stations never modify resource values.
 	get_node("MissionHUD").inspect_station(interaction_id)
 

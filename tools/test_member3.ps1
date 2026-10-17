@@ -1,5 +1,5 @@
 param(
-    [string]$GodotPath = (Join-Path $PSScriptRoot '../.tools/Godot_v4.7.2/Godot_v4.7.2-stable_win64_console.exe')
+    [string]$GodotPath = (Join-Path $PSScriptRoot '../.tools/godot/Godot_v4.7.2-stable_win64_console.exe')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,6 +11,10 @@ $logDirectory = Join-Path $projectRoot '.tools/day20/test-logs'
 New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
 $tests = @(
     'tests/simulation/test_mission_simulator.gd',
+    'tests/simulation/test_member2_event_slotting.gd',
+    'tests/simulation/test_member2_systems.gd',
+    'tests/world/test_live_operations.gd',
+    'tests/world/test_lander_interior.gd',
     'tests/ui/test_mission_dashboard.gd',
     'tests/world/test_lunar_landing_selector.gd',
     'tests/world/test_lunar_landing_transition.gd',
