@@ -95,7 +95,7 @@ func repair() -> bool:
 		return false
 	var fieldwork := world.get_node_or_null("CrewFieldwork")
 	if fieldwork != null and not fieldwork.consume_manual_repair():
-		repair_label.text = "REPAIR BLOCKED\nNeed a replacement kit and mission material.\nAsk the equipment specialist."
+		repair_label.text = "REPAIR BLOCKED\nNeed a kit, mission material and an unreserved worksite.\nAsk the equipment specialist."
 		return false
 	state.rover_health = 100.0
 	_update_health()

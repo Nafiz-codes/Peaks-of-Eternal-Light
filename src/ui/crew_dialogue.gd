@@ -144,7 +144,7 @@ func _add_fieldwork() -> void:
 					content.add_child(UI.button("Assign deployment: " + site.replace("_", " "), func(): _field_action("deploy", site)))
 			"food_storage":
 				content.add_child(UI.button("Assign rover readiness / dust inspection", func(): _field_action("inspect")))
-				content.add_child(UI.button("Assign rover maintenance (1 kit + material, +40 health)", func(): _field_action("repair")))
+				content.add_child(UI.button("Assign rover maintenance (1 kit + %.1f material, +%.0f health)" % [fieldwork.config.repair_materials, fieldwork.config.repair_points], func(): _field_action("repair")))
 			"crew_briefing":
 				content.add_child(UI.button("Assign local route / return-reserve review", func(): _field_action("navigate", "sample_a")))
 	if specialist_id == "crew_briefing":

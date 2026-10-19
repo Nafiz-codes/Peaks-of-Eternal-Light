@@ -47,10 +47,10 @@ func _ready() -> void:
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		actor.add_child(label)
 		labels[id] = label
-		var prop := _box(actor, Vector3(0.32, 0.18, 0.23), Vector3(0.4, 1.05, 0.25), Color("d8b871"))
+		var prop := _box(actor, Vector3(0.32, 0.18, 0.23), Vector3(0.4, 1.05, -0.25), Color("d8b871"))
 		prop.name = "FieldTool"
 		# Primitive fallback props preserve the original astronaut model and rig.
-		var lens := _box(prop, Vector3(0.12, 0.12, 0.12), Vector3(0, 0, 0.16), Color("222936"))
+		var lens := _box(prop, Vector3(0.12, 0.12, 0.12), Vector3(0, 0, -0.16), Color("222936"))
 		lens.name = "CameraLens"
 		for side in [-1, 1]:
 			var tong := _box(prop, Vector3(0.025, 0.48, 0.025), Vector3(side * 0.06, -0.27, 0), Color("abb3ba"))
@@ -297,12 +297,19 @@ func _prepare(id: String) -> bool:
 	if return_path.is_empty():
 		_block(id, "No verified return path from that work site. Choose another site or clear the corridor.")
 		return false
-	var distance: float = actors[id].position.distance_to(c.target) + c.target.distance_to(homes[id])
+	var distance := _path_length(actors[id].position, c.path) + _path_length(c.target, return_path)
 	if state.oxygen_kg < config.oxygen_reserve_kg + distance * config.oxygen_per_metre_kg:
 		_block(id, "The planned outing would use the reserved return oxygen. Shorten the excursion.")
 		return false
 	_report(id, "Preparing", "Checking tools, container and local return route.")
 	return true
+
+func _path_length(origin: Vector3, path: PackedVector3Array) -> float:
+	var total := 0.0
+	for point in path:
+		total += origin.distance_to(point)
+		origin = point
+	return total
 
 func _wait(id: String, reason: String) -> void:
 	_release(id)
@@ -409,7 +416,9 @@ func _move(id: String, delta: float) -> void:
 	actor.position = after
 	c.position = after
 	if distance > 0.0001:
-		actor.rotation.y = atan2(next.x - before.x, next.z - before.z)
+		# StationAstronaut has the same 180-degree model correction as the player:
+		# the suited character faces the actor's -Z axis, not +Z.
+		actor.rotation.y = atan2(before.x - next.x, before.z - next.z)
 	_update_visual(id, true)
 	if after.distance_to(next) < 0.05:
 		c.path.remove_at(0)
@@ -451,6 +460,7 @@ func _complete_step(id: String) -> void:
 			state.power_kwh -= config.verification_power_kwh
 			data.instrument.status = "verified"
 			data.instrument.battery_remaining = config.instrument_battery_seconds
+			session.state_changed.emit()
 		elif c.step == 3:
 			data.instrument.photographed = true
 			data.instrument.photo = {"position": c.target, "sol": state.sol, "purpose": "Installation documentation"}
@@ -465,6 +475,7 @@ func _complete_step(id: String) -> void:
 		c.kit = false
 		state.rover_health = minf(100.0, state.rover_health + config.repair_points)
 		world.get_node("RoverHull")._update_health()
+		session.state_changed.emit()
 	c.step += 1
 	c.progress = 0.0
 	if c.step >= STEPS[c.task].size():
@@ -577,7 +588,7 @@ func assist(id: String) -> bool:
 		if c.task == "deploy" and c.step == 2:
 			c.joint_verification = true
 		return resume_work(id)
-	if c.phase != "Working" or c.task == "buddy":
+	if c.phase != "Working" or not c.task in STEPS:
 		return false
 	if c.task == "deploy" and c.step == 2:
 		c.joint_verification = true
@@ -686,8 +697,11 @@ func consume_manual_repair() -> bool:
 	if data.is_empty():
 		return false
 	var near_base: bool = world.get_node("Outpost/Rover").position.length() <= config.survey_radius_m
-	var inventory: Dictionary = data.player_cargo if data.player_cargo.repair_kit > 0 else data.stock
-	if inventory == data.stock and not near_base:
+	if data.locks.has("rover_worksite"):
+		return false
+	var carried: bool = data.player_cargo.repair_kit > 0
+	var inventory: Dictionary = data.player_cargo if carried else data.stock
+	if not carried and not near_base:
 		return false
 	if inventory.repair_kit <= 0 or state.materials < config.repair_materials:
 		return false

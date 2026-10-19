@@ -5,6 +5,8 @@ var field: Node
 var world: Node3D
 var session: Node
 var player: Node3D
+var facing_failures := 0
+var moving_crew: Dictionary = {}
 
 func _init() -> void:
 	call_deferred("run")
@@ -21,11 +23,28 @@ func tick_until(id: String, phase: String, limit := 600, accompany := false) -> 
 		if accompany:
 			player.position = field.actors[id].position + Vector3(0, 0, 1.5)
 		for other in field.IDS:
+			var before: Vector3 = field.actors[other].position
 			field._tick(other, 0.25)
+			verify_facing(other, before)
 		if field.data.crew[id].phase == phase:
 			return true
 	print("Task did not reach ", phase, ": ", field.data.crew[id])
 	return false
+
+func verify_facing(id: String, before: Vector3) -> void:
+	var actor: Node3D = field.actors[id]
+	var travel := actor.position - before
+	travel.y = 0.0
+	if travel.length_squared() < 0.000001:
+		return
+	moving_crew[id] = true
+	# The imported suit's +Z front is rotated 180 degrees by StationAstronaut.
+	var suit_front: Vector3 = actor.get_node("StationAstronaut").global_basis.z.normalized()
+	if suit_front.dot(travel.normalized()) < 0.99:
+		facing_failures += 1
+	var tool: Node3D = field.props[id]
+	if (tool.global_position - actor.global_position).dot(suit_front) <= 0.0:
+		facing_failures += 1
 
 func run() -> void:
 	session = root.get_node("MissionSession")
@@ -99,6 +118,7 @@ func run() -> void:
 	var kits: int = field.data.stock.repair_kit
 	var materials: float = session.dashboard_state.materials
 	check(field.assign("food_storage", "repair"), "Assign supported rover maintenance.")
+	check(not field.consume_manual_repair(), "Player cannot use a rover worksite reserved for maintenance.")
 	check(await tick_until("food_storage", "Available"), "Maintenance completes inspection, repair and verification.")
 	check(session.dashboard_state.rover_health == 70.0 and field.data.stock.repair_kit == kits - 1 and session.dashboard_state.materials == materials - field.config.repair_materials, "Repair consumes limited kit/material and restores configured health.")
 	check(not field.data.readiness.is_empty(), "Readiness inspection persists.")
@@ -147,6 +167,7 @@ func run() -> void:
 	player.position = field.actors.crew_briefing.position + Vector3(0, 0, 1.5)
 	check(field.follow("crew_briefing"), "Coordinator can accompany the player locally.")
 	check(await tick_until("crew_briefing", "Working"), "Accompanying NPC walks to the player.")
+	check(not field.assist("crew_briefing"), "Following has no invalid specialist work step to assist.")
 	field.return_to_base("crew_briefing")
 	check(await tick_until("crew_briefing", "Available"), "Follow can be interrupted by a return order.")
 	field.data.crew.crew_briefing.auto_attempted = false
@@ -166,6 +187,8 @@ func run() -> void:
 	check(save.decode(invalid).is_empty(), "Malformed persisted crew position is rejected.")
 	captured.state.erase("fieldwork")
 	check(not save.decode(captured).is_empty(), "Old saves without fieldwork remain compatible.")
+	check(moving_crew.size() == 4, "Facing verification covers all four original NPCs in motion.")
+	check(facing_failures == 0, "Astronauts face their travel direction with tools in front on outbound, return and follow paths.")
 	if "--capture" in OS.get_cmdline_user_args():
 		world.get_node("MissionHUD").inspect_station("crew_briefing")
 		await process_frame
