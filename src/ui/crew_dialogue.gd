@@ -8,6 +8,10 @@ var site_id := ""
 var session: Node
 var content: VBoxContainer
 var previous_mouse_mode := Input.MOUSE_MODE_CAPTURED
+var fieldwork: Node
+var field_status: Label
+var field_summary: Label
+var field_phase := ""
 
 func _ready() -> void:
 	title = "Crew radio"
@@ -16,6 +20,15 @@ func _ready() -> void:
 	get_ok_button().text = "End conversation · Esc"
 	get_ok_button().custom_minimum_size.y = 44
 	session = get_node("/root/MissionSession")
+	fieldwork = get_parent().get_parent().get_node_or_null("CrewFieldwork")
+	if fieldwork != null:
+		fieldwork.changed.connect(func():
+			if visible:
+				var phase: String = "" if fieldwork.data.is_empty() else str(fieldwork.data.crew[specialist_id].phase)
+				if phase != field_phase:
+					refresh_report()
+				elif is_instance_valid(field_status):
+					field_status.text = fieldwork.describe(specialist_id))
 	var scroll := ScrollContainer.new()
 	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	scroll.offset_left = 24
@@ -66,6 +79,8 @@ func refresh_report() -> void:
 	title = report.role + " · Crew radio"
 	add_theme_stylebox_override("panel", UI.style(Color("101a29"), report.color))
 	content.add_child(UI.label(report.role.to_upper(), 24, report.color.lightened(0.25)))
+	if fieldwork != null:
+		_add_fieldwork()
 	content.add_child(UI.label(report.status, 16, UI.AMBER))
 	content.add_child(UI.label(report.task, 17, UI.MUTED))
 	content.add_child(UI.label(report.update, 20))
@@ -90,3 +105,59 @@ func refresh_report() -> void:
 func _request(kind: String, event_id: String) -> void:
 	hide()
 	action_requested.emit(kind, event_id)
+
+func _field_action(action: String, argument := "") -> void:
+	fieldwork.command(specialist_id, action, argument)
+	refresh_report()
+	if action == "status" and is_instance_valid(field_status):
+		field_status.show()
+
+func _add_fieldwork() -> void:
+	field_status = UI.label(fieldwork.describe(specialist_id), 16, UI.TEXT)
+	field_phase = "" if fieldwork.data.is_empty() else str(fieldwork.data.crew[specialist_id].phase)
+	field_summary = UI.label(fieldwork.SPECIALTIES[specialist_id] + " · " + field_phase, 19, UI.AMBER)
+	content.add_child(field_summary)
+	if fieldwork.data.is_empty():
+		content.add_child(field_status)
+		return
+	var c: Dictionary = fieldwork.data.crew[specialist_id]
+	content.add_child(UI.label(c.message, 16))
+	var row := HFlowContainer.new()
+	content.add_child(row)
+	for entry in [["Talk / status", "status"], ["Assist current step", "assist"], ["Pause", "pause"], ["Resume / retry", "resume"], ["Follow", "follow"], ["Return to base", "return"], ["Regroup crew", "regroup"]]:
+		var action: String = entry[1]
+		var button := UI.button(entry[0], func(): _field_action(action))
+		button.custom_minimum_size.x = 160
+		row.add_child(button)
+	field_status.visible = false
+	var details := UI.button("Status / records and activity log", func(): field_status.visible = not field_status.visible)
+	content.add_child(details)
+	content.add_child(field_status)
+	if c.phase == "Available" and session.can_advance():
+		match specialist_id:
+			"water_recycler":
+				content.add_child(UI.button("Assign: sample A (accompany on foot)", func(): _field_action("sample", "sample_a")))
+				content.add_child(UI.button("Approve optional sample B detour", func(): _field_action("sample", "sample_b")))
+				content.add_child(UI.button("Decline detour / stay at base", func(): _field_action("decline")))
+			"power_console":
+				for site in ["instrument_a", "instrument_b"]:
+					content.add_child(UI.button("Assign deployment: " + site.replace("_", " "), func(): _field_action("deploy", site)))
+			"food_storage":
+				content.add_child(UI.button("Assign rover readiness / dust inspection", func(): _field_action("inspect")))
+				content.add_child(UI.button("Assign rover maintenance (1 kit + material, +40 health)", func(): _field_action("repair")))
+			"crew_briefing":
+				content.add_child(UI.button("Assign local route / return-reserve review", func(): _field_action("navigate", "sample_a")))
+	if specialist_id == "crew_briefing":
+		for site in fieldwork.SITES:
+			content.add_child(UI.button("Assess destination: " + site.replace("_", " "), func(): _field_action("assess", site)))
+	if c.phase == "Blocked":
+		content.add_child(UI.button("Assess alternate approach", func(): _field_action("alternative")))
+		content.add_child(UI.button("Approve assessed alternative", func(): _field_action("approve")))
+	if specialist_id == "food_storage":
+		content.add_child(UI.button("Allocate limited power to maintenance", func(): _field_action("priority", "maintenance")))
+		content.add_child(UI.button("Allocate limited power to science", func(): _field_action("priority", "science")))
+	content.add_child(UI.label("Field supplies: pick up one item near the marked locker, then deliver it beside the specialist. Supplies are finite.", 14, UI.MUTED))
+	for item in ["container", "repair_kit"]:
+		content.add_child(UI.button("Pick up " + item.replace("_", " ") + " at locker", func(): _field_action("collect", item)))
+		if (specialist_id == "water_recycler" and item == "container") or (specialist_id == "food_storage" and item == "repair_kit"):
+			content.add_child(UI.button("Deliver " + item.replace("_", " "), func(): _field_action("deliver", item)))

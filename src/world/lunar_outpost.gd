@@ -57,6 +57,9 @@ func _ready() -> void:
 	rover_view = preload("res://src/world/rover_presentation.gd").new()
 	rover_view.name = "RoverPresentation"
 	add_child(rover_view)
+	var fieldwork := preload("res://src/world/crew_fieldwork.gd").new()
+	fieldwork.name = "CrewFieldwork"
+	add_child(fieldwork)
 	add_child(preload("res://src/ui/outpost_hud.gd").new())
 	var lander_access := preload("res://src/world/lander_access.gd").new()
 	lander_access.name = "LanderAccess"
@@ -389,6 +392,10 @@ func _add_rover(parent: Node3D) -> void:
 		var factor := 3.0 / extent
 		model.scale = Vector3.ONE * factor
 		model.position = Vector3(-bounds.get_center().x, -bounds.position.y, -bounds.get_center().z) * factor
+	var wheels := preload("res://src/world/rover_wheels.gd").new()
+	wheels.name = "Wheels"
+	rover.add_child(wheels)
+	wheels.setup(model)
 
 func _add_interaction_station(parent: Node3D, interaction_id: String, label_text: String, position_: Vector3, color: Color) -> void:
 	var station := Node3D.new()
@@ -434,6 +441,9 @@ func _on_interaction_area_exited(body: Node3D, area: Area3D) -> void:
 
 
 func _on_player_interaction(interaction_id: String) -> void:
+	if interaction_id == "rover_repair":
+		get_node("RoverHull").repair()
+		return
 	if interaction_id == "rover_operations":
 		get_node("MissionHUD").open_operations("rover")
 		return

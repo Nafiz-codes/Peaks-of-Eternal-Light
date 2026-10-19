@@ -11,11 +11,22 @@ Exterior and dashboard rover panels are inspection-only. There is no rover-side 
 
 ## Movement and mission integration
 
-`src/world/rover_drive.gd` uses a colliding CharacterBody3D, gradual acceleration/braking, slower reverse, speed-dependent bicycle steering, gravity, floor snapping and terrain-normal chassis alignment. Steering does not rotate a stationary rover. Default forward/reverse limits are 1.2/0.5 m/s with 0.35 m/s² acceleration and 0.9 m/s² braking. These are gameplay tuning values, not measured Curiosity performance. Individual wheels/suspension are not independently simulated.
+`src/world/rover_drive.gd` uses a colliding CharacterBody3D, gradual acceleration/braking, slower reverse, speed-dependent bicycle steering, gravity, floor snapping and terrain-normal chassis alignment. Steering does not rotate a stationary rover. Default forward/reverse limits are 1.2/0.5 m/s with 0.35 m/s² acceleration and 0.9 m/s² braking. These are gameplay tuning values, not measured Curiosity performance. The six original tires roll by accepted travel divided by their radius, reverse with travel, and steer along the bicycle turning circle with different inner/outer angles and speeds. Wheel animation stops when parked or movement is rejected. Suspension is not independently simulated.
 
 Actual horizontal travel in metres is converted to kilometres and submitted to the existing simulator's traverse action. Existing energy, range and pending-event rules remain authoritative. Rejected travel is rolled back, stops the rover and displays its reason. UI state publishes at 4 Hz; stopping control captures a checkpoint. Rover position and heading persist in mission saves; old saves without that field load at the original parking position. Mission reset restores parking. Reduced motion does not skip player-controlled travel.
 
 ## Validation
+
+Rover health starts at 100 and persists in saves; older saves default to full health.
+The remote camera shows a health bar, and a label above the rover displays its score.
+Impacts against collidable obstacles reduce health according to impact speed (minimum
+5 points for impacts above 0.1 m/s). Walkable ground and sustained contact do not
+cause repeated damage. At zero health, driving is disabled. Press R to leave remote
+control, exit the lander, approach the rover and press E to repair it to full health.
+Repairs require the astronaut to be on foot beside the rover and consume one finite
+replacement kit plus mission material. Away from base, carry a kit from the field
+supplies locker. See [crew fieldwork](crew_fieldwork.md) for NPC maintenance,
+equipment priorities and supply delivery.
 
 The combined runner passes 13 suites including lander entry/exit and remote driving. The driving suite passes 29 assertions and covers exterior denial, real hatch entry, R and W input, acceleration, curved steering, braking, reverse, collision, energy accounting/rejection, pause, camera/input restoration, save compatibility and reset. The separate game-menu/persistence test also passes; its temporary files now use the writable `.tools` folder. The rendered camera view was inspected after hiding the overlapping exploration hints. Rendered remote-camera capture is available using:
 

@@ -19,6 +19,9 @@ var publish_elapsed := 0.0
 var world: Node3D
 var rover: Node3D
 var session: Node
+var health_bar: ProgressBar
+var repair_label: Label3D
+var contacts: Dictionary = {}
 
 func _ready() -> void:
 	world = get_parent()
@@ -40,7 +43,84 @@ func _ready() -> void:
 	status.add_theme_constant_override("outline_size", 8)
 	status.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.add_child(status)
+	health_bar = ProgressBar.new()
+	health_bar.step = 0.0
+	health_bar.position = Vector2(20, 185)
+	health_bar.size = Vector2(280, 26)
+	health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(health_bar)
+	var health_title := Label.new()
+	health_title.text = "ROVER HEALTH"
+	health_title.position = Vector2(20, 160)
+	health_title.add_theme_constant_override("outline_size", 6)
+	health_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(health_title)
+	repair_label = Label3D.new()
+	repair_label.position = Vector3(0, 2.4, 0)
+	repair_label.font_size = 32
+	repair_label.pixel_size = 0.006
+	repair_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	rover.add_child(repair_label)
+	var area := Area3D.new()
+	area.name = "RepairArea"
+	area.set_meta("interaction_id", "rover_repair")
+	var shape := CollisionShape3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = 2.8
+	shape.shape = sphere
+	shape.position.y = 0.8
+	area.add_child(shape)
+	rover.add_child(area)
+	area.body_entered.connect(world._on_interaction_area_entered.bind(area))
+	area.body_exited.connect(world._on_interaction_area_exited.bind(area))
+	_update_health()
 	overlay.hide()
+
+func _update_health() -> void:
+	var health: float = 100.0 if session.dashboard_state == null else session.dashboard_state.rover_health
+	health_bar.value = health
+	health_bar.modulate = Color("ff6868") if health <= 25.0 else Color("83e6a0")
+	repair_label.text = "ROVER HEALTH %d / 100" % ceili(health)
+	if health < 100.0:
+		repair_label.text += "\n[E] Repair rover (on foot)"
+	if health <= 0.0:
+		repair_label.text += "\nDISABLED"
+
+func repair() -> bool:
+	var player := world.get_node("Outpost/Astronaut")
+	var state: Variant = session.dashboard_state
+	if active or get_tree().paused or player.seated or player.ui_blocked or state == null:
+		return false
+	if player.global_position.distance_to(rover.global_position + Vector3(0, 0.8, 0)) > 3.2 or state.rover_health >= 100.0:
+		return false
+	var fieldwork := world.get_node_or_null("CrewFieldwork")
+	if fieldwork != null and not fieldwork.consume_manual_repair():
+		repair_label.text = "REPAIR BLOCKED\nNeed a replacement kit and mission material.\nAsk the equipment specialist."
+		return false
+	state.rover_health = 100.0
+	_update_health()
+	session.capture_sol_checkpoint()
+	session.state_changed.emit()
+	return true
+
+func _apply_collision_damage(incoming: Vector3) -> void:
+	var touching := {}
+	var damage := 0.0
+	for i in range(get_slide_collision_count()):
+		var collision := get_slide_collision(i)
+		# Walkable terrain supports the hull; walls and steep rock faces are impacts.
+		if collision.get_normal().dot(Vector3.UP) >= cos(floor_max_angle):
+			continue
+		var id := collision.get_collider_id()
+		touching[id] = true
+		var impact := maxf(0.0, -incoming.dot(collision.get_normal()))
+		if not contacts.has(id) and impact > 0.1:
+			damage = maxf(damage, maxf(5.0, 35.0 * impact * impact))
+	contacts = touching
+	if damage > 0.0:
+		observed_state.rover_health = maxf(0.0, observed_state.rover_health - damage)
+		_update_health()
+		session.state_changed.emit()
 
 func available() -> bool:
 	var access := world.get_node_or_null("LanderAccess")
@@ -72,6 +152,7 @@ func stop_control() -> void:
 	speed = 0.0
 	steering = 0.0
 	velocity = Vector3.ZERO
+	rover.get_node("Wheels").update_motion(0.0, 0.0, WHEELBASE)
 	overlay.hide()
 	var player := world.get_node("Outpost/Astronaut")
 	player.ui_blocked = false
@@ -86,6 +167,8 @@ func sync_state() -> void:
 		return
 	stop_control()
 	observed_state = session.dashboard_state
+	contacts.clear()
+	_update_health()
 	var pose: Dictionary = {} if observed_state == null else observed_state.rover_pose
 	position = pose.get("position", Vector3(5.2, 0.65, -2.8))
 	heading = float(pose.get("heading", deg_to_rad(-50.0)))
@@ -93,6 +176,7 @@ func sync_state() -> void:
 	speed = 0.0
 	velocity = Vector3.ZERO
 	_sync_visual(1.0)
+	rover.get_node("Wheels").reset()
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -117,6 +201,11 @@ func _physics_process(delta: float) -> void:
 func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void:
 	if not active or not available() or not session.can_advance() or get_tree().paused:
 		return
+	if observed_state.rover_health <= 0.0:
+		speed = 0.0
+		velocity = Vector3.ZERO
+		status.text = "ROVER DISABLED\nR: return to lander\nExit the lander, approach the rover and press E to repair."
+		return
 	var target := clampf(throttle, -1, 1) * (MAX_SPEED if throttle >= 0 else REVERSE_SPEED)
 	var deceleration := brake or is_zero_approx(throttle) or speed * throttle < 0
 	if is_on_floor():
@@ -131,6 +220,7 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 	velocity.z = forward.z * speed
 	velocity.y -= 1.62 * delta
 	var before := global_position
+	var incoming := velocity
 	move_and_slide()
 	var metres := Vector2(global_position.x - before.x, global_position.z - before.z).length()
 	if metres > 0.000001:
@@ -142,9 +232,13 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 			status.text = "ROVER STOPPED / " + str(result.get("error", "unavailable")).replace("_", " ") + "\nR: return to lander"
 			_sync_visual(delta)
 			return
+	_apply_collision_damage(incoming)
 	if is_on_wall():
 		speed = 0.0
 	observed_state.rover_pose = {"position": position, "heading": heading}
+	# Roll only for accepted displacement, including reverse and collision stops.
+	var travel := (global_position - before).dot(forward)
+	rover.get_node("Wheels").update_motion(travel, steering, WHEELBASE)
 	_sync_visual(delta)
 	_update_camera()
 	status.text = "LANDER / ROVER REMOTE CAMERA\nW/S: forward / reverse · A/D: steer · Space: brake\nR: return to lander · Esc: pause\nSpeed %.2f m/s · Travel %.1f m" % [absf(speed), observed_state.rover_total_distance_km * 1000.0]

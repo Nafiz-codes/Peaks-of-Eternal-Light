@@ -37,6 +37,8 @@ var last_rover_action: String = ""
 var rover_distance_this_sol_km: float = 0.0
 var rover_total_distance_km: float = 0.0
 var rover_pose: Dictionary = {}
+var rover_health: float = 100.0
+var fieldwork: Dictionary = {}
 var crew_stress_avg: float = 0.25
 var crew_productivity: float = 1.0
 var volatile_prospect_found: bool = false
@@ -81,6 +83,7 @@ func snapshot() -> Dictionary:
 		"last_rover_action": last_rover_action,
 		"rover_distance_this_sol_km": rover_distance_this_sol_km,
 		"rover_total_distance_km": rover_total_distance_km,
+		"rover_health": rover_health,
 		"crew_stress_avg": crew_stress_avg,
 		"crew_productivity": crew_productivity,
 		"volatile_prospect_found": volatile_prospect_found,
