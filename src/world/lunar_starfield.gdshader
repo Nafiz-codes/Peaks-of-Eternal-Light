@@ -4,20 +4,21 @@ uniform sampler2D earth_surface : source_color, filter_linear_mipmap, repeat_ena
 uniform sampler2D earth_clouds : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D earth_night : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D earth_gloss : filter_linear_mipmap, repeat_enable;
-// NASA/JPL topocentric apparent position in kilometers. Local scene units are meters.
-uniform vec3 earth_position_km;
+// Time-dependent topocentric model position in kilometers. Scene units are meters.
+uniform vec3 earth_position_km = vec3(0.0, 0.0, -384400.0);
 uniform float earth_radius_km = 6378.137;
-uniform float earth_longitude : hint_range(-180.0, 180.0) = 20.0;
-uniform vec3 earth_sun_direction = vec3(-0.65, 0.35, 0.68);
-// Separate NASA daylight snapshot for the decorative Sun at each outpost.
+uniform float earth_longitude : hint_range(-180.0, 180.0) = 0.0;
+uniform mat3 earth_texture_basis = mat3(1.0);
+uniform mat3 star_basis = mat3(1.0);
+// Shared world-space direction for the Sun disk, Earth illumination and terrain light.
 uniform vec3 display_sun_direction = vec3(0.0, 0.5, -0.8660254);
-// Runtime uses the snapshot's angular radius; glow is artistic camera glare.
+// Runtime derives angular radius from solar distance; glow is artistic glare.
 uniform float sun_angular_radius = 0.004653;
 
 vec3 visible_sun(vec3 ray) {
 	vec3 sun_direction = normalize(display_sun_direction);
-	// Respect the frozen NASA horizon; no glow leaking from a nighttime Sun.
-	if (sun_direction.y <= 0.0 || ray.y <= 0.0 || dot(ray, sun_direction) <= 0.0) {
+	// Clip at the local horizon, including partial sunrise/sunset.
+	if (sun_direction.y <= -sin(sun_angular_radius) || ray.y <= 0.0 || dot(ray, sun_direction) <= 0.0) {
 		return vec3(0.0);
 	}
 	float separation = length(cross(ray, sun_direction));
@@ -34,11 +35,12 @@ vec3 earth_color(vec3 ray, vec3 center, float radius) {
 	float projection = dot(ray, center);
 	float discriminant = radius * radius - (1.0 - projection * projection);
 	vec3 normal = normalize(ray * (projection - sqrt(max(discriminant, 0.0))) - center);
-	vec2 earth_uv = vec2(atan(normal.x, normal.z) / TAU + 0.5 + earth_longitude / 360.0,
-		acos(clamp(normal.y, -1.0, 1.0)) / PI);
+	vec3 texture_normal = normalize(earth_texture_basis * normal);
+	vec2 earth_uv = vec2(atan(texture_normal.x, texture_normal.z) / TAU + 0.5 + earth_longitude / 360.0,
+		acos(clamp(texture_normal.y, -1.0, 1.0)) / PI);
 	vec3 surface = texture(earth_surface, earth_uv).rgb;
 	float clouds = texture(earth_clouds, earth_uv).r;
-	vec3 sunlight = normalize(earth_sun_direction);
+	vec3 sunlight = normalize(display_sun_direction);
 	float day = dot(normal, sunlight);
 	vec3 color = mix(surface, vec3(0.94), clouds * 0.88) * (0.025 + max(day, 0.0));
 	color += texture(earth_night, earth_uv).rgb * (1.0 - smoothstep(-0.12, 0.08, day)) * (1.0 - clouds);
@@ -57,18 +59,19 @@ float hash(vec3 p) {
 
 void sky() {
 	vec3 direction = normalize(EYEDIR);
-	vec3 a = abs(direction);
+	vec3 star_direction = normalize(star_basis * direction);
+	vec3 a = abs(star_direction);
 	vec2 uv;
 	float face;
 	if (a.x >= a.y && a.x >= a.z) {
-		uv = direction.yz / a.x;
-		face = direction.x > 0.0 ? 1.0 : 2.0;
+		uv = star_direction.yz / a.x;
+		face = star_direction.x > 0.0 ? 1.0 : 2.0;
 	} else if (a.y >= a.z) {
-		uv = direction.xz / a.y;
-		face = direction.y > 0.0 ? 3.0 : 4.0;
+		uv = star_direction.xz / a.y;
+		face = star_direction.y > 0.0 ? 3.0 : 4.0;
 	} else {
-		uv = direction.xy / a.z;
-		face = direction.z > 0.0 ? 5.0 : 6.0;
+		uv = star_direction.xy / a.z;
+		face = star_direction.z > 0.0 ? 5.0 : 6.0;
 	}
 	vec2 grid = uv * 220.0;
 	vec3 cell = vec3(floor(grid), face * 17.0);

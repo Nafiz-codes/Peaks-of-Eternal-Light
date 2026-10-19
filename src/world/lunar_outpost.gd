@@ -39,6 +39,9 @@ func _ready() -> void:
 			site_record = site
 	_add_environment()
 	_add_lighting()
+	var orbital_motion := preload("res://src/world/orbital_motion.gd").new()
+	orbital_motion.name = "OrbitalMotion"
+	add_child(orbital_motion)
 	_add_terrain()
 	_add_outpost()
 	if session.outpost_pose.get("site_id", "") == str(session.selected_site_id):
@@ -194,29 +197,7 @@ func _add_environment() -> void:
 	starfield.set_shader_parameter("earth_clouds", preload("res://Assets/earth/Earth_Clouds_6K.jpg"))
 	starfield.set_shader_parameter("earth_night", preload("res://Assets/earth/Earth_Illumination_6K.jpg"))
 	starfield.set_shader_parameter("earth_gloss", preload("res://Assets/earth/Earth_Glossiness_6K.jpg"))
-	var ephemeris: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/earth_ephemeris.json"))
-	var earth: Dictionary = ephemeris.sites[str(site_record.site_id)]
-	var earth_direction := _sky_direction(float(earth.azimuth_deg), float(earth.elevation_deg))
-	var earth_size_scale := 1.0
-	if str(site_record.site_id) == "crater_rim_b":
-		# Authored Tycho sky composition: visible beside the lander from arrival.
-		earth_direction = _sky_direction(30.0, 18.0)
-		earth_size_scale = 1.15
-	starfield.set_shader_parameter("earth_position_km", earth_direction * float(earth.observer_to_earth_center_km) * EARTH_DISTANCE_SCALE)
-	starfield.set_shader_parameter("earth_radius_km", float(ephemeris.earth_equatorial_radius_km) * earth_size_scale)
-	starfield.set_shader_parameter("earth_sun_direction", _sky_direction(float(earth.sun_azimuth_deg), float(earth.sun_elevation_deg)))
-	# Decorative daytime Sun: a real NASA position at a separate date per site.
-	# The existing directional light shares this direction; Earth's phase stays frozen.
-	var sun_display: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/sun_display.json"))
-	var display_sun: Dictionary = sun_display.sites[str(site_record.site_id)]
-	starfield.set_shader_parameter("display_sun_direction", _sky_direction(float(display_sun.azimuth_deg), float(display_sun.elevation_deg)))
-	starfield.set_shader_parameter("sun_angular_radius", deg_to_rad(float(display_sun.angular_diameter_deg) * 0.5))
-	set_meta("sun_display_epoch_utc", display_sun.epoch_utc)
-	set_meta("earth_ephemeris_epoch_utc", ephemeris.epoch_utc)
-	set_meta("earth_distance_km", earth.observer_to_earth_center_km)
-	set_meta("earth_render_distance_km", float(earth.observer_to_earth_center_km) * EARTH_DISTANCE_SCALE)
-	set_meta("earth_elevation_deg", earth.elevation_deg)
-	set_meta("earth_render_elevation_deg", rad_to_deg(asin(earth_direction.y)))
+	# OrbitalMotion supplies one coherent, changing Sun/Earth state after lighting setup.
 	sky.sky_material = starfield
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -228,13 +209,6 @@ func _add_environment() -> void:
 	add_child(world_environment)
 
 
-func _sky_direction(azimuth_deg: float, elevation_deg: float) -> Vector3:
-	# Godot local east/up/north: +X/+Y/-Z. Horizons azimuth runs clockwise from north.
-	var azimuth := deg_to_rad(azimuth_deg)
-	var elevation := deg_to_rad(elevation_deg)
-	return Vector3(sin(azimuth) * cos(elevation), sin(elevation), -cos(azimuth) * cos(elevation))
-
-
 func _add_lighting() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.name = "LowPolarSun"
@@ -242,10 +216,6 @@ func _add_lighting() -> void:
 	sun.light_energy = 1.1
 	sun.shadow_enabled = true
 	add_child(sun)
-	var sky_material: ShaderMaterial = get_node("LunarEnvironment").environment.sky.sky_material
-	var sun_direction: Vector3 = sky_material.get_shader_parameter("display_sun_direction")
-	# Godot emits directional light along -Z: rays travel FROM the visible Sun.
-	sun.look_at(sun.global_position - sun_direction, Vector3.FORWARD if absf(sun_direction.y) > 0.999 else Vector3.UP)
 
 
 func _add_terrain() -> void:

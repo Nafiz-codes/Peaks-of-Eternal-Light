@@ -1,76 +1,82 @@
-# Earth from the lunar surface
+# Orbital motion and the lunar sky
 
-Tycho has an authored visibility override: Earth renders at azimuth 30 degrees,
-elevation 18 degrees, with radius multiplied by 1.15. The existing distance
-scale remains 0.525. These are visual composition choices; the source ephemeris
-is unchanged. `earth_render_elevation_deg` records the displayed elevation.
+Open **Alt → Orbital motion** in an outpost. The default is **3,600×**:
+one real second advances one simulated hour. Choose 1×, 60×, 3,600× or
+86,400×, or pause the orbital clock. The dialog shows the model date/time.
+The game pause menu also freezes orbital motion. The orbital clock is saved
+with the mission, persists across scene changes, and resets for a new mission.
+Older saves start with the default clock. Time advances while the outpost is
+running, not while the game is closed or on the dashboard.
 
-The outpost uses a frozen NASA/JPL Horizons DE441 observer ephemeris for
-2026-10-05 00:00 UTC (06:00 Asia/Dhaka). It is not a live ephemeris and does not
-advance with mission sols. The date is explicit because there is no single
-constant, exact Earth–Moon distance.
+The clock starts at 2026-10-19 00:00:00 UTC. It is separate from mission sols,
+resource simulation, astronaut routines and rover physics. Accelerating the
+sky does not accelerate those systems. It stops after 20 model years to stay
+within the supported planetary element interval.
 
-`Resources/earth_ephemeris.json` contains the distance from each surface observer
-to Earth's center, apparent azimuth/elevation, and apparent equatorial angular
-diameter. Each observer uses the selected site's sourced latitude, east-positive
-longitude, and LOLA elevation above the 1737.4 km lunar reference sphere.
-Horizons' lunar reference sphere makes geodetic and planetocentric latitude
-equivalent here. Original responses and their precision/model notes are in
-`Resources/earth_ephemeris/`. Reproduce with
-`python3 tools/prepare_earth_ephemeris.py` (requires network access).
+## Physical model
 
-The shader ray-intersects a sphere of equatorial radius 6378.137 km at the
-site-specific distance multiplied by 0.525, a requested visual adjustment that
-brings Earth 25% closer, then another 30% closer. Its diameter is about 90% larger
-than the physical view, and about 43% larger than the previous adjustment. The original
-NASA data stays intact. Its rendered apparent diameter is calculated by geometry,
-`2 * asin(radius / distance)`, rather than an artistic size control. Calculations
-are normalized by distance to retain float precision. The sky pass avoids
-extending the terrain camera's far plane to hundreds of millions of meters;
-this represents the physical distance and size without a far-away scene mesh.
-Camera position is converted from scene meters to kilometers for parallax.
-Godot +X is east, +Y is local zenith, and -Z is north.
+`src/world/orbital_model.gd` solves Kepler's equation for elliptical orbits.
+Positions are in kilometers, time in Earth days, and angles in the J2000
+ecliptic frame. The Earth–Moon barycenter follows the JPL Earth/EM barycenter
+orbit around the Sun. Earth's position includes its motion around that
+barycenter. The Moon's heliocentric position is Earth's position plus the
+Earth-to-Moon vector; it therefore travels around both Earth and the Sun.
 
-At Tranquility Base the apparent center distance is 370344.6032 km, azimuth and
-elevation come from Horizons, and the physical diameter is about 1.97361 degrees.
-The visual adjustment renders it at about 194431 km with a diameter of about 3.76 degrees. At
-Tsiolkovskiy the center is below the local horizon, so ground occludes Earth.
-Terrain may also obscure Earth at other locations.
+| Quantity | Value used |
+| --- | --- |
+| Moon sidereal rotation / mean orbital longitude period | 27.3217 Earth days |
+| Lunar semimajor axis | 384,400 km |
+| Lunar eccentricity / orbital inclination | 0.0554 / 5.16° (JPL mean elements) |
+| Earth sidereal rotation | 86,164.09054 seconds |
+| Earth sidereal year (reference) | 365.25636 days |
+| Astronomical unit | 149,597,870.7 km |
+| Earth's obliquity | 23.43928° |
 
-Surface, cloud, gloss, and night textures come from the uploaded ZIP. Sun
-direction is taken from the same observer/date. Earth is represented as a sphere
-rather than an oblate ellipsoid. Continent orientation, cloud pattern, atmosphere,
-and detailed lighting remain visual approximations; they are not satellite
-imagery for the chosen date. Site coordinate and terrain sampling precision also
-limit accuracy. The lunar terrain light now follows the displayed Sun direction.
+The actual solar orbit uses JPL's time-varying mean elements rather than
+forcing a circle with the reference year. Lunar node and periapsis precession
+use the JPL mean periods. The lunar spin axis uses an approximate Cassini-state
+orientation, tilted 1.54° from the ecliptic normal. Mean synchronous spin and
+nonuniform orbital speed produce optical libration. Earth stays near the same
+place in the sky rather than orbiting the player's horizon every month.
+The lunar solar day is approximately 29.53 Earth days, longer than its spin
+period because the Earth–Moon system is also moving around the Sun.
 
-The decorative Sun uses NASA/JPL Horizons target 10, with independent daylight
-snapshots for all four outposts. `Resources/sun_display.json` stores each date,
-azimuth, elevation, angular diameter, observer coordinates, and request URL. Raw
-responses are in `Resources/sun_display/`; reproduce them with
-`python3 tools/prepare_sun_display.py`. The selection rule chooses the first hourly
-sample on or after October 5, 2026 with elevation at least 20 degrees, so the disk
-clears the illustrative terrain. No direction or physical disk size is invented.
+The surface scene rides with the Moon in a local east/up/south frame using the
+selected site's latitude, longitude and elevation. This avoids moving physics
+objects astronomical distances. The sky, Earth texture orientation, Sun disk,
+Earth's illuminated hemisphere and terrain shadows update from this frame.
+Direct sunlight fades at sunrise/sunset and switches off below the horizon.
+Earth's texture uses an approximate J2000 sidereal phase and rotates with Earth.
 
-| Outpost | Sun snapshot (UTC) | Azimuth | Elevation |
-| --- | --- | --- | --- |
-| Tranquility Base | 2026-10-18 04:00 | 91.64° | 20.13° |
-| Aristarchus | 2026-10-05 00:00 | 256.66° | 28.80° |
-| Tycho | 2026-10-21 14:00 | 71.73° | 20.22° |
-| Tsiolkovskiy | 2026-10-09 16:00 | 83.35° | 20.43° |
+## Sources and limits
 
-This is an authored composition of separate NASA snapshots, not a simultaneous
-Earth/Sun sky or a live mission clock. Earth's existing appearance and lighting
-remain on their original setup. The white core and golden camera glare are artistic;
-the solar disk's angular radius comes from the selected NASA row. The Sun is
-excluded from the sky radiance cubemap, so the disk adds no extra illumination or
-reflections. The existing directional light uses the exact same direction as the
-displayed Sun, with rays traveling away from it and shadows falling opposite it.
-Its brightness (1.1), warm color, and enabled shadows are retained. Ambient fill
-and power simulation are unchanged. Terrain and foreground objects occlude the Sun
-normally.
+- [JPL approximate planetary positions](https://ssd.jpl.nasa.gov/planets/approx_pos.html): Earth/EM barycenter elements, 1800–2050 fit, and Kepler method.
+- [JPL satellite mean elements](https://ssd.jpl.nasa.gov/sats/elem/sep.html): Moon J2000 elements and precession periods.
+- [JPL astronomical parameters](https://ssd.jpl.nasa.gov/astro_par.html): AU, rotation/year periods and Earth/Moon gravitational parameters.
+- [NASA Moon fact sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html): synchronous spin period, radius and obliquity.
+- [NASA Earth fact sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html) and [Sun fact sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/sunfact.html): radii and rotational properties.
 
-Sources:
-- https://ssd-api.jpl.nasa.gov/doc/horizons.html
-- https://ssd.jpl.nasa.gov/horizons/manual.html (quantities 4, 13, 20)
-- https://science.nasa.gov/moon/facts/ (384400 km is an average, not this epoch)
+These are real physical rates in an **approximate analytic model**, not a
+precision numerical ephemeris. No new NASA datasets were analyzed. Lunar
+perturbations, physical libration, nutation, light travel time, detailed
+orientation models, eclipses and relativistic time conversions are omitted.
+UTC labels provide a gameplay clock; leap seconds and UTC-to-TDB conversion
+are not modeled. Stars are procedural, not a catalog.
+
+Earth's existing visual distance scale of 0.525 remains: its rendered disk is
+about 1.9 times its physical angular size. Physical orbital calculations are
+unscaled. The former fixed Tycho elevation and extra radius override have
+been removed so its direction follows the same model as every other site.
+Ambient fill, the Sun's glare, terrain and cloud textures remain artistic.
+The frozen files in `Resources/earth_ephemeris/`, `earth_ephemeris.json` and
+`sun_display.json` remain historical references; they no longer set the live
+sky. Their dates must not be interpreted as the current orbital clock.
+
+## Verification
+
+`tests/world/test_orbital_motion.gd` checks Kepler residuals, annual motion,
+spin rates, lunar distances, inherited heliocentric motion, tidal locking,
+clock speed/pause, save compatibility, invalid saves, UI input blocking and
+the model time limit. `test_sun_lighting.gd` checks shared direction, shadows
+and horizon lighting at all four outposts. `test_earth_lighting.gd` renders
+the production shader to check left/right/full/dark Earth illumination.

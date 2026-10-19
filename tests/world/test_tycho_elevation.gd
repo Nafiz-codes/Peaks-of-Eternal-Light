@@ -74,8 +74,9 @@ func _run() -> void:
 					check(Elevation.height(x, z) == 0.0, prop + " footprint stays on the level pad")
 	var sky: ShaderMaterial = world.get_node("LunarEnvironment").environment.sky.sky_material
 	var earth_position: Vector3 = sky.get_shader_parameter("earth_position_km")
-	check(absf(rad_to_deg(asin(earth_position.normalized().y)) - 18.0) < 0.001, "Earth sits visibly above the horizon")
-	check(absf(float(sky.get_shader_parameter("earth_radius_km")) - 6378.137 * 1.15) < 0.01, "Earth is fifteen percent larger")
+	var modeled: Vector3 = world.get_node("OrbitalMotion").observation.earth_position_km
+	check(earth_position.is_equal_approx(modeled * world.EARTH_DISTANCE_SCALE), "Earth follows the orbital observer geometry")
+	check(absf(float(sky.get_shader_parameter("earth_radius_km")) - 6378.137) < 0.01, "Earth uses its physical radius")
 	world.queue_free()
 	await process_frame
 	print("Tycho elevation tests: %d failures." % failures)

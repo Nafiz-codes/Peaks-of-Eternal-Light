@@ -23,6 +23,7 @@ var activity: Label
 var clear_preview_button: Button
 var reading_tween: Tween
 var crew_dialogue: AcceptDialog
+var orbital_panel: AcceptDialog
 
 func _ready() -> void:
 	name = "MissionHUD"
@@ -75,6 +76,9 @@ func _ready() -> void:
 	clear_preview_button.hide()
 	actions.add_child(clear_preview_button)
 	actions.add_child(UI.button("Overview camera", func(): world.toggle_overview()))
+	actions.add_child(UI.button("Orbital motion", func():
+		if not _modal_visible():
+			orbital_panel.open_orbits(world.get_node("OrbitalMotion"))))
 	var reduced := CheckButton.new()
 	reduced.text = "Reduce motion"
 	reduced.button_pressed = session.reduce_motion
@@ -113,6 +117,9 @@ func _ready() -> void:
 	crew_dialogue.visibility_changed.connect(_dialog_visibility_changed)
 	crew_dialogue.report_read.connect(world.refresh_feedback)
 	crew_dialogue.action_requested.connect(_crew_action)
+	orbital_panel = preload("res://src/ui/orbital_panel.gd").new()
+	add_child(orbital_panel)
+	orbital_panel.visibility_changed.connect(_dialog_visibility_changed)
 	operations.placement_preview_requested.connect(func(id: String):
 		var catalog := _construction_contract()
 		if world.construction_view.show_preview(id, catalog.get("structures", [])):
@@ -236,6 +243,8 @@ func open_dashboard() -> void:
 		session.open_dashboard(world.scene_file_path)
 
 func _modal_visible() -> bool:
+	if is_instance_valid(orbital_panel) and orbital_panel.visible:
+		return true
 	return (is_instance_valid(event_dialog) and event_dialog.visible) or (is_instance_valid(operations) and operations.visible) or (is_instance_valid(crew_dialogue) and crew_dialogue.visible)
 
 func _construction_contract() -> Dictionary:

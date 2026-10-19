@@ -14,6 +14,7 @@ var reduce_motion := false
 var outpost_pose: Dictionary = {}
 var sol_checkpoint: Dictionary = {}
 var crew_read_reports: Dictionary = {}
+var orbital_clock: Dictionary = preload("res://src/world/orbital_model.gd").default_clock()
 const Save = preload("res://src/runtime/mission_save.gd")
 
 func remember_pose() -> void:
@@ -55,6 +56,7 @@ func restart_current_sol() -> Error:
 	return Save.restore(self, sol_checkpoint)
 
 func reset_current_mission() -> Error:
+	orbital_clock = preload("res://src/world/orbital_model.gd").default_clock()
 	crew_read_reports = {}
 	dashboard_state = null
 	dashboard_last_tick = {}

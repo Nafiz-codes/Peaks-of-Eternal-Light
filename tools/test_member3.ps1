@@ -13,6 +13,8 @@ $tests = @(
     'tests/simulation/test_mission_simulator.gd',
     'tests/simulation/test_member2_event_slotting.gd',
     'tests/simulation/test_member2_systems.gd',
+    'tests/world/test_orbital_motion.gd',
+    'tests/world/test_sun_lighting.gd',
     'tests/world/test_live_operations.gd',
     'tests/world/test_crew_fieldwork.gd',
     'tests/ui/test_crew_dialogue.gd',

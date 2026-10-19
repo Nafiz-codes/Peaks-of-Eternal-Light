@@ -16,11 +16,11 @@ func _run() -> void:
 		await physics_frame
 	_assert(outpost.get_node_or_null("LunarEnvironment") != null, "The 3D scene includes a world environment.")
 	var ephemeris: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/earth_ephemeris.json"))
-	var earth: Dictionary = ephemeris.sites.ridge_a
+	var earth: Dictionary = outpost.get_node("OrbitalMotion").observation
 	var sky_material: ShaderMaterial = outpost.get_node("LunarEnvironment").environment.sky.sky_material
 	var earth_position: Vector3 = sky_material.get_shader_parameter("earth_position_km")
-	_assert(absf(earth_position.length() - float(earth.observer_to_earth_center_km) * 0.525) < 0.1, "Earth renders at 52.5% of the NASA surface-observer distance.")
-	_assert(absf(rad_to_deg(asin(earth_position.normalized().y)) - float(earth.elevation_deg)) < 0.001, "Earth uses NASA's elevation above the local horizon.")
+	_assert(absf(earth_position.length() - earth.earth_position_km.length() * 0.525) < 0.1, "Earth renders at 52.5% of the modeled surface-observer distance.")
+	_assert(absf(rad_to_deg(asin(earth_position.normalized().y)) - rad_to_deg(asin(earth.earth_position_km.normalized().y))) < 0.001, "Earth uses the orbital model elevation above the local horizon.")
 	for site_id in ephemeris.sites:
 		var site: Dictionary = ephemeris.sites[site_id]
 		var diameter := rad_to_deg(2.0 * asin(float(ephemeris.earth_equatorial_radius_km) / float(site.observer_to_earth_center_km)))
