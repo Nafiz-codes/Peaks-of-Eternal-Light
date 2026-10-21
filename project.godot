@@ -11,7 +11,9 @@ config_version=5
 [application]
 
 config/name="Peaks of Eternal Light"
-run/main_scene="res://scenes/lunar_landing_selector.tscn"
+run/main_scene="res://scenes/startup.tscn"
+boot_splash/show_image=false
+boot_splash/bg_color=Color(0.0196, 0.0275, 0.0627, 1)
 config/features=PackedStringArray("4.7")
 
 [autoload]
