@@ -22,6 +22,9 @@ var session: Node
 var health_bar: ProgressBar
 var repair_label: Label3D
 var contacts: Dictionary = {}
+enum Power { INACTIVE, STARTING, READY }
+var power_state := Power.INACTIVE
+var takeover: CanvasLayer
 
 func _ready() -> void:
 	world = get_parent()
@@ -75,6 +78,11 @@ func _ready() -> void:
 	area.body_exited.connect(world._on_interaction_area_exited.bind(area))
 	_update_health()
 	overlay.hide()
+	takeover = preload("res://src/world/rover_takeover.gd").new()
+	takeover.name = "RoverTakeover"
+	add_child(takeover)
+	takeover.completed.connect(_takeover_finished)
+	takeover.interrupted.connect(stop_control)
 
 func _update_health() -> void:
 	var health: float = 100.0 if session.dashboard_state == null else session.dashboard_state.rover_health
@@ -129,19 +137,19 @@ func available() -> bool:
 func start_control() -> bool:
 	if active:
 		return true
-	if not available() or world.get_node("MissionHUD")._modal_visible():
+	if get_tree().paused or not available() or world.get_node("Outpost/Astronaut").ui_blocked or world.get_node("MissionHUD")._modal_visible():
 		return false
 	if session.start_selected_mission() != OK or not session.can_advance():
 		return false
 	active = true
+	power_state = Power.STARTING
 	var player := world.get_node("Outpost/Astronaut")
 	player.ui_blocked = true
 	world.get_node("MissionHUD").panel.hide()
 	world.get_node("MissionHUD").help_hint.hide()
 	world.get_node("MissionHUD").set_process_input(false)
 	_update_camera()
-	camera.make_current()
-	overlay.show()
+	takeover.begin()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	return true
 
@@ -149,6 +157,9 @@ func stop_control() -> void:
 	if not active:
 		return
 	active = false
+	takeover.cancel()
+	get_node("/root/GameAudio").cancel_rover_startup(self)
+	power_state = Power.INACTIVE
 	speed = 0.0
 	steering = 0.0
 	velocity = Vector3.ZERO
@@ -181,7 +192,9 @@ func sync_state() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_R and (active or available()):
-			if active:
+			if active and power_state == Power.STARTING:
+				pass # Repeated takeover requests cannot restart or cancel the cinematic.
+			elif active:
 				stop_control()
 			else:
 				start_control()
@@ -205,6 +218,11 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 		speed = 0.0
 		velocity = Vector3.ZERO
 		status.text = "ROVER DISABLED\nR: return to lander\nExit the lander, approach the rover and press E to repair."
+		return
+	if power_state != Power.READY:
+		speed = 0.0
+		velocity = Vector3.ZERO
+		status.text = "ROVER SYSTEMS STARTING…"
 		return
 	var target := clampf(throttle, -1, 1) * (MAX_SPEED if throttle >= 0 else REVERSE_SPEED)
 	var deceleration := brake or is_zero_approx(throttle) or speed * throttle < 0
@@ -256,6 +274,17 @@ func _sync_visual(delta: float) -> void:
 	var right := normal.cross(forward).normalized()
 	var target := Basis(right, forward.cross(right).normalized(), forward).orthonormalized()
 	rover.basis = rover.basis.slerp(target, minf(1, delta * 5)).orthonormalized()
+
+func _takeover_finished() -> void:
+	if active and power_state == Power.STARTING:
+		power_state = Power.READY
+		_update_camera()
+		camera.make_current()
+		overlay.show()
+
+func _exit_tree() -> void:
+	var audio := get_node_or_null("/root/GameAudio")
+	if audio: audio.cancel_rover_startup(self)
 
 func _update_camera() -> void:
 	var forward := Vector3(sin(heading), 0, cos(heading))

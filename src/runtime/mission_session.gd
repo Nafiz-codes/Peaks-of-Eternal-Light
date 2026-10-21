@@ -4,6 +4,7 @@ extends Node
 ## mission dashboard. MissionSimulator remains authoritative for mission state.
 
 var selected_site_id := ""
+var skip_next_startup_intro := false
 var return_scene_path := ""
 var dashboard_simulator: RefCounted = null
 var dashboard_state: Variant = null

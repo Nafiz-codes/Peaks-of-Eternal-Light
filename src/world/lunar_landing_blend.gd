@@ -30,27 +30,41 @@ func begin(selector: Node) -> void:
 		return
 	await get_tree().scene_changed
 	var outpost := get_tree().current_scene
+	reparent(outpost) # Interrupted scenes also dispose their transition/tween.
 	var player := outpost.get_node("Outpost/Astronaut")
 	if get_node("/root/MissionSession").reduce_motion:
 		queue_free()
 		return
-	player.process_mode = Node.PROCESS_MODE_DISABLED
-	# Let the spring arm settle before capturing the final gameplay view.
+	player.ui_blocked = true
+	player.set_physics_process(false)
+	# Keep the spring arm enabled while freezing only astronaut locomotion.
+	await get_tree().physics_frame
 	await get_tree().physics_frame
 	await get_tree().process_frame
 	var gameplay_camera := get_viewport().get_camera_3d()
 	var destination := gameplay_camera.global_transform
+	var path := preload("res://src/world/safe_arrival_camera.gd").new()
+	var safe: bool = not player.first_person and path.configure(player, destination)
+	# Saved cockpit/first-person views use a dissolve, never a flight into the body.
+	if not safe:
+		var dissolve := create_tween()
+		dissolve.tween_property(cover, "modulate:a", 0.0, 0.65)
+		await dissolve.finished
+		player.ui_blocked = false
+		player.set_physics_process(true)
+		queue_free()
+		return
 	var arrival := Camera3D.new()
 	outpost.add_child(arrival)
 	arrival.fov = gameplay_camera.fov
-	arrival.global_position = destination.origin + Vector3(0.0, 12.0, 5.0)
-	arrival.look_at(player.global_position + Vector3.UP)
+	arrival.global_transform = path.pose(0.0)
 	arrival.make_current()
 	var tween := create_tween().set_parallel(true)
 	tween.tween_property(cover, "modulate:a", 0.0, 0.65).set_trans(Tween.TRANS_SINE)
-	tween.tween_property(arrival, "global_transform", destination, 1.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_method(func(progress: float): arrival.global_transform = path.pose(progress), 0.0, 1.0, 1.6)
 	await tween.finished
 	gameplay_camera.make_current()
 	arrival.queue_free()
-	player.process_mode = Node.PROCESS_MODE_INHERIT
+	player.ui_blocked = false
+	player.set_physics_process(true)
 	queue_free()

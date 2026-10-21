@@ -3,6 +3,7 @@ extends Node
 signal settings_changed
 
 const DEFAULTS := {"master": 0.8, "music": 0.7, "effects": 0.8,
+	"music_enabled": true, "mission_music": 0.2,
 	"sensitivity": 1.0, "invert_y": false, "quality": 1, "fullscreen": false,
 	"brightness": 1.0, "reduce_motion": false}
 var values: Dictionary = DEFAULTS.duplicate()
@@ -18,7 +19,7 @@ func _ready() -> void:
 			var value: Variant = config.get_value("settings", key, DEFAULTS[key])
 			if typeof(value) == typeof(DEFAULTS[key]):
 				values[key] = value
-	for key in ["master", "music", "effects"]:
+	for key in ["master", "music", "effects", "mission_music"]:
 		values[key] = clampf(float(values[key]), 0.0, 1.0)
 	values.sensitivity = clampf(float(values.sensitivity), 0.25, 3.0)
 	values.brightness = clampf(float(values.brightness), 0.6, 1.5)
@@ -44,15 +45,16 @@ func change(key: String, value: Variant) -> void:
 	config.save(settings_path)
 
 func apply() -> void:
-	for entry in [["Master", "master"], ["Music", "music"], ["Effects", "effects"]]:
+	for entry in [["Master", "master"], ["Music", "music"], ["Effects", "effects"], ["MissionMusic", "mission_music"]]:
 		var bus := AudioServer.get_bus_index(entry[0])
 		if bus < 0:
 			AudioServer.add_bus()
 			bus = AudioServer.bus_count - 1
 			AudioServer.set_bus_name(bus, entry[0])
 			AudioServer.set_bus_send(bus, "Master")
+		if entry[0] == "MissionMusic": AudioServer.set_bus_send(bus, "Music")
 		var volume := float(values[entry[1]])
-		AudioServer.set_bus_mute(bus, volume <= 0.0)
+		AudioServer.set_bus_mute(bus, volume <= 0.0 or (entry[0] == "Music" and not values.music_enabled))
 		AudioServer.set_bus_volume_db(bus, linear_to_db(maxf(volume, 0.0001)))
 	get_node("/root/MissionSession").reduce_motion = values.reduce_motion
 	get_viewport().msaa_3d = Viewport.MSAA_4X if values.quality == 2 else (Viewport.MSAA_2X if values.quality == 1 else Viewport.MSAA_DISABLED)

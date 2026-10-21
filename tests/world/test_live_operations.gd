@@ -56,11 +56,15 @@ func run() -> void:
 	root.push_input(remote_key)
 	check(driver.active, "R key starts mission and remote control from lander.")
 	driver.set_physics_process(false)
-	check(driver.camera.current and player.ui_blocked, "Remote camera owns input.")
+	check(driver.takeover.running and player.ui_blocked, "Takeover cinematic owns input.")
 	var state: Variant = session.dashboard_state
 	var initial_power: float = state.power_kwh
 	var initial_position: Vector3 = driver.position
 	var initial_heading: float = driver.heading
+	driver.step_drive(1.0 / 60, 1.0, 0.0, false)
+	check(driver.power_state == driver.Power.STARTING and driver.position == initial_position, "Rover stays still during power-on.")
+	await create_timer(root.get_node("GameAudio").rover_player.stream.get_length() + 0.2).timeout
+	check(driver.power_state == driver.Power.READY, "Actual startup playback completes before driving.")
 	await drive(driver, 30, 0, 1)
 	check(is_equal_approx(driver.heading, initial_heading), "Stationary steering cannot spin rover.")
 	await drive(driver, 30, 1, 0)
@@ -139,7 +143,7 @@ func run() -> void:
 	key.keycode = KEY_W
 	key.pressed = true
 	Input.parse_input_event(key)
-	await create_timer(0.5).timeout
+	await create_timer(root.get_node("GameAudio").rover_player.stream.get_length() + 0.5).timeout
 	check(driver.speed > 0, "W key reaches the physics driving path.")
 	key.pressed = false
 	Input.parse_input_event(key)

@@ -12,6 +12,7 @@ var sidebar: Control
 var sidebar_buttons: Array[Button] = []
 var zoom_in: Button
 var zoom_out: Button
+var back_button: Button
 var sequence: Tween
 var moon_entry := 0.0
 var earth_entry := 0.0
@@ -112,7 +113,7 @@ func _build_ui() -> void:
 	layer.add_child(canvas)
 	canvas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	sidebar = Control.new()
-	sidebar.size = Vector2(410, 490)
+	sidebar.size = Vector2(410, 560)
 	# Blocks clicks in the actual panel, including spaces between entries.
 	sidebar.mouse_filter = Control.MOUSE_FILTER_STOP
 	canvas.add_child(sidebar)
@@ -140,6 +141,13 @@ func _build_ui() -> void:
 	var hint := _label("↑ ↓ / Tab to navigate · Enter / Space to deploy\nOr click the Moon to select a site on its surface.", 14, Color("8ea2b3"))
 	hint.position.y = 443
 	sidebar.add_child(hint)
+	back_button = Button.new()
+	back_button.text = "BACK TO START MENU   /   ESC"
+	back_button.position = Vector2(0, 505)
+	back_button.size = Vector2(400, 44)
+	_style(back_button, 16)
+	back_button.pressed.connect(go_back)
+	sidebar.add_child(back_button)
 	sidebar.modulate.a = 0.0
 	sidebar.hide()
 	zoom_in = Button.new()
@@ -154,7 +162,7 @@ func _build_ui() -> void:
 		button.hide()
 	zoom_in.pressed.connect(zoom_by.bind(0.8))
 	zoom_out.pressed.connect(zoom_by.bind(1.25))
-	preload("res://src/ui/menu_navigation.gd").configure(sidebar_buttons, [zoom_in, zoom_out])
+	preload("res://src/ui/menu_navigation.gd").configure(sidebar_buttons, [back_button, zoom_in, zoom_out])
 
 func _hover(button: Button, active: bool) -> void:
 	if mode != Mode.OVERVIEW: return
@@ -171,7 +179,7 @@ func _layout() -> void:
 	var size_ := get_viewport().get_visible_rect().size
 	var factor := minf(size_.x / 1360.0, size_.y / 820.0)
 	sidebar.scale = Vector2.ONE * factor
-	sidebar.position = Vector2(size_.x * 0.065, (size_.y - 490 * factor) * 0.5)
+	sidebar.position = Vector2(size_.x * 0.065, (size_.y - sidebar.size.y * factor) * 0.5)
 	var button_size := Vector2.ONE * clampf(52 * factor, 44, 72)
 	zoom_in.size = button_size
 	zoom_out.size = button_size
@@ -227,6 +235,7 @@ func _show_overview() -> void:
 	approach = 0.0
 	_compose()
 	sidebar.show()
+	back_button.disabled = false
 	for button in sidebar_buttons:
 		button.disabled = false
 		button.modulate = Color.WHITE
@@ -304,9 +313,11 @@ func _input(event: InputEvent) -> void:
 func enter_moon(site_id: String = "") -> void:
 	if mode != Mode.OVERVIEW: return
 	if not site_id.is_empty() and selector._site_by_id(site_id).is_empty(): return
+	get_node("/root/GameAudio").play_ui_click()
 	_stop_sequence()
 	pending_site = site_id
 	mode = Mode.APPROACH
+	back_button.disabled = true
 	for button in sidebar_buttons:
 		button.disabled = true
 		button.modulate = Color("b8e7ff") if button.name == site_id + "_OverviewButton" else Color(0.7, 0.7, 0.7)
@@ -371,6 +382,16 @@ func _zoom(value: float) -> void:
 	selector._update_site_callouts()
 
 func go_back() -> void:
+	if mode == Mode.OVERVIEW:
+		_stop_sequence()
+		mode = Mode.RETURNING
+		var session := get_node("/root/MissionSession")
+		session.skip_next_startup_intro = true
+		var error := get_tree().change_scene_to_file("res://scenes/startup.tscn")
+		if error != OK:
+			session.skip_next_startup_intro = false
+			_show_overview()
+		return
 	if mode != Mode.EXPLORE: return
 	_stop_sequence()
 	mode = Mode.RETURNING

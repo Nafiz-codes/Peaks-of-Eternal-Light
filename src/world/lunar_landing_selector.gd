@@ -90,6 +90,8 @@ func select_site(site_id: String) -> void:
 		push_warning("Unknown lunar landing site: %s" % site_id)
 		return
 	selected_site_id = site_id
+	if navigation_controller == null or navigation_controller.mode != navigation_controller.Mode.FOCUS:
+		get_node("/root/GameAudio").play_ui_click()
 	landing_in_progress = launch_outpost_on_selection
 	if navigation_controller != null and landing_in_progress:
 		navigation_controller.prepare_landing()

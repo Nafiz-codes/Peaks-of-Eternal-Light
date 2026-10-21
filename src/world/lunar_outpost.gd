@@ -324,6 +324,9 @@ func _add_astronaut(parent: Node3D) -> void:
 	camera_shape.radius = 0.2
 	spring_arm.shape = camera_shape
 	camera_pivot.add_child(spring_arm)
+	# The astronaut's _ready ran before this dynamically built arm existed.
+	# Exclude its own capsule here or the arm collapses into the body.
+	spring_arm.add_excluded_object(astronaut.get_rid())
 	var camera := Camera3D.new()
 	camera.name = "ThirdPersonCamera"
 	camera.fov = 70.0

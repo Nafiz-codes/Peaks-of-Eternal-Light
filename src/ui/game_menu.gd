@@ -292,9 +292,15 @@ func _load(index: int) -> void:
 
 func _settings() -> void:
 	body.add_child(UI.label("Audio", 21, UI.BLUE))
+	var music_toggle := CheckButton.new()
+	music_toggle.text = "Music enabled"
+	music_toggle.button_pressed = settings.values.music_enabled
+	music_toggle.toggled.connect(func(enabled: bool): settings.change("music_enabled", enabled))
+	body.add_child(music_toggle)
 	for entry in [["Master volume", "master", 0.0, 1.0, 0.05], ["Music volume", "music", 0.0, 1.0, 0.05], ["Effects volume", "effects", 0.0, 1.0, 0.05]]:
 		_slider(entry)
-	body.add_child(UI.label("Music and effects levels apply to their audio channels when tracks are available.", 13, UI.MUTED))
+	_slider(["Mission ambience · default 20%", "mission_music", 0.0, 1.0, 0.01])
+	body.add_child(UI.label("Mission ambience is reduced further by Music and Master volume.", 13, UI.MUTED))
 	body.add_child(UI.label("Camera & display", 21, UI.BLUE))
 	_slider(["Mouse sensitivity", "sensitivity", 0.25, 3.0, 0.05])
 	_slider(["Brightness", "brightness", 0.6, 1.5, 0.05])

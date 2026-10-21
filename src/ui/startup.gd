@@ -32,7 +32,12 @@ func _ready() -> void:
 	_build()
 	get_viewport().size_changed.connect(_layout)
 	_layout()
-	_intro()
+	var session := get_node("/root/MissionSession")
+	if session.skip_next_startup_intro:
+		session.skip_next_startup_intro = false
+		_enter_menu()
+	else:
+		_intro()
 
 func _build() -> void:
 	layer = CanvasLayer.new()
@@ -112,7 +117,7 @@ func _build() -> void:
 	var hint := _label("↑ ↓ / TAB  NAVIGATE     ENTER / SPACE  SELECT", 12, Color("7894a9"))
 	navigation.add_child(hint)
 	hint.position = Vector2(0, 465)
-	for entry in [["Made with", "Godot", "G A M E   E N G I N E"], ["Created for", "NASA Space Apps Challenge 2026", "I N D E P E N D E N T   C H A L L E N G E   P R O J E C T"], ["Developed by", "Team Hierarchy", "P E A K S   O F   E T E R N A L   L I G H T S"]]:
+	for entry in [["Made with", "Godot", "G A M E   E N G I N E"], ["Created for", "NASA Space Apps Challenge 2026", "I N D E P E N D E N T   C H A L L E N G E   P R O J E C T"], ["Developed by", "Triarchy", "P E A K S   O F   E T E R N A L   L I G H T S"]]:
 		var credit := VBoxContainer.new()
 		credit.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		credit.add_theme_constant_override("separation", 18)
@@ -133,7 +138,12 @@ func _build() -> void:
 	canvas.add_child(dialog)
 	dialog_body = VBoxContainer.new()
 	dialog_body.add_theme_constant_override("separation", 18)
-	dialog.add_child(dialog_body)
+	var scroll := ScrollContainer.new()
+	scroll.follow_focus = true
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	dialog.add_child(scroll)
+	scroll.add_child(dialog_body)
+	dialog_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dialog.hide()
 
 func _label(text: String, font_size: int, color: Color) -> Label:
@@ -296,6 +306,24 @@ func _settings() -> void:
 	volume.custom_minimum_size.y = 32
 	volume.value_changed.connect(func(value: float): settings.change("master", value))
 	dialog_body.add_child(volume)
+	var music_toggle := CheckButton.new()
+	music_toggle.text = "Music enabled"
+	music_toggle.button_pressed = settings.values.music_enabled
+	music_toggle.toggled.connect(func(enabled: bool): settings.change("music_enabled", enabled))
+	dialog_body.add_child(music_toggle)
+	for entry in [["Music volume", "music"], ["Mission ambience · default 20%", "mission_music"]]:
+		var key: String = entry[1]
+		var caption := _label("%s · %d%%" % [entry[0], roundi(settings.values[key] * 100)], 18, Color.WHITE)
+		dialog_body.add_child(caption)
+		var slider := HSlider.new()
+		slider.max_value = 1.0
+		slider.step = 0.01
+		slider.value = settings.values[key]
+		slider.custom_minimum_size.y = 28
+		slider.value_changed.connect(func(value: float):
+			settings.change(key, value)
+			caption.text = "%s · %d%%" % [entry[0], roundi(value * 100)])
+		dialog_body.add_child(slider)
 	for entry in [["Fullscreen", "fullscreen"], ["Reduce idle motion", "reduce_motion"]]:
 		var toggle := CheckButton.new()
 		toggle.text = entry[0]
@@ -314,7 +342,7 @@ func _settings() -> void:
 	_dialog_back()
 
 func _exit() -> void:
-	if state == State.MENU_IDLE: get_tree().quit()
+	if state == State.MENU_IDLE: get_node("/root/GameAudio").quit_with_click()
 
 func _exit_tree() -> void:
 	if sequence: sequence.kill()

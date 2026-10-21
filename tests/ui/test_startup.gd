@@ -37,7 +37,7 @@ func run() -> void:
 	check(boot.state == boot.State.MENU_IDLE, "Modal blocks starts")
 	boot._close_dialog()
 	click(boot.buttons[2])
-	check(boot.dialog_body.find_children("*", "HSlider", true, false).size() == 1, "Volume control exists")
+	check(boot.dialog_body.find_children("*", "HSlider", true, false).size() == 3, "Master, music and mission ambience controls exist")
 	boot._close_dialog()
 	root.size = Vector2i(960, 720)
 	await process_frame

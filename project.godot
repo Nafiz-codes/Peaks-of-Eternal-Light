@@ -21,6 +21,8 @@ boot_splash/show_image=false
 MissionSession="*res://src/runtime/mission_session.gd"
 GameSettings="*res://src/runtime/game_settings.gd"
 GameMenu="*res://src/ui/game_menu.gd"
+MenuMusic="*res://src/runtime/menu_music.gd"
+GameAudio="*res://src/runtime/game_audio.gd"
 
 [display]
 
