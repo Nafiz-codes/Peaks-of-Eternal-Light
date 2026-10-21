@@ -18,8 +18,8 @@ var dialog: PanelContainer
 var dialog_body: VBoxContainer
 var elapsed := 0.0
 var astronaut_departure := 0.0
-var moon_progress := 0.0
-var final_offset := 0.0
+var planetary: Node
+
 var ready_for_mission := false
 var reduced := false
 var menu_reveal := 0.0
@@ -39,6 +39,10 @@ func _build() -> void:
 	layer.layer = 50
 	add_child(layer)
 	canvas = Control.new()
+	var interface_font := ThemeDB.fallback_font.duplicate() as FontFile
+	if interface_font != null:
+		interface_font.multichannel_signed_distance_field = true
+		canvas.add_theme_font_override("font", interface_font)
 	layer.add_child(canvas)
 	canvas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -104,11 +108,13 @@ func _build() -> void:
 		button.mouse_exited.connect(_highlight.bind(button, false))
 		button.focus_entered.connect(_highlight.bind(button, true))
 		button.focus_exited.connect(_highlight.bind(button, false))
-	var hint := _label("↑ ↓  NAVIGATE     ENTER  SELECT", 12, Color("7894a9"))
+	preload("res://src/ui/menu_navigation.gd").configure(buttons)
+	var hint := _label("↑ ↓ / TAB  NAVIGATE     ENTER / SPACE  SELECT", 12, Color("7894a9"))
 	navigation.add_child(hint)
 	hint.position = Vector2(0, 465)
 	for entry in [["Made with", "Godot", "G A M E   E N G I N E"], ["Created for", "NASA Space Apps Challenge 2026", "I N D E P E N D E N T   C H A L L E N G E   P R O J E C T"], ["Developed by", "Team Hierarchy", "P E A K S   O F   E T E R N A L   L I G H T S"]]:
 		var credit := VBoxContainer.new()
+		credit.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		credit.add_theme_constant_override("separation", 18)
 		canvas.add_child(credit)
 		for index in range(3):
@@ -146,7 +152,8 @@ func _layout() -> void:
 	for credit in credits:
 		credit.size = Vector2(1100, 160)
 		credit.scale = Vector2.ONE * factor
-		credit.position = (viewport - credit.size * factor) * 0.5
+		# Credits scale around their center; positioning must not scale that pivot twice.
+		credit.position = (viewport - credit.size) * 0.5
 		credit.pivot_offset = credit.size * 0.5
 	skip.position = Vector2(viewport.x - 200, viewport.y - 55)
 	dialog.size = Vector2(600, 500)
@@ -169,6 +176,7 @@ func _intro() -> void:
 
 func _highlight(button: Button, active: bool) -> void:
 	if state != State.MENU_IDLE or button.disabled: return
+	if active and not button.has_focus(): button.grab_focus()
 	var previous: Tween = button.get_meta("highlight") if button.has_meta("highlight") else null
 	if previous: previous.kill()
 	var tween := create_tween()
@@ -189,6 +197,7 @@ func _enter_menu() -> void:
 	sequence.tween_property(self, "menu_reveal", 1.0, 1.0).set_delay(0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	sequence.chain().tween_callback(func():
 		state = State.MENU_IDLE
+		for credit in credits: credit.hide()
 		for button in buttons: button.disabled = false
 		buttons[0].disabled = not ready_for_mission
 		buttons[0].grab_focus() if ready_for_mission else buttons[1].grab_focus())
@@ -205,7 +214,7 @@ func _process(delta: float) -> void:
 		world.process_mode = Node.PROCESS_MODE_DISABLED
 		world.menu_layer.hide()
 		world.hide()
-		final_offset = world.camera.h_offset
+		planetary = world.enable_cinematic_navigation()
 		ready_for_mission = true
 		if state == State.MENU_IDLE: buttons[0].disabled = false
 	var viewport := get_viewport().get_visible_rect().size
@@ -215,10 +224,6 @@ func _process(delta: float) -> void:
 		drift = (canvas.get_local_mouse_position() / viewport - Vector2.ONE * 0.5) * 10.0
 		drift.y += sin(elapsed * 0.65) * 4.0
 	astronaut.position = Vector2(viewport.x * 0.67 - astronaut.size.x * 0.5 - astronaut_departure * viewport.x * 1.65, viewport.y - astronaut.size.y + maxf(0.0, (astronaut.size.y - astronaut.size.x * 412.0 / 735.0) * 0.5) + 8.0) + drift
-	if state == State.STARTING_MISSION:
-		# Screen-space distance is recomputed on resize; no Moon transforms change.
-		var width: float = world.camera.size * viewport.x / viewport.y
-		world.camera.h_offset = lerpf(-width * 0.5 - 10.5, 0.0, moon_progress)
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
@@ -234,31 +239,21 @@ func _start_mission() -> void:
 		button.disabled = true
 		var highlight: Tween = button.get_meta("highlight") if button.has_meta("highlight") else null
 		if highlight: highlight.kill()
-	var viewport := get_viewport().get_visible_rect().size
-	world.camera.h_offset = -world.camera.size * viewport.x / viewport.y * 0.5 - 10.5
+
 	world.show()
+	world.process_mode = Node.PROCESS_MODE_INHERIT
+	planetary.begin_entrance()
 	sequence = create_tween().set_parallel(true)
 	for i in range(buttons.size()):
 		sequence.tween_property(buttons[i], "modulate:a", 0.0, 0.35).set_delay(i * 0.07)
 	sequence.tween_property(navigation, "modulate:a", 0.0, 0.6).set_delay(0.15)
 	sequence.tween_property(self, "astronaut_departure", 1.0, 2.0).set_delay(0.4).set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_IN_OUT)
 	sequence.tween_property(backdrop, "modulate:a", 0.0, 0.6).set_delay(0.3)
-	sequence.tween_property(self, "moon_progress", 1.0, 2.0).set_delay(0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	sequence.chain().tween_callback(_settle)
-
-func _settle() -> void:
-	state = State.GAMEPLAY
-	sequence = create_tween()
-	sequence.tween_property(world.camera, "h_offset", final_offset, 0.8).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	sequence.tween_callback(_handoff)
+	sequence.chain().tween_interval(0.4)
+	sequence.chain().tween_callback(_handoff)
 
 func _handoff() -> void:
-	world.menu_layer.show()
-	world._update_site_callouts()
-	for control in world.menu_layer.get_children():
-		if control is Control:
-			control.modulate.a = 0.0
-			world.create_tween().tween_property(control, "modulate:a", 1.0, 0.45)
+	state = State.GAMEPLAY
 	world.reparent(get_tree().root)
 	get_tree().current_scene = world
 	world.process_mode = Node.PROCESS_MODE_INHERIT
@@ -325,5 +320,3 @@ func _exit_tree() -> void:
 	if sequence: sequence.kill()
 	var menu := get_node_or_null("/root/GameMenu")
 	if menu: menu.set_process_input(true)
-
-

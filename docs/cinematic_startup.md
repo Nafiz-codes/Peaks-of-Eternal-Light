@@ -1,3 +1,7 @@
+# Current flow
+
+The Earth–Moon overview now extends this startup. See [lunar_navigation.md](lunar_navigation.md) for the current handoff, camera ownership, UI rules, and verification. The original implementation notes below describe the first startup revision.
+
 # Cinematic startup
 
 The project now boots into `scenes/startup.tscn`. `src/ui/startup.gd` owns the flow:

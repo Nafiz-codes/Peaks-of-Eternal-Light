@@ -26,6 +26,19 @@ var zoom_out_button: Button
 var zoom_reset_button: Button
 var landing_in_progress := false
 var menu_layer: CanvasLayer
+var navigation_controller: Node
+
+func enable_cinematic_navigation() -> Node:
+	if navigation_controller == null:
+		navigation_controller = preload("res://src/ui/lunar_navigation.gd").new()
+		add_child(navigation_controller)
+	return navigation_controller
+
+func handle_navigation_cancel() -> bool:
+	if navigation_controller == null or landing_in_progress:
+		return false
+	navigation_controller.go_back()
+	return true
 
 func _ready() -> void:
 	set_process_unhandled_input(true)
@@ -38,6 +51,8 @@ func _ready() -> void:
 	_update_site_callouts()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if navigation_controller != null:
+		return # The cinematic controller owns input, including drag/click discrimination.
 	if landing_in_progress:
 		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_I:
@@ -76,6 +91,8 @@ func select_site(site_id: String) -> void:
 		return
 	selected_site_id = site_id
 	landing_in_progress = launch_outpost_on_selection
+	if navigation_controller != null and landing_in_progress:
+		navigation_controller.prepare_landing()
 	for marker in get_tree().get_nodes_in_group("lunar_site_marker"):
 		if marker is MeshInstance3D:
 			var material := marker.material_override as StandardMaterial3D
@@ -91,17 +108,10 @@ func _begin_landing() -> void:
 	if get_node("/root/MissionSession").reduce_motion:
 		_open_selected_outpost()
 		return
-	var coordinates: Dictionary = _site_by_id(selected_site_id).coordinates
-	var target := _globe_position(float(coordinates.latitude_deg), float(coordinates.longitude_deg))
 	var start_transform := camera.transform
 	var start_size := camera.size
 	var start_offset := camera.h_offset
-	# Keep the existing screen-up direction, including when looking down at a pole.
-	var normal := target.normalized()
-	var up := camera.basis.y
-	if absf(up.dot(normal)) > 0.98:
-		up = camera.basis.x
-	var destination := Transform3D(Basis.looking_at(-normal, up), target + normal * 20.0)
+	var destination := site_camera_target(selected_site_id)
 	for control in menu_layer.find_children("*", "Button", true, false):
 		(control as Button).disabled = true
 	var tween := create_tween()
@@ -119,6 +129,15 @@ func _begin_landing() -> void:
 				control.modulate.a = 1.0 - smoothstep(0.0, 0.3, progress)
 	, 0.0, 1.0, 1.8)
 	tween.tween_callback(_open_selected_outpost)
+
+func site_camera_target(site_id: String) -> Transform3D:
+	var coordinates: Dictionary = _site_by_id(site_id).coordinates
+	var target := _globe_position(float(coordinates.latitude_deg), float(coordinates.longitude_deg))
+	var normal := target.normalized()
+	var up := Vector3.UP if navigation_controller != null else camera.basis.y
+	if absf(up.dot(normal)) > 0.98:
+		up = camera.basis.x
+	return Transform3D(Basis.looking_at(-normal, up), target + normal * 20.0)
 
 func _open_selected_outpost() -> void:
 	var transition := preload("res://src/world/lunar_landing_blend.gd").new()
@@ -240,6 +259,9 @@ func _update_camera() -> void:
 		camera.h_offset = -5.0 * camera.size / 24.0
 		camera.position = Vector3(sin(orbit.x) * cos(orbit.y), sin(orbit.y), cos(orbit.x) * cos(orbit.y)) * 30.0
 		camera.look_at(Vector3.ZERO, Vector3.UP)
+	if navigation_controller != null:
+		camera.h_offset = 0.0
+		camera.v_offset = 0.0
 	camera.force_update_transform()
 	_update_zoom_controls()
 
@@ -354,6 +376,7 @@ func _update_site_callouts() -> void:
 	if camera == null:
 		return
 	var globe := get_node("SouthPoleMap") as MeshInstance3D
+	var viewport_size := get_viewport().get_visible_rect().size
 	for callout in site_callouts:
 		var site := _site_by_id(str(callout.site_id))
 		var coordinates: Dictionary = site.coordinates
@@ -362,14 +385,23 @@ func _update_site_callouts() -> void:
 		# An orthographic camera sees only the hemisphere facing its viewing axis.
 		var normal := (globe.global_basis * local_anchor.normalized()).normalized()
 		var visible_on_globe := normal.dot(camera.global_basis.z) > 0.015
+		if navigation_controller != null:
+			visible_on_globe = visible_on_globe and navigation_controller.labels_visible()
 		callout.button.visible = visible_on_globe
 		if not visible_on_globe:
 			continue
 		var projected := camera.unproject_position(anchor)
 		var button := callout.button as Button
+		if navigation_controller != null:
+			var font_size := clampi(roundi(viewport_size.y / 54.0), 14, 23)
+			if button.get_theme_font_size("font_size") != font_size:
+				button.add_theme_font_size_override("font_size", font_size)
 		button.size = button.get_combined_minimum_size()
 		# Center the block on its geographic anchor through orbit, zoom and resize.
 		button.position = projected - button.size * 0.5
+		if navigation_controller != null:
+			# Never clamp a geographic label to a false screen location.
+			button.visible = Rect2(Vector2.ZERO, viewport_size).has_point(projected)
 
 func _add_polar_grid() -> void:
 	var grid := MeshInstance3D.new()

@@ -86,6 +86,10 @@ func _scene_changed() -> void:
 func _input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo or event.keycode != KEY_ESCAPE:
 		return
+	var scene := get_tree().current_scene
+	if not opened and scene != null and scene.has_method("handle_navigation_cancel") and scene.handle_navigation_cancel():
+		get_viewport().set_input_as_handled()
+		return
 	if not opened and _modal_visible():
 		return # Esc belongs to the current decision/operations dialog first.
 	get_viewport().set_input_as_handled()
