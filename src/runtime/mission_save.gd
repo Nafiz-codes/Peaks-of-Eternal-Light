@@ -52,7 +52,7 @@ static func decode(data: Variant) -> Dictionary:
 			var key: String = property.name
 			if not data.state.has(key) or typeof(data.state[key]) != property.type:
 				# Older version 1 saves omit newer fields; preserve their defaults.
-				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork"] and not data.state.has(key):
+				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "rover_training"] and not data.state.has(key):
 					continue
 				return {}
 			var value: Variant = data.state[key]
@@ -71,6 +71,8 @@ static func decode(data: Variant) -> Dictionary:
 		if state.rover_health < 0.0 or state.rover_health > 100.0:
 			return {}
 		if not preload("res://src/world/crew_fieldwork.gd").valid_save(state.fieldwork):
+			return {}
+		if not preload("res://src/simulation/rover_training.gd").valid_save(state.rover_training):
 			return {}
 		if not state.rover_pose.is_empty():
 			if not state.rover_pose.get("position") is Vector3 or not state.rover_pose.get("heading") is float:

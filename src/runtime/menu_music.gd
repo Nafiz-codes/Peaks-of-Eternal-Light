@@ -7,7 +7,7 @@ const MENUS := ["res://scenes/startup.tscn", "res://scenes/lunar_landing_selecto
 var player: AudioStreamPlayer
 var ambient_player: AudioStreamPlayer
 var mission_active := false
-var crossfade_seconds := 2.5
+var crossfade_seconds := 1.5
 var blend := 0.0
 var duck := 1.0
 var initialized := false

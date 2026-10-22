@@ -80,15 +80,9 @@ func _build() -> void:
 	navigation = Control.new()
 	canvas.add_child(navigation)
 	navigation.modulate.a = 0.0
-	var eyebrow := _label("T E A M   H I E R A R C H Y   /   L U N A R   S I M U L A T I O N", 12, Color("86a6bb"))
-	navigation.add_child(eyebrow)
-	eyebrow.position = Vector2(0, 0)
 	var title := _label("PEAKS OF\nETERNAL LIGHTS", 44, Color("edf5fa"))
 	navigation.add_child(title)
 	title.position = Vector2(0, 34)
-	var sub := _label("A journey to the lunar frontier", 17, Color("8ea2b3"))
-	navigation.add_child(sub)
-	sub.position = Vector2(2, 151)
 	for i in range(4):
 		var button := Button.new()
 		button.text = ["START MISSION", "MISSION BRIEFING", "SETTINGS", "EXIT"][i]
@@ -114,10 +108,7 @@ func _build() -> void:
 		button.focus_entered.connect(_highlight.bind(button, true))
 		button.focus_exited.connect(_highlight.bind(button, false))
 	preload("res://src/ui/menu_navigation.gd").configure(buttons)
-	var hint := _label("↑ ↓ / TAB  NAVIGATE     ENTER / SPACE  SELECT", 12, Color("7894a9"))
-	navigation.add_child(hint)
-	hint.position = Vector2(0, 465)
-	for entry in [["Made with", "Godot", "G A M E   E N G I N E"], ["Created for", "NASA Space Apps Challenge 2026", "I N D E P E N D E N T   C H A L L E N G E   P R O J E C T"], ["Developed by", "Triarchy", "P E A K S   O F   E T E R N A L   L I G H T S"]]:
+	for entry in [["Made with", "Godot", "G A M E   E N G I N E"], ["Created for", "NASA Space Apps Challenge 2026", "Challenge: Build a Junior Astronaut Mission Trainer"], ["Developed by", "Triarchy", "P E A K S   O F   E T E R N A L   L I G H T S"]]:
 		var credit := VBoxContainer.new()
 		credit.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		credit.add_theme_constant_override("separation", 18)

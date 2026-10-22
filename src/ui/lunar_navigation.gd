@@ -117,8 +117,6 @@ func _build_ui() -> void:
 	# Blocks clicks in the actual panel, including spaces between entries.
 	sidebar.mouse_filter = Control.MOUSE_FILTER_STOP
 	canvas.add_child(sidebar)
-	var subtitle := _label("L U N A R   M I S S I O N   D E P L O Y M E N T", 12, Color("86a6bb"))
-	sidebar.add_child(subtitle)
 	var title := _label("SELECT YOUR\nOUTPOST", 43, Color("edf5fa"))
 	title.position.y = 34
 	sidebar.add_child(title)
@@ -138,11 +136,11 @@ func _build_ui() -> void:
 		button.focus_exited.connect(_hover.bind(button, false))
 		sidebar.add_child(button)
 		sidebar_buttons.append(button)
-	var hint := _label("↑ ↓ / Tab to navigate · Enter / Space to deploy\nOr click the Moon to select a site on its surface.", 14, Color("8ea2b3"))
+	var hint := _label("Click the Moon to select a site on its surface.", 14, Color("8ea2b3"))
 	hint.position.y = 443
 	sidebar.add_child(hint)
 	back_button = Button.new()
-	back_button.text = "BACK TO START MENU   /   ESC"
+	back_button.text = "BACK TO START MENU"
 	back_button.position = Vector2(0, 505)
 	back_button.size = Vector2(400, 44)
 	_style(back_button, 16)

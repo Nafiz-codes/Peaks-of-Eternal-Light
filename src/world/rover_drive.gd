@@ -200,6 +200,12 @@ func _input(event: InputEvent) -> void:
 				start_control()
 			get_viewport().set_input_as_handled()
 		elif active and event.keycode in [KEY_E, KEY_I, KEY_V, KEY_C, KEY_ALT]:
+			var training := world.get_node_or_null("RoverTraining")
+			if training != null: training.handle_key(event.keycode)
+			get_viewport().set_input_as_handled()
+		elif active and event.keycode in [KEY_L, KEY_F, KEY_ENTER]:
+			var training := world.get_node_or_null("RoverTraining")
+			if training != null: training.handle_key(event.keycode)
 			get_viewport().set_input_as_handled()
 
 func _physics_process(delta: float) -> void:
@@ -224,6 +230,11 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 		velocity = Vector3.ZERO
 		status.text = "ROVER SYSTEMS STARTING…"
 		return
+	var training := world.get_node_or_null("RoverTraining")
+	if training != null and training.locks_drive():
+		throttle = 0.0
+		turn = 0.0
+		brake = true
 	var target := clampf(throttle, -1, 1) * (MAX_SPEED if throttle >= 0 else REVERSE_SPEED)
 	var deceleration := brake or is_zero_approx(throttle) or speed * throttle < 0
 	if is_on_floor():

@@ -34,7 +34,7 @@ func _ready() -> void:
 	rover_button = Button.new()
 	rover_button.position = Vector2(20, 110)
 	rover_button.custom_minimum_size = Vector2(380, 52)
-	rover_button.text = "Control rover  [R]"
+	rover_button.text = "Rover mission training  [R]"
 	rover_button.pressed.connect(func(): get_parent().get_node("RoverHull").start_control())
 	layer.add_child(rover_button)
 	fade = ColorRect.new()
@@ -55,7 +55,8 @@ func _process(_delta: float) -> void:
 	rover_button.visible = inside and not busy and not driving and not player.ui_blocked
 	var session := get_node("/root/MissionSession")
 	rover_button.disabled = session.dashboard_state != null and not session.can_advance()
-	rover_button.text = "Start mission + control rover  [R]" if session.dashboard_state == null else ("Resolve mission decisions before driving" if rover_button.disabled else "Control rover  [R]")
+	rover_button.text = "Start rover mission training  [R]" if session.dashboard_state == null else ("Resolve mission decisions before driving" if rover_button.disabled else "Rover mission training  [R]")
+	rover_button.tooltip_text = "Surface Survey → Frozen Horizon → Lifeline. Remote rover controls: hold F to scan, E to interact, L for headlights."
 	button.visible = not busy and not player.ui_blocked and door_available()
 	button.text = "Get outside  [E]" if inside else "Get inside  [E]"
 	button.tooltip_text = "Press E to enter or exit. Esc opens the pause menu."

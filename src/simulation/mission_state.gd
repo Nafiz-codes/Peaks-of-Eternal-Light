@@ -39,6 +39,7 @@ var rover_total_distance_km: float = 0.0
 var rover_pose: Dictionary = {}
 var rover_health: float = 100.0
 var fieldwork: Dictionary = {}
+var rover_training: Dictionary = {}
 var crew_stress_avg: float = 0.25
 var crew_productivity: float = 1.0
 var volatile_prospect_found: bool = false

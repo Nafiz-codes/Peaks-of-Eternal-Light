@@ -67,6 +67,9 @@ func _ready() -> void:
 	var lander_access := preload("res://src/world/lander_access.gd").new()
 	lander_access.name = "LanderAccess"
 	add_child(lander_access)
+	var training := preload("res://src/world/rover_training_controller.gd").new()
+	training.name = "RoverTraining"
+	add_child(training)
 	session.state_changed.connect(refresh_feedback)
 	refresh_feedback()
 
