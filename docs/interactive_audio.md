@@ -26,9 +26,9 @@ Button activation signals cover mouse and keyboard/controller UI acceptance. Sli
 
 ## Rover sequence
 
-`src/world/rover_drive.gd` extends the existing controller with INACTIVE, STARTING and READY states. First throttle input after taking control starts the supplied clip and holds speed/velocity at zero. The player's `finished` signal unlocks existing movement after the full approximately 17-second clip; there is no arbitrary readiness timer.
+`src/world/rover_drive.gd` extends the existing controller with INACTIVE, STARTING and READY states. A valid R takeover starts the 5.875-second video intro and ten-second processed startup audio immediately, holding speed/velocity at zero. The recorded driving shot is replaced by the real rover camera while audio continues. Audio completion then unlocks the existing movement controller. The original 17-second MP3 remains unchanged. See `docs/cinematic_transitions.md` for the takeover, synchronization and music transitions.
 
-Held throttle then uses existing acceleration. Released throttle leaves the rover ready and stationary. Ordinary stopping/starting does not replay startup. Exiting control or removing the rover cancels startup; reentry permits a new sequence. Pausing the game pauses rover audio and readiness, while UI effects remain available. This non-spatial sound represents the vehicle/simulator audio feed.
+Held throttle then uses existing acceleration. Released throttle leaves the rover ready and stationary. Ordinary stopping/starting does not replay startup. Repeated R presses during the cinematic are ignored. Scene changes or explicit control cancellation stop startup safely; reentry permits a new sequence. Pausing the game pauses video, rover audio and readiness, while UI effects remain available. This non-spatial sound represents the vehicle/simulator audio feed.
 
 ## Mixing and settings
 

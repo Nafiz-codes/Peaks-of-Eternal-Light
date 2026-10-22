@@ -32,9 +32,6 @@ func begin(selector: Node) -> void:
 	var outpost := get_tree().current_scene
 	reparent(outpost) # Interrupted scenes also dispose their transition/tween.
 	var player := outpost.get_node("Outpost/Astronaut")
-	if get_node("/root/MissionSession").reduce_motion:
-		queue_free()
-		return
 	player.ui_blocked = true
 	player.set_physics_process(false)
 	# Keep the spring arm enabled while freezing only astronaut locomotion.
@@ -45,6 +42,30 @@ func begin(selector: Node) -> void:
 	var destination := gameplay_camera.global_transform
 	var path := preload("res://src/world/safe_arrival_camera.gd").new()
 	var safe: bool = not player.first_person and path.configure(player, destination)
+	if not safe and not player.first_person:
+		# A nearby wall can retract an otherwise valid spring arm into the suit.
+		# Find a clear orbit while the map cover still hides camera corrections.
+		var original_yaw: float = player.camera_yaw
+		for offset in [0.5, -0.5, 1.0, -1.0, 1.57, -1.57, PI]:
+			player.camera_yaw = original_yaw + offset
+			player.camera_pitch = -0.4
+			player._sync_camera_rig()
+			await get_tree().physics_frame
+			await get_tree().physics_frame
+			await get_tree().process_frame
+			destination = gameplay_camera.global_transform
+			safe = path.configure(player, destination)
+			if safe: break
+		if not safe:
+			# Confined saved positions use the existing eye ahead of the visor.
+			# Never animate toward an unsafe third-person endpoint.
+			player.camera_yaw = original_yaw
+			player.set_first_person(true)
+	if get_node("/root/MissionSession").reduce_motion:
+		player.ui_blocked = false
+		player.set_physics_process(true)
+		queue_free()
+		return
 	# Saved cockpit/first-person views use a dissolve, never a flight into the body.
 	if not safe:
 		var dissolve := create_tween()

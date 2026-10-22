@@ -2,7 +2,8 @@ extends CanvasLayer
 ## Owns the visual/audio gate; the existing driver retains all movement logic.
 signal completed
 signal interrupted
-const VIDEO := preload("res://Assets/video/rover_takeover.ogv")
+const VIDEO := preload("res://Assets/video/rover_takeover_intro.ogv")
+const VIDEO_DURATION := 5.875 # End before the source cuts to the driving shot.
 const DURATION := 10.0
 var driver: Node
 var screen: Control
@@ -52,6 +53,7 @@ func begin() -> void:
 	screen.modulate.a = 0.0
 	screen.show()
 	video.paused = false
+	video.speed_scale = 1.0
 	if not video.is_playing(): video.play()
 	get_node("/root/GameAudio").play_rover_startup(driver, true)
 	get_node("/root/MenuMusic").set_rover_duck(true)
@@ -62,21 +64,34 @@ func _process(delta: float) -> void:
 	if get_tree().paused: return
 	elapsed += delta
 	var position := video.stream_position
-	# Switch the 3D camera under the opaque video before dissolving into it.
-	if position >= DURATION - 0.65 and not camera_handed_off:
-		camera_handed_off = true
-		driver._update_camera()
-		driver.camera.make_current()
-	screen.modulate.a = smoothstep(0.0, 0.35, position) * (1.0 - smoothstep(DURATION - 0.55, DURATION, position))
+	# Audio runs on its own clock. Gently recover video drift after a slow frame
+	# without changing the pitch or timing of the mechanical recording.
+	var audio: AudioStreamPlayer = get_node("/root/GameAudio").rover_player
+	if not video_done:
+		var audio_position := DURATION if audio_done else audio.get_playback_position() + AudioServer.get_time_since_last_mix()
+		video.speed_scale = 1.0 + clampf((audio_position - position) * 1.5, -0.08, 0.08)
+	# Reveal the actual parked rover and its current heading, while startup audio
+	# continues independently to ten seconds. The driver remains STARTING.
+	if not video_done:
+		if position >= VIDEO_DURATION - 0.45: _show_live_rover()
+		screen.modulate.a = smoothstep(0.0, 0.35, position) * (1.0 - smoothstep(VIDEO_DURATION - 0.35, VIDEO_DURATION, position))
 	if elapsed > DURATION + 2.0:
-		push_warning("Rover video did not complete; returning safely to cockpit.")
+		push_warning("Rover startup did not complete; returning safely to cockpit.")
 		cancel()
 		interrupted.emit()
 
 func _video_finished() -> void:
 	if not running: return
 	video_done = true
+	_show_live_rover()
+	screen.hide()
 	_finish_if_ready()
+
+func _show_live_rover() -> void:
+	if camera_handed_off: return
+	camera_handed_off = true
+	driver._update_camera()
+	driver.camera.make_current()
 
 func _audio_finished(owner_id: int) -> void:
 	if not running or owner_id != driver.get_instance_id(): return

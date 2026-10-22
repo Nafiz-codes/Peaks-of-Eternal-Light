@@ -8,7 +8,7 @@ func check(ok: bool, message: String) -> void:
 		failures += 1
 		push_error(message)
 func capture(path: String) -> void:
-	if DisplayServer.get_name() == "headless": return
+	if DisplayServer.get_name() == "headless" or "--no-capture" in OS.get_cmdline_user_args(): return
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://.tools/" + path + ".png")
 func r_key() -> void:
@@ -17,14 +17,18 @@ func r_key() -> void:
 	key.pressed = true
 	root.push_input(key)
 func run() -> void:
+	print("CINEMATIC: loading menu")
 	change_scene_to_file("res://scenes/startup.tscn")
 	await scene_changed
+	print("CINEMATIC: menu loaded")
 	await process_frame
+	while not current_scene.ready_for_mission: await process_frame
 	var music := root.get_node("MenuMusic")
 	var audio := root.get_node("GameAudio")
 	check(music.player.playing and not music.ambient_player.playing, "Initial menu theme")
 	change_scene_to_file("res://scenes/lunar_outpost_3d.tscn")
 	await scene_changed
+	print("CINEMATIC: outpost loaded")
 	await create_timer(0.5).timeout
 	check(music.player.playing and music.ambient_player.playing, "Both players overlap at mission entry")
 	check(music.blend > 0 and music.blend < 1, "Crossfade is gradual")
@@ -69,6 +73,15 @@ func run() -> void:
 	driver.step_drive(0.1, 1, 1, false)
 	check(driver.position == before and is_zero_approx(driver.speed), "Input cannot move rover during video")
 	await capture("rover-cutscene")
+	check(is_equal_approx(driver.takeover.video.size.x / driver.takeover.video.size.y, 16.0 / 9.0), "Windowed video keeps source aspect ratio")
+	if DisplayServer.get_name() != "headless":
+		var original_mode := DisplayServer.window_get_mode()
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		await create_timer(0.3).timeout
+		check(is_equal_approx(driver.takeover.video.size.x / driver.takeover.video.size.y, 16.0 / 9.0), "Fullscreen video keeps source aspect ratio")
+		check(driver.takeover.screen.size.is_equal_approx(root.get_visible_rect().size), "Cutscene covers fullscreen viewport")
+		await capture("rover-cutscene-fullscreen")
+		DisplayServer.window_set_mode(original_mode)
 	var before_video: float = driver.takeover.video.stream_position
 	root.get_node("GameMenu").open_menu()
 	await create_timer(0.1).timeout
@@ -86,11 +99,16 @@ func run() -> void:
 	var started := Time.get_ticks_msec()
 	while driver.takeover.running and Time.get_ticks_msec() - started < 13000:
 		await process_frame
-		if driver.takeover.video_done and video_done_at < 0: video_done_at = Time.get_ticks_msec() / 1000.0
+		if driver.takeover.video_done and video_done_at < 0:
+			video_done_at = Time.get_ticks_msec() / 1000.0
+			check(audio.rover_player.playing and not driver.takeover.audio_done, "Startup sound continues after trimmed video")
+			check(driver.camera.current and not driver.takeover.screen.visible, "Actual rover camera replaces recorded driving shot")
+			check(driver.power_state == driver.Power.STARTING and driver.position == before, "Live rover remains stationary until full audio ends")
+			await capture("rover-live-startup")
 		if driver.takeover.audio_done and audio_done_at < 0: audio_done_at = Time.get_ticks_msec() / 1000.0
 	check(driver.power_state == driver.Power.READY and driver.camera.current, "Both media finish before rover control")
-	check(video_done_at >= 0 and audio_done_at >= 0 and absf(video_done_at - audio_done_at) < 0.15, "Media finishes within 150ms")
-	print("Media completion delta: ", absf(video_done_at - audio_done_at))
+	check(video_done_at >= 0 and audio_done_at - video_done_at > 3.9 and audio_done_at - video_done_at < 4.4, "Live rover replaces final four seconds while sound finishes")
+	print("Live rover startup remainder: ", audio_done_at - video_done_at)
 	check(driver.position == before and is_zero_approx(driver.speed), "Released throttle never causes movement")
 	await capture("rover-cutscene-handoff")
 	await create_timer(0.9).timeout
