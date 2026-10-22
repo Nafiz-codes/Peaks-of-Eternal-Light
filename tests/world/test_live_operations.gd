@@ -144,6 +144,10 @@ func run() -> void:
 	key.pressed = true
 	Input.parse_input_event(key)
 	await create_timer(root.get_node("GameAudio").rover_player.stream.get_length() + 0.5).timeout
+	var training := world.get_node("RoverTraining")
+	check(training.rules.data.status == "failed" and is_zero_approx(driver.speed), "Critical damage remains a failed training attempt after repair.")
+	training.handle_key(KEY_ENTER)
+	await create_timer(0.5).timeout
 	check(driver.speed > 0, "W key reaches the physics driving path.")
 	key.pressed = false
 	Input.parse_input_event(key)

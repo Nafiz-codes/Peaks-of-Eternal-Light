@@ -10,10 +10,12 @@ void vertex() {
 void fragment() {
 	float radius = length(world_position.xz - zone_center);
 	if (radius > 16.0) { discard; }
-	ALBEDO = vec3(0.19, 0.20, 0.22);
+	float grain = fract(sin(dot(world_position.xz, vec2(12.9898, 78.233))) * 43758.5453);
+	ALBEDO = vec3(0.19, 0.20, 0.22) * mix(0.8, 1.2, grain);
+	EMISSION = vec3(0.008, 0.009, 0.012);
 	ROUGHNESS = 1.0;
-	AO = 0.02;
-	ALPHA = 1.0 - smoothstep(12.0, 16.0, radius);
+	AO = 0.15;
+	ALPHA = 0.96 * (1.0 - smoothstep(12.0, 16.0, radius));
 }
 void light() {
 	// Headlights illuminate the simulated shadow; direct sunlight is suppressed.

@@ -48,10 +48,10 @@ func _ready() -> void:
 	_build_targets()
 	lights = SpotLight3D.new()
 	lights.position = Vector3(0, 0.9, 1.4)
-	lights.rotation.y = PI
+	lights.rotation = Vector3(deg_to_rad(-20), PI, 0)
 	lights.spot_range = 22
 	lights.spot_angle = 48
-	lights.light_energy = 3.5
+	lights.light_energy = 8.0
 	lights.shadow_enabled = true
 	driver.add_child(lights)
 	tool = _box(Vector3(0.12, 0.7, 0.12), Color("8cabb6"))
@@ -184,6 +184,7 @@ func handle_key(key: int) -> void:
 		if rules.data.stage == "perimeter" and not rules.data.lights:
 			feedback = "Press L to enable headlights."
 			return
+		feedback = ""
 		busy_id = id
 		busy_stage = rules.data.stage
 		busy_elapsed = 0.0
@@ -238,6 +239,7 @@ func _physics_process(delta: float) -> void:
 			feedback = "Interaction interrupted: " + rejection
 			_cancel_tool()
 		else:
+			var old_elapsed := busy_elapsed
 			busy_elapsed += delta
 			if busy_stage == "sample":
 				var socket := driver.to_global(Vector3(1.05, 0.45, 1.15))
@@ -252,6 +254,7 @@ func _physics_process(delta: float) -> void:
 					tool_arm.scale.z = socket.distance_to(tool.global_position)
 				dust.global_position = point - Vector3.UP * 0.3
 				dust.emitting = busy_elapsed > 0.7 and busy_elapsed < 3.0
+				if busy_elapsed < 3.0 and int(busy_elapsed * 2) != int(old_elapsed * 2): _tone(115, 0.22)
 			if busy_stage == "kit":
 				kit.show()
 				kit.global_position = (driver.global_position + Vector3.UP).lerp(targets.astronaut.global_position + Vector3(0.9, 0.2, 0), clampf(busy_elapsed / busy_duration, 0, 1))
@@ -265,11 +268,15 @@ func _physics_process(delta: float) -> void:
 		var target := _scan_candidate()
 		var id: String = "" if target == null else target.target_id
 		var rejection := "Aim at an unscanned mission target" if target == null else scanner.validate(driver, target)
+		var old_progress := scanner.progress
 		if scanner.advance(delta, Input.is_action_pressed("rover_scan"), id, rules.eligible(id), rejection):
 			if rules.record_scan(id):
 				_tone(1000, 0.16)
 				feedback = "Scan stored: " + id.to_upper()
 				_changed()
+				session.capture_sol_checkpoint()
+		elif int(scanner.progress) > int(old_progress): _tone(660, 0.06)
+		tool.rotation.z = sin(scanner.progress * 4.0) * 0.12 if scanner.progress > 0 else 0.0
 		if Input.is_action_pressed("rover_scan") and rejection != "": feedback = rejection
 	if ready and rules.data.mission == 2 and rules.data.status == "active" and not rules.data.stabilized:
 		beacon_time += delta
@@ -300,6 +307,7 @@ func _cancel_tool() -> void:
 	if tool != null:
 		tool.position = Vector3(1.05, 0.45, 1.15)
 		tool.rotation.y = 0
+		tool.rotation.z = 0
 	if tool_arm != null: tool_arm.hide()
 	if dust != null: dust.emitting = false
 	if kit != null and not rules.data.is_empty(): kit.visible = rules.data.stabilized
@@ -318,7 +326,7 @@ func _changed() -> void:
 		if id == "astronaut": targets[id].caption.visible = rules.data.scans.has(id)
 		elif id == "search_area": targets[id].visible = show_target and not rules.data.scans.has("astronaut")
 		targets[id].marker.scale = Vector3.ONE * (1.5 if rules.data.best == id else 1.0)
-		targets[id].caption.modulate = Color("91edae") if rules.data.scans.has(id) else Color.WHITE
+		targets[id].caption.modulate = Color("91edae") if rules.data.scans.has(id) else targets[id].base_tint
 	kit.visible = rules.data.stabilized
 	kit.position = targets.astronaut.position + Vector3(0.9, 0.2, 0)
 	relay.visible = rules.data.relay
@@ -360,12 +368,16 @@ func _publish() -> void:
 	else:
 		details += "Beacon %d%% · Reserve %d:%02d\nKit: %s · Relay: %s\n" % [roundi(_beacon() * 100), int(d.remaining) / 60, int(d.remaining) % 60, "delivered / stable" if d.stabilized else "available", "online" if d.relay else "offline"]
 		details += "Independent team handles pickup."
-	var prompt_text := "F: hold scan · E: interact · L: lights\nBrake, face target, operate within 6.5 m."
+	var prompt_text := ("F: hold scan" if rules.action_target() == "" else "E: " + rules.action_name()) + " · L: lights\nBrake, face target, operate within 6.5 m."
 	if feedback != "": prompt_text += "\n" + feedback
 	if d.battery <= 20.0: prompt_text += "\nLOW BATTERY — complete the uplink soon."
+	if maxf(absf(driver.position.x), absf(driver.position.z)) > 52.0: prompt_text += "\nBOUNDARY WARNING — turn toward the outpost."
 	var outcome: String = d.message
 	if d.status == "success": outcome = "MISSION COMPLETE\n" + outcome + ("\nEnter: next mission" if d.mission < 2 else "\nTraining complete. R: return to lander.")
 	elif d.status == "failed": outcome = "MISSION FAILED\n" + outcome + "\nEnter: retry from deployment pad · R: return"
+	if d.status != "active":
+		objective = "Training debrief"
+		prompt_text = "R: return to lander"
 	var amount := scanner.progress / scan_seconds
 	if busy_id != "":
 		amount = busy_elapsed / busy_duration

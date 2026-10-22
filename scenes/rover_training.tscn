@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/world/rover_training_controller.gd" id="1"]
+
+[node name="RoverTraining" type="Node3D"]
+script = ExtResource("1")
+life_support_seconds = 480.0
+battery_drain_per_second = 0.012
+scan_seconds = 3.0

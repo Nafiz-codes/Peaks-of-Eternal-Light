@@ -55,16 +55,20 @@ func complete_action(id: String) -> bool:
 		"sample":
 			data.stage = "ice_upload"
 			data.message = "Sample analyzer: evidence of ice in this simulated sample. Hydrogen readings alone were not confirmation."
-		"contact": data.stage = "kit"
+		"contact":
+			data.stage = "kit"
+			data.message = "Radio: suit contact established. Deploy the emergency support kit."
 		"kit":
 			if not data.kit: return false
 			data.kit = false
 			data.stabilized = true
 			data.stage = "relay"
+			data.message = "Radio: emergency oxygen and power connected. Astronaut stabilized; reserve clock stopped."
 		"relay":
 			if not data.stabilized: return false
 			data.relay = true
 			data.stage = "pickup"
+			data.message = "Mission Control: relay online. We can contact the astronaut. Confirm the separate team's pickup handoff."
 		"pickup":
 			if not data.stabilized or not data.relay: return false
 			data.status = "success"

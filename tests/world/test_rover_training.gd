@@ -118,6 +118,17 @@ func run() -> void:
 	training.rules.fail("test retry")
 	training.handle_key(KEY_ENTER)
 	check(training.rules.data.status == "active" and training.rules.data.scans.is_empty() and not training.kit.visible, "Retry restores tools and scan state")
+	await position_for("alpha")
+	driver.global_position.z -= 20.0
+	check(training.scanner.validate(driver, training.targets.alpha).contains("Approach"), "Out-of-range scan rejected")
+	training._restart(1)
+	training.rules.data.lights = true
+	await position_for("perimeter")
+	training.handle_key(KEY_E)
+	training._physics_process(1.0)
+	driver.global_position.x += 20.0
+	training._physics_process(3.0)
+	check(training.busy_id == "" and training.rules.data.stage == "perimeter", "Leaving interaction range cancels without advancing")
 	training._restart(2)
 	training.rules.data.clock_started = true
 	reserve = training.rules.data.remaining
@@ -130,6 +141,10 @@ func run() -> void:
 		await process_frame
 		await process_frame
 		root.get_texture().get_image().save_png("res://.tools/rover_training_hud.png")
+		root.size = Vector2i(960, 540)
+		await process_frame
+		await process_frame
+		root.get_texture().get_image().save_png("res://.tools/rover_training_hud_small.png")
 	driver.stop_control()
 	print("ROVER TRAINING WORLD: %d failures / %d assertions" % [failures, assertions])
 	quit(failures)

@@ -3,9 +3,11 @@ extends Area3D
 var target_id := ""
 var caption: Label3D
 var marker: MeshInstance3D
+var base_tint := Color.WHITE
 
 func setup(id: String, title: String, tint: Color) -> void:
 	target_id = id
+	base_tint = tint
 	name = "Target_" + id
 	collision_layer = 128
 	collision_mask = 0

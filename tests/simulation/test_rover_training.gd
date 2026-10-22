@@ -78,5 +78,18 @@ func run() -> void:
 	check(save.decode(captured).is_empty(), "Corrupt telemetry rejected")
 	captured.state.erase("rover_training")
 	check(not save.decode(captured).is_empty(), "Older saves remain compatible")
+	model.begin(2, 480.0)
+	model.tick(12, true, false, false, 100, 0.012)
+	model.record_scan("astronaut")
+	model.complete_action("astronaut")
+	model.complete_action("astronaut")
+	session.dashboard_state.rover_training = model.data
+	captured = save.capture(session)
+	var restored: Dictionary = save.decode(captured)
+	check(restored.state.rover_training == model.data, "Partial rescue restores reserve, kit, stabilization and progress")
+	model.data.remaining = 1.0
+	check(restored.state.rover_training.remaining == 468, "Save data is an independent snapshot")
+	captured.state.rover_training.relay = true
+	check(save.decode(captured).is_empty(), "Out-of-sequence relay save is rejected")
 	print("ROVER TRAINING RULES: %d failures / %d assertions" % [failures, assertions])
 	quit(failures)
