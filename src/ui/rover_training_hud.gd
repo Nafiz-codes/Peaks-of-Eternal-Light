@@ -7,6 +7,7 @@ var detail: Label
 var prompt: Label
 var progress: ProgressBar
 var result: Label
+var waypoint: Label
 
 func _ready() -> void:
 	layer = 86
@@ -14,6 +15,15 @@ func _ready() -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
+	waypoint = Label.new()
+	waypoint.custom_minimum_size.x = 280
+	waypoint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	waypoint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	waypoint.add_theme_font_size_override("font_size", 22)
+	waypoint.add_theme_color_override("font_color", Color("83e8ef"))
+	waypoint.add_theme_color_override("font_outline_color", Color.BLACK)
+	waypoint.add_theme_constant_override("outline_size", 7)
+	root.add_child(waypoint)
 	panel = PanelContainer.new()
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(panel)
@@ -75,3 +85,8 @@ func render(view: Dictionary) -> void:
 	progress.value = view.progress * 100.0
 	progress.visible = view.progress > 0.0
 	result.text = view.result
+	var navigation: Dictionary = view.get("navigation", {})
+	waypoint.visible = not navigation.is_empty()
+	if waypoint.visible:
+		waypoint.text = navigation.label
+		waypoint.position = navigation.screen

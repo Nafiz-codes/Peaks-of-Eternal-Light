@@ -6,7 +6,7 @@ const UI = preload("res://src/ui/ui_style.gd")
 const Simulator = preload("res://src/simulation/mission_simulator.gd")
 const OutpostPreview = preload("res://src/ui/outpost_preview.gd")
 const EventScene = preload("res://scenes/event_preview.tscn")
-const MISSION_LENGTH := 10
+const MISSION_LENGTH := 7
 const SITE_FIELDS := {"illumination_pct": ["Illumination", "%"], "elevation_m": ["Elevation", "m"], "slope_deg": ["Slope", "degrees"], "hydrogen_ppm": ["Hydrogen potential", "ppmw H"]}
 const REQUIRED_SITE_FIELDS := ["illumination_pct", "elevation_m", "slope_deg"]
 
@@ -158,7 +158,7 @@ func _brief(key: String, fallback: String) -> String:
 func show_sites() -> void:
 	_new_page("sites", "Choose your landing site")
 	column.add_child(UI.label(_brief("opening", "Establish a lunar outpost and sustain your crew.")))
-	column.add_child(UI.label(_brief("primary_objective", "Sustain the crew through Sol 10."), 16, UI.PURPLE))
+	column.add_child(UI.label(_brief("primary_objective", "Sustain the crew through Sol 7."), 16, UI.PURPLE))
 	column.add_child(UI.label(_brief("science_notice", "Hydrogen indicates resource potential, not guaranteed water."), 14, UI.MUTED))
 	sites_grid = GridContainer.new()
 	sites_grid.add_theme_constant_override("h_separation", 12)

@@ -5,7 +5,7 @@ extends RefCounted
 ## rather than calculating resource changes itself.
 
 var sol: int = 0
-var mission_length_sols: int = 10
+var mission_length_sols: int = 7
 var site_id: String = ""
 var crew_size: int = 0
 var power_kwh: float = 0.0

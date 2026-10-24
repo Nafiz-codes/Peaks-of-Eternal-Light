@@ -24,11 +24,13 @@ var session: Node
 var health_bar: ProgressBar
 var repair_label: Label3D
 var contacts: Dictionary = {}
+var impact_cooldown := 0.0
 enum Power { INACTIVE, STARTING, READY }
 var power_state := Power.INACTIVE
 var takeover: CanvasLayer
 var camera_yaw := 0.0
 var camera_elevation := 0.38
+var boost_held := false
 
 func _ready() -> void:
 	world = get_parent()
@@ -125,14 +127,26 @@ func _apply_collision_damage(incoming: Vector3) -> void:
 			continue
 		var id := collision.get_collider_id()
 		touching[id] = true
-		var impact := maxf(0.0, -incoming.dot(collision.get_normal()))
-		if not contacts.has(id) and impact > 0.1:
-			damage = maxf(damage, maxf(5.0, 35.0 * impact * impact))
+		if not contacts.has(id) and impact_cooldown <= 0:
+			damage = maxf(damage, impact_damage(collision.get_collider(), collision.get_normal(), incoming))
 	contacts = touching
 	if damage > 0.0:
+		impact_cooldown = 1.0
 		observed_state.rover_health = maxf(0.0, observed_state.rover_health - damage)
 		_update_health()
 		session.state_changed.emit()
+
+static func impact_damage(collider: Node, normal: Vector3, incoming: Vector3) -> float:
+	var ancestor := collider
+	while ancestor != null:
+		if ancestor.has_meta("crew_id") or ancestor.get_meta("rover_target", "") == "astronaut" or ancestor.has_meta("rover_safe_terrain"):
+			return 0.0
+		ancestor = ancestor.get_parent()
+	# Only a substantial horizontal impact with a solid obstacle causes damage.
+	if absf(normal.y) > 0.35:
+		return 0.0
+	var impact := maxf(0.0, -Vector3(incoming.x, 0, incoming.z).dot(normal))
+	return clampf(8.0 * impact * impact, 0, 30) if impact >= 0.65 else 0.0
 
 func available() -> bool:
 	var access := world.get_node_or_null("LanderAccess")
@@ -161,6 +175,7 @@ func stop_control() -> void:
 	if not active:
 		return
 	active = false
+	boost_held = false
 	takeover.cancel()
 	get_node("/root/GameAudio").cancel_rover_startup(self)
 	power_state = Power.INACTIVE
@@ -192,8 +207,21 @@ func sync_state() -> void:
 	velocity = Vector3.ZERO
 	_sync_visual(1.0)
 	rover.get_node("Wheels").reset()
+	_settle_parked()
+
+func _settle_parked() -> void:
+	await get_tree().physics_frame
+	if not is_inside_tree() or active: return
+	var query := PhysicsRayQueryParameters3D.create(global_position + Vector3.UP * 100, global_position - Vector3.UP * 200, 1, [get_rid()])
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if not hit.is_empty() and hit.normal.y >= cos(floor_max_angle):
+		global_position.y = hit.position.y + 0.65
+		velocity = Vector3.ZERO
+		_sync_visual(1.0)
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.physical_keycode == KEY_SHIFT and event.location == KEY_LOCATION_LEFT:
+		boost_held = event.pressed
 	if event is InputEventMouseMotion and active and power_state == Power.READY and not get_tree().paused and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var expedition := world.get_node_or_null("RoverTraining")
 		if expedition == null or not expedition.transitioning:
@@ -223,6 +251,7 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 func _physics_process(delta: float) -> void:
+	if not Input.is_physical_key_pressed(KEY_SHIFT): boost_held = false
 	if not active:
 		return
 	if not available() or not session.can_advance():
@@ -234,6 +263,7 @@ func _physics_process(delta: float) -> void:
 func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void:
 	if not active or not available() or not session.can_advance() or get_tree().paused:
 		return
+	impact_cooldown = maxf(0, impact_cooldown - delta)
 	if observed_state.rover_health <= 0.0:
 		speed = 0.0
 		velocity = Vector3.ZERO
@@ -249,16 +279,18 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 		throttle = 0.0
 		turn = 0.0
 		brake = true
-	var target := clampf(throttle, -1, 1) * (MAX_SPEED if throttle >= 0 else REVERSE_SPEED)
+	var boost := 2.0 if boost_held else 1.0
+	var target := clampf(throttle, -1, 1) * (MAX_SPEED if throttle >= 0 else REVERSE_SPEED) * boost
 	if training != null and training.has_method("speed_limit"):
 		var limit: float = training.speed_limit(throttle)
+		if limit >= MAX_SPEED: limit *= boost
 		target = clampf(target,-limit,limit)
 		if limit == 0.0:
 			speed = 0.0
 			brake = true
 	var deceleration := brake or is_zero_approx(throttle) or speed * throttle < 0
 	if is_on_floor():
-		speed = move_toward(speed, 0.0 if brake else target, (BRAKING if deceleration else ACCELERATION) * delta)
+		speed = move_toward(speed, 0.0 if brake else target, (BRAKING * 2.0 if deceleration or absf(speed) > absf(target) else ACCELERATION * boost) * delta)
 	steering = move_toward(steering, clampf(turn, -1, 1) * MAX_STEER, 0.7 * delta)
 	# Reverse travel reverses the turn; stationary steering cannot spin the rover.
 	if is_on_floor():
@@ -291,7 +323,7 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 	rover.get_node("Wheels").update_motion(travel, steering, WHEELBASE)
 	_sync_visual(delta)
 	_update_camera()
-	status.text = "LANDER / ROVER REMOTE CAMERA\nW/S: forward / reverse · A/D: steer · Space: brake\nMouse: look around · R: return · Esc: pause\nSpeed %.2f m/s · Travel %.1f m" % [absf(speed), observed_state.rover_total_distance_km * 1000.0]
+	status.text = "LANDER / ROVER REMOTE CAMERA\nW/S: drive · A/D: steer · Left Shift: 2× speed · Space: brake\nMouse: look around · R: return · Esc: pause\nSpeed %.2f m/s · Travel %.1f m" % [absf(speed), observed_state.rover_total_distance_km * 1000.0]
 	publish_elapsed += delta
 	if publish_elapsed >= 0.25:
 		publish_elapsed = 0.0
@@ -306,6 +338,20 @@ func _sync_visual(delta: float) -> void:
 	var right := normal.cross(forward).normalized()
 	var target := Basis(right, forward.cross(right).normalized(), forward).orthonormalized()
 	rover.basis = rover.basis.slerp(target, minf(1, delta * 5)).orthonormalized()
+	# The upright collision box rests on its uphill edge. Place the visual tires
+	# against the surface independently so that this does not lift the whole model.
+	var support := 0.0
+	var samples := 0
+	for wheel in rover.get_node("Wheels").wheels:
+		var offset: Vector3 = rover.basis * wheel.center
+		var point := global_position + Vector3(offset.x, 0, offset.z)
+		var query := PhysicsRayQueryParameters3D.create(point + Vector3.UP, point - Vector3.UP * 2.5, 1, [get_rid()])
+		var hit := get_world_3d().direct_space_state.intersect_ray(query)
+		if not hit.is_empty() and hit.normal.y >= cos(floor_max_angle):
+			support += hit.position.y - offset.y + wheel.radius
+			samples += 1
+	if samples >= 3 and (is_on_floor() or absf(velocity.y) < 0.1):
+		rover.global_position.y = support / samples
 
 func _takeover_finished() -> void:
 	if active and power_state == Power.STARTING:

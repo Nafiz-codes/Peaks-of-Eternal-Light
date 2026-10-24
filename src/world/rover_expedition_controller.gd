@@ -52,7 +52,7 @@ func _ready() -> void:
 	add_child(landscape)
 	departure = Circle.new()
 	add_child(departure)
-	departure.position = Vector3(18,0,8)
+	departure.position = Vector3(32,0,12)
 	_label_circle(departure,"EXPEDITION DEPARTURE\nStop in the circle")
 	extraction = Circle.new()
 	add_child(extraction)
@@ -246,6 +246,24 @@ func _stand() -> void:
 
 func remote_ready() -> bool:
 	return driver.active and driver.power_state == driver.Power.READY and not transitioning and not get_tree().paused and session.can_advance()
+
+func developer_select_mission(index: int) -> bool:
+	if not OS.is_debug_build() or not session.DEV_SOL_SKIP_ENABLED or index < 0 or index >= Rules.TITLES.size(): return false
+	if get_tree().paused or transitioning or driver.active or session.action_busy: return false
+	if not data.is_empty() and data.location != "outpost": return false
+	if session.start_selected_mission() != OK: return false
+	if session.dashboard_state.mission_outcome.status != "in_progress": return false
+	var fresh: Dictionary = Rules.fresh()
+	fresh.mission = index
+	session.dashboard_state.rover_expedition = fresh
+	session.dashboard_state.sol = maxi(session.dashboard_state.sol, Rules.SOLS[index])
+	bound_state = null
+	_sync()
+	_refresh_targets()
+	feedback = "DEV: selected " + Rules.TITLES[index] + ". Drive to departure."
+	session.state_changed.emit()
+	session.capture_sol_checkpoint()
+	return true
 func locks_drive() -> bool:
 	return transitioning or busy_id != "" or dialogue > 0
 func speed_limit(throttle: float = 0.0) -> float:
@@ -398,7 +416,7 @@ func _recall() -> void:
 	tween.tween_property(fade,"color:a",1.0,0.65)
 	await tween.finished
 	if token != generation: return
-	_place_rover(Vector3(18,ground_y(Vector3(18,0,16)),16))
+	_place_rover(Vector3(32,ground_y(Vector3(32,0,20)),20))
 	data.location = "outpost"
 	data.phase = "active"
 	escort_link = false
@@ -475,7 +493,7 @@ func _transition(outward: bool) -> void:
 			await _arrival()
 			if token != generation: return
 		else:
-			_place_rover(Vector3(18,ground_y(Vector3(18,0,16)),16))
+			_place_rover(Vector3(32,ground_y(Vector3(32,0,20)),20))
 		data.location = "outpost"
 		if not data.completed.has(data.mission): data.completed.append(data.mission)
 		feedback = Rules.TITLES[data.mission].to_upper()+" COMPLETE"
@@ -540,7 +558,7 @@ func _arrival() -> void:
 	tween.tween_property(fade,"color:a",1.0,0.5)
 	await tween.finished
 	if token != generation: return
-	_place_rover(Vector3(18,ground_y(Vector3(18,0,16)),16))
+	_place_rover(Vector3(32,ground_y(Vector3(32,0,20)),20))
 	driver.camera.make_current()
 	cinematic_camera.queue_free()
 	cinematic_motion = false
@@ -583,7 +601,34 @@ func _publish() -> void:
 			details += "\nExtraction: %.0f m · bearing %.0f°" % [driver.position.distance_to(extraction.position),rad_to_deg(atan2(extraction.position.x-driver.position.x,extraction.position.z-driver.position.z))]
 		prompt += "\nEnter: suspend expedition and recover rover."
 	if bound_state.rover_health <= 0: prompt = "Enter: recover disabled rover to outpost for repair."
-	hud_changed.emit({"visible":driver.active and driver.power_state == driver.Power.READY and not transitioning,"title":title,"objective":objective,"telemetry":"SOL %d · HEADING %.0f° · LINK CONNECTED" % [bound_state.sol,rad_to_deg(driver.heading)],"detail":details,"prompt":prompt,"progress":busy_elapsed/6 if busy_id != "" else scanner.progress/scanner.duration,"result":feedback})
+	hud_changed.emit({"visible":driver.active and driver.power_state == driver.Power.READY and not transitioning,"title":title,"objective":objective,"telemetry":"SOL %d · HEADING %.0f° · LINK CONNECTED" % [bound_state.sol,rad_to_deg(driver.heading)],"detail":details,"prompt":prompt,"progress":busy_elapsed/6 if busy_id != "" else scanner.progress/scanner.duration,"result":feedback,"navigation":_navigation()})
+
+func _navigation() -> Dictionary:
+	if data.location != "expedition": return {}
+	var destination: Vector3 = extraction.global_position
+	var label := "EXTRACTION"
+	if not Rules.ready_to_return(data):
+		if data.mission < 2:
+			var id := _nearest(data.mission == 1)
+			if id == "": return {}
+			destination = targets[id].global_position
+			label = id.replace("_", " ").to_upper()
+		else:
+			destination = Terrain.point(Vector2(60, 230))
+			label = "SEARCH AREA"
+	var camera: Camera3D = driver.camera
+	var size := get_viewport().get_visible_rect().size
+	var screen := camera.unproject_position(destination + Vector3.UP * 2) - Vector2(140, 0)
+	var behind := camera.is_position_behind(destination)
+	if behind:
+		var side: float = (destination-camera.global_position).dot(camera.global_basis.x)
+		screen = Vector2(size.x-300 if side >= 0 else 30, size.y*0.55)
+	var edge := behind or screen.x < 30 or screen.x > size.x-300 or screen.y < 110 or screen.y > size.y-100
+	screen = screen.clamp(Vector2(30,110),Vector2(maxf(31,size.x-300),maxf(111,size.y-100)))
+	if screen.x + 280 > size.x - 420 and screen.y < size.y * 0.6:
+		screen.y = size.y * 0.65
+	var arrow := ("▶ " if screen.x > size.x*0.5 else "◀ ") if edge else "▼ "
+	return {"screen":screen,"label":arrow+label+" · %.0f m" % driver.global_position.distance_to(destination)}
 
 func _tone(frequency: float) -> void:
 	var stream := AudioStreamWAV.new()

@@ -26,6 +26,9 @@ func run() -> void:
 	await process_frame
 	var state: Variant = session.dashboard_state
 	check(state.sol == 2, "Calendar is Sol 2.")
+	var legacy: Dictionary = preload("res://src/runtime/mission_save.gd").capture(session)
+	legacy.state.mission_length_sols = 10
+	check(preload("res://src/runtime/mission_save.gd").decode(legacy).state.mission_length_sols == 7, "Legacy ten-Sol saves migrate to seven Sols.")
 	var power: float = state.power_kwh
 	var food: float = state.food_kg
 	var rules := preload("res://src/simulation/rover_expedition.gd")
@@ -44,9 +47,18 @@ func run() -> void:
 	state.rover_expedition.location = "expedition"
 	check(not session.developer_skip_sols(1), "Cannot skip with rover away.")
 	state.rover_expedition.location = "outpost"
-	check(session.developer_skip_sols(100) and state.sol == 9, "Jump clamps before final simulated Sol.")
+	check(not session.developer_skip_sols(100) and state.sol == 6, "Jump stops before final simulated Sol.")
 	check(not session.developer_skip_sols(1), "Final outcome cannot be bypassed.")
 	check(not preload("res://src/runtime/mission_save.gd").decode(session.sol_checkpoint).is_empty(), "Skipped calendar checkpoint remains loadable.")
+	var expedition := world.get_node("RoverTraining")
+	for mission in [2, 0, 1]:
+		check(expedition.developer_select_mission(mission), "Developer can select any mission out of order.")
+		check(rules.assigned(state.rover_expedition, state.sol) == mission, "Selected mission overrides normal scheduling.")
+		check(state.rover_expedition.samples.is_empty() and state.rover_expedition.surveys.is_empty(), "Selected operation starts fresh.")
+	check(not preload("res://src/runtime/mission_save.gd").decode(session.sol_checkpoint).is_empty(), "Developer-selected mission saves correctly.")
+	driver.position.y = 25
+	await driver._settle_parked()
+	check(driver.position.y < 1.0, "Floating parked rover is settled onto the surface.")
 	world.queue_free()
 	await process_frame
 	await create_timer(0.2).timeout

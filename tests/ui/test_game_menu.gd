@@ -92,8 +92,10 @@ func _run() -> void:
 	settings.values = previous_settings
 	settings.apply()
 	# Save a mission with a pending decision; its resolution and future events must survive.
-	while session.dashboard_state.pending_events.is_empty() and session.dashboard_state.sol < 8:
-		check(session.advance_mission(), "Can advance before pending decisions.")
+	if session.dashboard_state.pending_events.is_empty():
+		session.dashboard_state.pending_events.append(session.dashboard_simulator.events[1].duplicate(true))
+		session.state_changed.emit()
+		session.capture_sol_checkpoint()
 		await process_frame
 	before = Save.state_data(session.dashboard_state)
 	var slot: String = menu.slot_path(1)

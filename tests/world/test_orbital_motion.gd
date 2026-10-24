@@ -76,6 +76,19 @@ func run() -> void:
 	session.orbital_clock.elapsed_seconds = Model.MAX_ELAPSED - 1.0
 	motion.advance(2.0)
 	check(session.orbital_clock.paused and session.orbital_clock.elapsed_seconds == Model.MAX_ELAPSED, "Fit horizon stops clock")
+	session.orbital_clock = Model.default_clock()
+	session.start_selected_mission()
+	check(session.dashboard_state.mission_length_sols == 7, "Campaign lasts seven Sols")
+	motion.advance(100)
+	check(session.orbital_clock.elapsed_seconds == 0, "Waiting does not advance manual campaign calendar")
+	session.dashboard_state.sol = 3
+	motion.advance(12)
+	check(session.orbital_clock.elapsed_seconds == 3 * Model.DAY, "Sky follows mission Sol three")
+	motion.advance(100)
+	check(session.orbital_clock.elapsed_seconds == 3 * Model.DAY, "Sky stops at matching calendar time")
+	session.dashboard_state.sol = 7
+	motion.advance(16)
+	check(session.orbital_clock.elapsed_seconds == 7 * Model.DAY, "Seven Sols equals seven modeled days")
 	world.free()
 	print("Orbital motion: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)

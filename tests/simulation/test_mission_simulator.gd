@@ -126,7 +126,7 @@ func _init() -> void:
 
 
 func _run_full_mission(simulator: Object, site_id: String) -> void:
-	const MISSION_LENGTH := 10
+	const MISSION_LENGTH := 7
 	var state: Object = simulator.call("begin_mission", site_id, MISSION_LENGTH)
 	_assert(state.get("site_id") == site_id, "A mission preserves its selected site identifier.")
 	_assert(state.get("history").size() == 1, "A new mission records one initial snapshot.")
@@ -151,7 +151,7 @@ func _run_full_mission(simulator: Object, site_id: String) -> void:
 			var resolution: Dictionary = simulator.call("resolve_event_choice", state, str(pending.get("event_id", "")), choice_id)
 			_assert(resolution.get("ok", false), "%s resolves triggered event choices through the simulator." % site_id)
 
-	_assert(state.get("mission_outcome").get("status") == "success", "%s completes the balanced first-choice 10-sol baseline." % site_id)
+	_assert(state.get("mission_outcome").get("status") == "success", "%s completes the balanced first-choice 7-sol baseline." % site_id)
 
 
 func _assert(condition: bool, message: String) -> void:

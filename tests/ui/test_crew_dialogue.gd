@@ -45,8 +45,9 @@ func run() -> void:
 	session.advance_mission()
 	await process_frame
 	check("NEW UPDATE" in world.get_node("Outpost/power_console/StatusLabel").text, "Advancing a sol produces a fresh update.")
-	while session.dashboard_state.pending_events.is_empty() and session.dashboard_state.sol < 8:
-		session.advance_mission()
+	if session.dashboard_state.pending_events.is_empty():
+		session.dashboard_state.pending_events.append(session.dashboard_simulator.events[1].duplicate(true))
+		session.state_changed.emit()
 		await process_frame
 	check(not session.dashboard_state.pending_events.is_empty(), "A real mission decision is available.")
 	if not session.dashboard_state.pending_events.is_empty():

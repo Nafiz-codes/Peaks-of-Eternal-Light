@@ -64,7 +64,7 @@ func load_contracts() -> Error:
 	return OK
 
 
-func begin_mission(selected_site_id: String, mission_length: int = 10) -> Variant:
+func begin_mission(selected_site_id: String, mission_length: int = 7) -> Variant:
 	assert(not sites.is_empty(), "Call load_contracts() before begin_mission().")
 	assert(_find_site(selected_site_id) != null, "Unknown site_id: %s" % selected_site_id)
 

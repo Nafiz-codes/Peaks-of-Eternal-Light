@@ -109,6 +109,7 @@ func start_selected_mission() -> Error:
 		return ERR_INVALID_PARAMETER
 	dashboard_simulator = simulator
 	dashboard_state = simulator.begin_mission(selected_site_id)
+	orbital_clock.elapsed_seconds = 0.0
 	dashboard_last_tick = {}
 	capture_sol_checkpoint()
 	state_changed.emit()

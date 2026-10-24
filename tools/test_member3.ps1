@@ -21,6 +21,7 @@ $tests = @(
     'tests/world/test_orbital_motion.gd',
     'tests/world/test_sun_lighting.gd',
     'tests/world/test_live_operations.gd',
+    'tests/world/test_rover_impact_rules.gd',
     'tests/world/test_crew_fieldwork.gd',
     'tests/ui/test_crew_dialogue.gd',
     'tests/world/test_lander_interior.gd',

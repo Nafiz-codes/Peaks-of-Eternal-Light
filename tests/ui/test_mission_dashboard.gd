@@ -51,12 +51,12 @@ func _verify() -> void:
 		app.select_site(site.site_id)
 		check(not app.start_button.disabled, "Each current site should be selectable")
 		app.start_button.pressed.emit()
-		var reference: Variant = baseline.begin_mission(site.site_id, 10)
+		var reference: Variant = baseline.begin_mission(site.site_id, 7)
 		check(app.state.site_id == site.site_id and app.state.sol == 0, "Site selection should reach mission initialization")
 		var initial: Dictionary = app.state.snapshot()
 		app.start_mission()
 		check(app.state.snapshot() == initial, "Duplicate starts must not recreate state")
-		while reference.mission_outcome.status == "in_progress" and reference.sol < 10:
+		while reference.mission_outcome.status == "in_progress" and reference.sol < 7:
 			app.run_button.pressed.emit()
 			var once: int = app.state.sol
 			app.advance_turn()

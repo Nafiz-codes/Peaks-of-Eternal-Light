@@ -65,7 +65,7 @@ func _ready() -> void:
 		var skip_count := SpinBox.new()
 		skip_count.name = "DeveloperSolCount"
 		skip_count.min_value = 1
-		skip_count.max_value = 9
+		skip_count.max_value = 6
 		skip_count.value = 1
 		skip_count.prefix = "Sols: "
 		skip_count.tooltip_text = "Temporary developer calendar jump. Supplies and mission objectives are preserved."
@@ -78,6 +78,20 @@ func _ready() -> void:
 				notice.text = "DEV skip unavailable: return rover to outpost and stop control. Mission must be active; final Sol uses Run the sol.")
 		skip_button.name = "DeveloperSkipSols"
 		actions.add_child(skip_button)
+		var mission_choice := OptionButton.new()
+		mission_choice.name = "DeveloperRoverMission"
+		for title in preload("res://src/simulation/rover_expedition.gd").TITLES:
+			mission_choice.add_item(title)
+		actions.add_child(mission_choice)
+		var select_mission := UI.button("DEV: Select rover mission", func():
+			if _modal_visible(): return
+			if world.get_node("RoverTraining").developer_select_mission(mission_choice.selected):
+				notice.text = "DEV: mission selected with fresh objectives. Use the departure circle."
+			else:
+				notice.text = "Return to outpost and stop rover control first. Reset the campaign if it has ended.")
+		select_mission.name = "DeveloperSelectRoverMission"
+		select_mission.tooltip_text = "Testing override: replaces rover mission progress and advances to its unlock Sol."
+		actions.add_child(select_mission)
 	event_button = UI.button("Review decision", open_pending_event)
 	actions.add_child(event_button)
 	report_button = UI.button("Dashboard / report", open_dashboard)
@@ -178,7 +192,7 @@ func refresh() -> void:
 		readings.modulate = Color.WHITE
 	heading.text = str(world.site_record.get("name", "Lunar outpost"))
 	if state == null:
-		status.text = "READY / Start a 10-sol mission at this site."
+		status.text = "READY / Start a 7-sol mission at this site."
 		for key in values:
 			values[key].text = key + " / Awaiting mission"
 		run_button.text = "Start mission"

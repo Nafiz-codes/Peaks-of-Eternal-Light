@@ -130,8 +130,28 @@ func run() -> void:
 	check(driver.position.z > 8, "Rover clears a low ledge without getting stuck.")
 	check(state.rover_health == curb_health, "Traversable ledges do not inflict wall-impact damage.")
 	check(is_equal_approx(driver.speed, 2.4), "Actual forward motion reaches doubled speed without expedition cap.")
+	var shift := InputEventKey.new()
+	shift.physical_keycode = KEY_SHIFT
+	shift.location = KEY_LOCATION_LEFT
+	shift.pressed = true
+	driver._input(shift)
+	await drive(driver, 120, 1, 0)
+	check(is_equal_approx(driver.speed, 4.8), "Left Shift doubles forward speed.")
+	shift.pressed = false
+	driver._input(shift)
+	await drive(driver, 60, 1, 0)
+	check(is_equal_approx(driver.speed, 2.4), "Releasing Left Shift restores normal speed.")
+	for wheel in tires.wheels:
+		var bottom: Vector3 = driver.rover.global_transform * wheel.center - Vector3.UP * wheel.radius
+		check(absf(bottom.y - 100.0) < 0.03, "Visual tire rests on platform surface.")
 	await drive(driver, 180, -1, 0)
 	check(is_equal_approx(driver.speed, -1.0), "Reverse reaches doubled speed.")
+	shift.pressed = true
+	driver._input(shift)
+	await drive(driver, 60, -1, 0)
+	check(is_equal_approx(driver.speed, -2.0), "Left Shift doubles reverse speed.")
+	shift.pressed = false
+	driver._input(shift)
 	driver.position = saved_position
 	driver.heading = original_heading
 	driver.speed = 0
@@ -150,6 +170,14 @@ func run() -> void:
 	barrier.rotation.y = driver.heading
 	var approach: Vector3 = driver.position
 	var health_before: float = state.rover_health
+	barrier.set_meta("crew_id", "engineer")
+	await drive(driver, 240, 1, 0)
+	check(state.rover_health == health_before, "Astronaut collision blocks rover without damaging it.")
+	barrier.remove_meta("crew_id")
+	driver.position = approach
+	driver.speed = 0
+	driver.velocity = Vector3.ZERO
+	driver.contacts.clear()
 	await drive(driver, 240, 1, 0)
 	check(driver.position.distance_to(approach) < 2.0, "Obstacle blocks kinematic hull.")
 	check(state.rover_health < health_before, "Crashing into a hard barrier damages rover health.")

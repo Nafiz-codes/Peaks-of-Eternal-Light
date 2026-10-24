@@ -7,9 +7,9 @@ const SITES := {"alpha": Vector2(-100, 80), "beta": Vector2(-185, 205), "gamma":
 static func height_at(x: float, z: float) -> float:
 	var p := Vector2(x,z)
 	var h := 1.8 * sin(x * 0.017) * sin(z * 0.014)
-	for ridge in [Vector4(-210,170,26,65),Vector4(260,230,35,60),Vector4(20,350,38,65)]:
+	for ridge in [Vector4(-210,170,26,65),Vector4(260,230,35,60),Vector4(20,350,38,65),Vector4(-285,-120,19,70),Vector4(230,-145,22,80),Vector4(-315,320,16,65),Vector4(330,40,18,65)]:
 		h += ridge.z * exp(-pow((x-ridge.x)/ridge.w,2) - pow((z-ridge.y)/125.0,2))
-	for crater in [Vector3(-20,300,38),Vector3(130,310,48),Vector3(70,150,22)]:
+	for crater in [Vector3(-20,300,38),Vector3(130,310,48),Vector3(70,150,22),Vector3(-150,-100,35),Vector3(180,-80,40),Vector3(-290,60,30),Vector3(310,310,32),Vector3(-110,350,28)]:
 		var r: float = p.distance_to(Vector2(crater.x,crater.y))/crater.z
 		h += 3.0*exp(-pow((r-1.0)/0.23,2))-4.0*exp(-pow(r/0.7,2))
 	return h * smoothstep(12,45,p.length())
@@ -27,6 +27,7 @@ func _ready() -> void:
 				surface.add_vertex(Vector3(p.x,height_at(p.x,p.y),p.y))
 	surface.generate_normals()
 	var ground := MeshInstance3D.new()
+	ground.set_meta("rover_safe_terrain", true)
 	ground.mesh = surface.commit()
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://src/world/regolith.gdshader")

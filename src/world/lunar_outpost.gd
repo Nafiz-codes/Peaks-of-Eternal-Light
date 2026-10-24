@@ -239,6 +239,7 @@ func _add_lighting() -> void:
 
 func _add_terrain() -> void:
 	var ground := preload("res://src/world/outpost_terrain.gd").build(site_record)
+	ground.set_meta("rover_safe_terrain", true)
 	add_child(ground)
 	ground.create_trimesh_collision()
 	ground.get_child(0).name = "LunarSurfaceCollision"
@@ -311,6 +312,14 @@ func _add_solar_array(parent: Node3D) -> void:
 		child.free()
 	array.position = Vector3(-6.0, 0.0, -5.5)
 	parent.add_child(array)
+	var orbit := preload("res://src/world/orbital_model.gd")
+	var sunlight := Vector3.ZERO
+	# Fixed mounting optimized for the seven-day mission's above-horizon Sun.
+	for hour in range(169):
+		var sample: Dictionary = orbit.observer(orbit.days_from_j2000(hour * 3600.0), site_record.coordinates.latitude_deg, site_record.coordinates.longitude_deg)
+		if sample.sun_direction.y > 0:
+			sunlight += sample.sun_direction
+	var azimuth := atan2(sunlight.x, sunlight.z) if sunlight.length_squared() > 0.001 else 0.0
 	for index in range(2):
 		# Fit an identity wrapper so the GLB root's authored transform is included.
 		var panel := Node3D.new()
@@ -318,9 +327,25 @@ func _add_solar_array(parent: Node3D) -> void:
 		array.add_child(panel)
 		panel.add_child(preload("res://Assets/expedition/solar_panel.glb").instantiate())
 		preload("res://src/world/imported_asset_fit.gd").fit(panel, 3.0)
+		panel.rotation.y = azimuth
 		# Both footprints are inside every site's level landing pad (height zero).
 		# Bury the frame feet slightly to avoid a visible daylight gap.
 		panel.position += Vector3(-1.8 if index == 0 else 1.8, -0.015, 0)
+		# Rotated bounding boxes include empty space below the real frame feet.
+		var lowest := INF
+		var minimum := Vector3(INF, INF, INF)
+		var maximum := Vector3(-INF, -INF, -INF)
+		for mesh in panel.find_children("*", "MeshInstance3D", true, false):
+			for vertex in mesh.mesh.get_faces():
+				var point: Vector3 = mesh.global_transform * vertex
+				lowest = minf(lowest, point.y)
+				minimum = minimum.min(point)
+				maximum = maximum.max(point)
+		if is_finite(lowest):
+			panel.global_position.y -= lowest + 0.015
+			var center := (minimum + maximum) * 0.5
+			panel.global_position.x += -6.0 + (-1.8 if index == 0 else 1.8) - center.x
+			panel.global_position.z += -5.5 - center.z
 
 func _add_astronaut(parent: Node3D) -> void:
 	var astronaut := LunarAstronautScript.new()

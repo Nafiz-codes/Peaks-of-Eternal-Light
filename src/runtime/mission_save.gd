@@ -90,6 +90,11 @@ static func decode(data: Variant) -> Dictionary:
 				return {}
 		if not state.mission_outcome.get("status", "") in ["in_progress", "success", "failure"]:
 			return {}
+		if state.mission_length_sols == 10:
+			state.mission_length_sols = 7
+			state.sol = mini(state.sol, 7)
+			state.mission_outcome = simulator._evaluate_mission_outcome(state)
+			simulator._update_report_data(state)
 	var pose: Dictionary = data.pose
 	if not pose.is_empty():
 		if pose.get("site_id") != data.site_id or not pose.get("transform") is Transform3D or not pose.get("yaw") is float or not pose.get("pitch") is float:
@@ -112,6 +117,8 @@ static func restore(session: Node, data: Dictionary) -> Error:
 	session.outpost_pose = restored.pose
 	session.crew_read_reports = restored.crew_read_reports
 	session.orbital_clock = restored.orbital_clock
+	if restored.state != null:
+		session.orbital_clock.elapsed_seconds = restored.state.sol * preload("res://src/world/orbital_model.gd").DAY
 	session.action_busy = false
 	session.return_scene_path = ""
 	return OK
