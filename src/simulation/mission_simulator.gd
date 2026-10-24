@@ -11,14 +11,14 @@ const CONSTRUCTION_PATH := "res://Resources/construction.json"
 const EVENTS_PATH := "res://Resources/events.json"
 const MissionStateScript = preload("res://src/simulation/mission_state.gd")
 
-# Gameplay start reserve tuned on Day 16 so a first-choice 10-sol route has a
-# narrow recovery margin at the disclosed 50% illumination model.
-const INITIAL_POWER_KWH := 170.0
-const INITIAL_WATER_L := 400.0
-const INITIAL_OXYGEN_KG := 45.0
-const INITIAL_FOOD_KG := 30.0
+# Five-person provisioning: retain the previous ten-sol reserve margin while
+# accounting for the player (12 kWh/sol extra baseline, 25% more consumables).
+const INITIAL_POWER_KWH := 290.0
+const INITIAL_WATER_L := 500.0
+const INITIAL_OXYGEN_KG := 56.25
+const INITIAL_FOOD_KG := 37.5
 const INITIAL_MATERIALS := 180.0
-const BATTERY_CAPACITY_KWH := 180.0
+const BATTERY_CAPACITY_KWH := 300.0
 
 ## NASA NESC Table 8.4-2: unshielded lunar-surface GCR effective dose during
 ## the 2009 solar minimum. CRaTER supplies the observational radiation context;

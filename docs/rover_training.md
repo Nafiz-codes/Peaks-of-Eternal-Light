@@ -1,5 +1,7 @@
 # Rover mission training — implementation and review
 
+**Campaign update:** normal gameplay now uses the scheduled expedition campaign described in [rover_expeditions.md](rover_expeditions.md). This document describes the earlier sequential training implementation, retained for legacy-save/rules reference; its outpost training controls and pickup ending no longer describe the campaign.
+
 ## Review against the existing game
 
 The supplied mission prompt fits the current uncrewed rover, but its suggested new autoloads would duplicate existing ownership. Godot 4.7.2 is installed in `.tools/godot`; `project.godot` targets Godot 4.7 with the Compatibility renderer.

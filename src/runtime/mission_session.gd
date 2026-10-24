@@ -17,6 +17,33 @@ var sol_checkpoint: Dictionary = {}
 var crew_read_reports: Dictionary = {}
 var orbital_clock: Dictionary = preload("res://src/world/orbital_model.gd").default_clock()
 const Save = preload("res://src/runtime/mission_save.gd")
+# Temporary development aid. Set false (or remove this method/UI) before release.
+const DEV_SOL_SKIP_ENABLED := true
+
+func developer_skip_sols(count: int) -> bool:
+	if not DEV_SOL_SKIP_ENABLED or not OS.is_debug_build() or count <= 0 or action_busy or get_tree().paused:
+		return false
+	var scene := get_tree().current_scene
+	if scene != null:
+		var driver := scene.get_node_or_null("RoverHull")
+		var access := scene.get_node_or_null("LanderAccess")
+		if (driver != null and driver.active) or (access != null and access.busy):
+			return false
+	if start_selected_mission() != OK:
+		return false
+	if dashboard_state.mission_outcome.get("status", "") != "in_progress" or dashboard_state.rover_expedition.get("location", "outpost") != "outpost":
+		return false
+	# Calendar-only jump: retain supplies, decisions, and incomplete objectives.
+	# Leave the final Sol to the simulator so it can generate a valid outcome.
+	var target := mini(dashboard_state.sol + count, dashboard_state.mission_length_sols - 1)
+	if target <= dashboard_state.sol:
+		return false
+	dashboard_state.sol = target
+	dashboard_state.rover_distance_this_sol_km = 0.0
+	dashboard_last_tick = {}
+	state_changed.emit()
+	capture_sol_checkpoint()
+	return true
 
 func remember_pose() -> void:
 	var scene := get_tree().current_scene
@@ -95,6 +122,8 @@ func can_advance() -> bool:
 func advance_mission() -> bool:
 	if not can_advance():
 		return false
+	if dashboard_state.rover_expedition.get("location", "outpost") == "expedition":
+		return false # Finish or recall the remote expedition before advancing the Sol.
 	action_busy = true
 	dashboard_last_tick = dashboard_simulator.advance_sol(dashboard_state)
 	dashboard_state = dashboard_last_tick.state

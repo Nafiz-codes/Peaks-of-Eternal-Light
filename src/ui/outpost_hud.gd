@@ -61,6 +61,23 @@ func _ready() -> void:
 	content.add_child(actions)
 	run_button = UI.button("Start mission", advance_turn)
 	actions.add_child(run_button)
+	if session.DEV_SOL_SKIP_ENABLED and OS.is_debug_build():
+		var skip_count := SpinBox.new()
+		skip_count.name = "DeveloperSolCount"
+		skip_count.min_value = 1
+		skip_count.max_value = 9
+		skip_count.value = 1
+		skip_count.prefix = "Sols: "
+		skip_count.tooltip_text = "Temporary developer calendar jump. Supplies and mission objectives are preserved."
+		actions.add_child(skip_count)
+		var skip_button := UI.button("DEV: Skip Sols", func():
+			if _modal_visible(): return
+			if session.developer_skip_sols(int(skip_count.value)):
+				notice.text = "DEV: jumped to Sol %d. No supplies consumed or objectives completed. Pending decisions remain." % session.dashboard_state.sol
+			else:
+				notice.text = "DEV skip unavailable: return rover to outpost and stop control. Mission must be active; final Sol uses Run the sol.")
+		skip_button.name = "DeveloperSkipSols"
+		actions.add_child(skip_button)
 	event_button = UI.button("Review decision", open_pending_event)
 	actions.add_child(event_button)
 	report_button = UI.button("Dashboard / report", open_dashboard)

@@ -1,10 +1,12 @@
 extends CharacterBody3D
 
 ## Slow teleoperation with bicycle steering. Speeds are gameplay tuning values.
-const MAX_SPEED := 1.2
-const REVERSE_SPEED := 0.5
-const ACCELERATION := 0.35
-const BRAKING := 0.9
+const MAX_SPEED := 2.4
+const REVERSE_SPEED := 1.0
+const ACCELERATION := 0.7
+const BRAKING := 1.8
+const STEP_HEIGHT := 0.3
+const MOUSE_SENSITIVITY := 0.003
 const WHEELBASE := 2.2
 const MAX_STEER := 0.55
 var active := false
@@ -25,6 +27,8 @@ var contacts: Dictionary = {}
 enum Power { INACTIVE, STARTING, READY }
 var power_state := Power.INACTIVE
 var takeover: CanvasLayer
+var camera_yaw := 0.0
+var camera_elevation := 0.38
 
 func _ready() -> void:
 	world = get_parent()
@@ -190,8 +194,18 @@ func sync_state() -> void:
 	rover.get_node("Wheels").reset()
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion and active and power_state == Power.READY and not get_tree().paused and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		var expedition := world.get_node_or_null("RoverTraining")
+		if expedition == null or not expedition.transitioning:
+			_apply_mouse_look(event.relative)
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_R and (active or available()):
+			var expedition := world.get_node_or_null("RoverTraining")
+			if expedition != null and expedition.get("transitioning") == true:
+				get_viewport().set_input_as_handled()
+				return
 			if active and power_state == Power.STARTING:
 				pass # Repeated takeover requests cannot restart or cancel the cinematic.
 			elif active:
@@ -236,6 +250,12 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 		turn = 0.0
 		brake = true
 	var target := clampf(throttle, -1, 1) * (MAX_SPEED if throttle >= 0 else REVERSE_SPEED)
+	if training != null and training.has_method("speed_limit"):
+		var limit: float = training.speed_limit(throttle)
+		target = clampf(target,-limit,limit)
+		if limit == 0.0:
+			speed = 0.0
+			brake = true
 	var deceleration := brake or is_zero_approx(throttle) or speed * throttle < 0
 	if is_on_floor():
 		speed = move_toward(speed, 0.0 if brake else target, (BRAKING if deceleration else ACCELERATION) * delta)
@@ -250,6 +270,7 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 	velocity.y -= 1.62 * delta
 	var before := global_position
 	var incoming := velocity
+	_try_step(Vector3(velocity.x, 0, velocity.z) * delta)
 	move_and_slide()
 	var metres := Vector2(global_position.x - before.x, global_position.z - before.z).length()
 	if metres > 0.000001:
@@ -262,7 +283,7 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 			_sync_visual(delta)
 			return
 	_apply_collision_damage(incoming)
-	if is_on_wall():
+	if is_on_wall() and metres < absf(speed) * delta * 0.1:
 		speed = 0.0
 	observed_state.rover_pose = {"position": position, "heading": heading}
 	# Roll only for accepted displacement, including reverse and collision stops.
@@ -270,7 +291,7 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 	rover.get_node("Wheels").update_motion(travel, steering, WHEELBASE)
 	_sync_visual(delta)
 	_update_camera()
-	status.text = "LANDER / ROVER REMOTE CAMERA\nW/S: forward / reverse · A/D: steer · Space: brake\nR: return to lander · Esc: pause\nSpeed %.2f m/s · Travel %.1f m" % [absf(speed), observed_state.rover_total_distance_km * 1000.0]
+	status.text = "LANDER / ROVER REMOTE CAMERA\nW/S: forward / reverse · A/D: steer · Space: brake\nMouse: look around · R: return · Esc: pause\nSpeed %.2f m/s · Travel %.1f m" % [absf(speed), observed_state.rover_total_distance_km * 1000.0]
 	publish_elapsed += delta
 	if publish_elapsed >= 0.25:
 		publish_elapsed = 0.0
@@ -297,7 +318,52 @@ func _exit_tree() -> void:
 	var audio := get_node_or_null("/root/GameAudio")
 	if audio: audio.cancel_rover_startup(self)
 
+func _apply_mouse_look(relative: Vector2) -> void:
+	if not active or power_state != Power.READY or get_tree().paused:
+		return
+	var settings := get_node_or_null("/root/GameSettings")
+	var sensitivity := MOUSE_SENSITIVITY * (float(settings.values.sensitivity) if settings != null else 1.0)
+	var vertical := -1.0 if settings != null and settings.values.invert_y else 1.0
+	camera_yaw = wrapf(camera_yaw - relative.x * sensitivity, -PI, PI)
+	camera_elevation = clampf(camera_elevation + relative.y * sensitivity * vertical, 0.12, 1.2)
+	_update_camera()
+
+func _try_step(motion: Vector3) -> void:
+	if not is_on_floor() or motion.length_squared() < 0.00000001:
+		return
+	var hit := KinematicCollision3D.new()
+	var probe := motion.normalized() * maxf(motion.length(), 0.08)
+	if not test_move(global_transform, probe, hit, safe_margin, false, 8):
+		return
+	var wall := false
+	for index in range(hit.get_collision_count()):
+		wall = wall or hit.get_normal(index).dot(Vector3.UP) < cos(floor_max_angle)
+	if not wall:
+		return
+	# Lift only when the entire hull clears the ledge and has walkable support.
+	var lift := Vector3.UP * STEP_HEIGHT
+	if test_move(global_transform, lift):
+		return
+	var raised := global_transform
+	raised.origin += lift
+	if test_move(raised, probe):
+		return
+	raised.origin += probe
+	if not test_move(raised, Vector3.DOWN * (STEP_HEIGHT + floor_snap_length), hit):
+		return
+	if hit.get_normal().dot(Vector3.UP) < cos(floor_max_angle):
+		return
+	global_position += lift
+	velocity.y = 0.0
+
 func _update_camera() -> void:
-	var forward := Vector3(sin(heading), 0, cos(heading))
-	camera.global_position = global_position - forward * 6 + Vector3(0, 3, 0)
-	camera.look_at(global_position + Vector3(0, 0.6, 0), Vector3.UP)
+	var view_heading := heading + camera_yaw
+	var forward := Vector3(sin(view_heading), 0, cos(view_heading))
+	var focus := global_position + Vector3(0, 0.6, 0)
+	var desired := focus - forward * (6.5 * cos(camera_elevation)) + Vector3.UP * (6.5 * sin(camera_elevation))
+	var query := PhysicsRayQueryParameters3D.create(focus, desired)
+	query.exclude = [get_rid()]
+	var obstruction := get_world_3d().direct_space_state.intersect_ray(query)
+	camera.global_position = desired if obstruction.is_empty() else obstruction.position + obstruction.normal * 0.2
+	if camera.global_position.distance_squared_to(focus) > 0.01:
+		camera.look_at(focus, Vector3.UP)

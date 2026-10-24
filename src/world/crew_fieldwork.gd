@@ -151,6 +151,8 @@ func _physics_process(delta: float) -> void:
 		return
 	elapsed += delta
 	for id in IDS:
+		if id == "crew_briefing" and not state.rover_expedition.is_empty() and state.sol >= 6 and not state.rover_expedition.completed.has(2):
+			continue
 		_tick(id, delta)
 	# Local instrument records only modeled health/uptime, never invented moonquakes.
 	if data.instrument.get("status", "") == "operational":
@@ -202,6 +204,8 @@ func _release(id: String) -> void:
 			data.locks.erase(item)
 
 func assign(id: String, task: String, site := "") -> bool:
+	if id == "crew_briefing" and state != null and state.sol >= 6 and not state.rover_expedition.get("completed", []).has(2):
+		return false
 	if state == null or not session.can_advance() or get_tree().paused or not IDS.has(id):
 		return false
 	var c: Dictionary = data.crew[id]
@@ -743,6 +747,10 @@ func follow(id: String) -> bool:
 	return true
 
 func _update_visual(id: String, moving: bool) -> void:
+	if id == "crew_briefing" and state != null and state.sol >= 6 and not state.rover_expedition.get("completed", []).has(2):
+		labels[id].hide()
+		props[id].hide()
+		return
 	if data.is_empty():
 		return
 	var c: Dictionary = data.crew[id]

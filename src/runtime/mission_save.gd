@@ -52,7 +52,7 @@ static func decode(data: Variant) -> Dictionary:
 			var key: String = property.name
 			if not data.state.has(key) or typeof(data.state[key]) != property.type:
 				# Older version 1 saves omit newer fields; preserve their defaults.
-				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "rover_training"] and not data.state.has(key):
+				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "rover_training", "rover_expedition"] and not data.state.has(key):
 					continue
 				return {}
 			var value: Variant = data.state[key]
@@ -68,11 +68,20 @@ static func decode(data: Variant) -> Dictionary:
 				state.set(key, value.duplicate(true) if value is Dictionary else value)
 		if state.site_id != data.site_id or state.sol < 0 or state.sol > state.mission_length_sols or state.mission_length_sols < 1:
 			return {}
+		# The previous four-person resource model omitted the visible player.
+		if state.crew_size == 4:
+			state.power_kwh += 12.0 * maxf(0,state.mission_length_sols-state.sol)
+			state.water_l *= 1.25
+			state.oxygen_kg *= 1.25
+			state.food_kg *= 1.25
+		state.crew_size = 5
 		if state.rover_health < 0.0 or state.rover_health > 100.0:
 			return {}
 		if not preload("res://src/world/crew_fieldwork.gd").valid_save(state.fieldwork):
 			return {}
 		if not preload("res://src/simulation/rover_training.gd").valid_save(state.rover_training):
+			return {}
+		if not preload("res://src/simulation/rover_expedition.gd").valid_save(state.rover_expedition):
 			return {}
 		if not state.rover_pose.is_empty():
 			if not state.rover_pose.get("position") is Vector3 or not state.rover_pose.get("heading") is float:

@@ -4,6 +4,14 @@
   },
   "crew": [
     {
+      "crew_id": "player",
+      "name": "Expedition Operator",
+      "role": "Rover Operations",
+      "base_stress": 0.15,
+      "base_productivity": 1.0,
+      "notes": "The player is the fifth unique crew member. Remote rover control leaves this astronaut at the outpost."
+    },
+    {
       "crew_id": "commander",
       "name": "Leila Navarro",
       "role": "Mission Commander",

@@ -90,6 +90,55 @@ func run() -> void:
 	driver.step_drive(1.0, 1, 1, false)
 	paused = false
 	check(driver.position == paused_position, "Pause freezes driving.")
+	var original_heading: float = driver.heading
+	var original_camera: Vector3 = driver.camera.global_position
+	var mouse := InputEventMouseMotion.new()
+	mouse.relative = Vector2(160, 90)
+	if DisplayServer.get_name() == "headless":
+		driver._apply_mouse_look(mouse.relative)
+	else:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		root.push_input(mouse)
+	check(driver.camera.global_position.distance_to(original_camera) > 0.5 and driver.heading == original_heading, "Mouse orbits the camera independently of steering.")
+	var orbit: float = driver.camera_yaw
+	paused = true
+	driver._apply_mouse_look(mouse.relative)
+	paused = false
+	check(driver.camera_yaw == orbit, "Pause blocks rover mouse look.")
+	# Isolated physical ledge: the old flat hull stalls against this 20 cm step.
+	var saved_position: Vector3 = driver.position
+	var platform := StaticBody3D.new()
+	var platform_shape := CollisionShape3D.new()
+	platform_shape.shape = BoxShape3D.new()
+	platform_shape.shape.size = Vector3(20, 1, 60)
+	platform.add_child(platform_shape)
+	world.add_child(platform)
+	platform.position = Vector3(0, 99.5, 0)
+	var curb := StaticBody3D.new()
+	var curb_shape := CollisionShape3D.new()
+	curb_shape.shape = BoxShape3D.new()
+	curb_shape.shape.size = Vector3(12, 0.2, 3)
+	curb.add_child(curb_shape)
+	world.add_child(curb)
+	curb.position = Vector3(0, 100.1, 5)
+	driver.position = Vector3(0, 100.66, 0)
+	driver.heading = 0
+	driver.speed = 0
+	driver.velocity = Vector3.ZERO
+	var curb_health: float = state.rover_health
+	await drive(driver, 420, 1, 0)
+	check(driver.position.z > 8, "Rover clears a low ledge without getting stuck.")
+	check(state.rover_health == curb_health, "Traversable ledges do not inflict wall-impact damage.")
+	check(is_equal_approx(driver.speed, 2.4), "Actual forward motion reaches doubled speed without expedition cap.")
+	await drive(driver, 180, -1, 0)
+	check(is_equal_approx(driver.speed, -1.0), "Reverse reaches doubled speed.")
+	driver.position = saved_position
+	driver.heading = original_heading
+	driver.speed = 0
+	driver.velocity = Vector3.ZERO
+	platform.queue_free()
+	curb.queue_free()
+	await drive(driver, 60, 0, 0, true)
 	var barrier := StaticBody3D.new()
 	var shape := CollisionShape3D.new()
 	shape.shape = BoxShape3D.new()
@@ -108,6 +157,9 @@ func run() -> void:
 	var contact_health: float = state.rover_health
 	await drive(driver, 60, 1, 0)
 	check(state.rover_health == contact_health, "Holding throttle against an obstacle does not repeatedly damage rover.")
+	var contact_position: Vector3 = driver.position
+	await drive(driver, 90, -1, 0)
+	check(driver.position.distance_to(contact_position) > 0.3 and driver.speed < 0, "Reverse escapes wall contact without being held at zero speed.")
 	check(not driver.repair(), "Cannot repair remotely from lander.")
 	barrier.queue_free()
 	await physics_frame
@@ -145,8 +197,7 @@ func run() -> void:
 	Input.parse_input_event(key)
 	await create_timer(root.get_node("GameAudio").rover_player.stream.get_length() + 0.5).timeout
 	var training := world.get_node("RoverTraining")
-	check(training.rules.data.status == "failed" and is_zero_approx(driver.speed), "Critical damage remains a failed training attempt after repair.")
-	training.handle_key(KEY_ENTER)
+	check(not training.locks_drive(), "Repaired rover resumes without resetting expedition objectives.")
 	await create_timer(0.5).timeout
 	check(driver.speed > 0, "W key reaches the physics driving path.")
 	key.pressed = false

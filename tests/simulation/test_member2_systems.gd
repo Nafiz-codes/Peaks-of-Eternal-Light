@@ -15,11 +15,11 @@ func _run() -> void:
 	var solar_particle := _event(simulator, "solar_particle_event")
 	simulator.events.clear()
 	var state: Object = simulator.begin_mission("ridge_a", 20)
-	check(is_equal_approx(state.crew_productivity, 1.1075), "Crew productivity is the average of the authored crew values.")
+	check(is_equal_approx(state.crew_productivity, 1.086), "Crew productivity is the average of the authored crew values.")
 
 	var solar := simulator.queue_construction(state, "solar_array")
 	check(solar.ok, "A structure can be queued when its authored costs are affordable.")
-	check(is_equal_approx(state.materials, 145.0) and is_equal_approx(state.power_kwh, 162.0), "Construction pays the authored material and power cost once.")
+	check(is_equal_approx(state.materials, 145.0) and is_equal_approx(state.power_kwh, 282.0), "Construction pays the authored material and power cost once.")
 	simulator.advance_sol(state)
 	check(not state.built_structures.has("solar_array"), "A two-sol authored build does not complete in one sol.")
 	simulator.advance_sol(state)
@@ -41,20 +41,20 @@ func _run() -> void:
 	for _step in range(3):
 		simulator.advance_sol(extractor_state)
 	check(extractor_state.built_structures.has("water_extractor"), "The authored three-sol extractor build completes.")
-	check(is_equal_approx(extractor_state.water_recovered_l, 25.0), "An extraction candidate plus extractor adds the authored 16 L/sol recovery output.")
+	check(is_equal_approx(extractor_state.water_recovered_l, 27.25), "An extraction candidate plus extractor adds the authored 16 L/sol recovery output.")
 
 	var greenhouse_state: Object = simulator.begin_mission("ridge_a", 20)
 	check(simulator.queue_construction(greenhouse_state, "greenhouse").ok, "The greenhouse can be constructed.")
 	for _step in range(3):
 		simulator.advance_sol(greenhouse_state)
 	check(greenhouse_state.built_structures.has("greenhouse"), "The authored greenhouse build completes.")
-	check(is_equal_approx(greenhouse_state.food_consumed_kg, 1.268), "The greenhouse offsets food draw by its authored 1.2 kg/sol output.")
+	check(is_equal_approx(greenhouse_state.food_consumed_kg, 1.885), "The greenhouse offsets food draw by its authored 1.2 kg/sol output.")
 
 	var effects_state: Object = simulator.begin_mission("ridge_a", 200)
 	effects_state.active_events.append({"event_id": "thermal", "effects": {"battery_available_capacity_multiplier": 0.8}, "remaining_sols": 2, "started_sol": effects_state.sol})
-	effects_state.power_kwh = 170.0
+	effects_state.power_kwh = 290.0
 	simulator.advance_sol(effects_state)
-	check(effects_state.power_kwh <= 144.0, "Battery-capacity effects constrain stored energy.")
+	check(effects_state.power_kwh <= 240.0, "Battery-capacity effects constrain stored energy.")
 	effects_state.active_events.clear()
 	effects_state.event_warning_disabled = true
 	effects_state.triggered_event_ids.clear()

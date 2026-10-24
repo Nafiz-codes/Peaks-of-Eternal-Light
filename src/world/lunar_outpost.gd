@@ -67,7 +67,7 @@ func _ready() -> void:
 	var lander_access := preload("res://src/world/lander_access.gd").new()
 	lander_access.name = "LanderAccess"
 	add_child(lander_access)
-	var training := preload("res://scenes/rover_training.tscn").instantiate()
+	var training := preload("res://src/world/rover_expedition_controller.gd").new()
 	training.name = "RoverTraining"
 	add_child(training)
 	session.state_changed.connect(refresh_feedback)
@@ -76,7 +76,7 @@ func _ready() -> void:
 
 func _add_prop_collisions() -> void:
 	# Simple hulls keep walking/camera collision predictable around imported art.
-	for entry in [["RoverHull", Vector3(5.2, 0.65, -2.8), Vector3(3.0, 1.3, 3.0)], ["SolarHull", Vector3(-6, 0.5, -5.5), Vector3(6.5, 1.0, 2.6)]]:
+	for entry in [["RoverHull", Vector3(5.2, 0.65, -2.8), Vector3(3.0, 1.3, 3.0)]]:
 		var body: PhysicsBody3D = preload("res://src/world/rover_drive.gd").new() if entry[0] == "RoverHull" else StaticBody3D.new()
 		body.name = entry[0]
 		body.position = entry[1]
@@ -86,6 +86,22 @@ func _add_prop_collisions() -> void:
 		collision.shape = shape
 		body.add_child(collision)
 		add_child(body)
+	for panel in get_node("Outpost/SolarArray").get_children():
+		var bounds := AABB()
+		var first := true
+		for mesh in panel.find_children("*", "MeshInstance3D", true, false):
+			var box: AABB = mesh.global_transform * mesh.get_aabb()
+			bounds = box if first else bounds.merge(box)
+			first = false
+		var hull := StaticBody3D.new()
+		hull.name = "SolarHull" if panel.get_index() == 0 else "SolarHull2"
+		var collision := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = bounds.size
+		collision.shape = shape
+		hull.add_child(collision)
+		add_child(hull)
+		hull.global_position = bounds.get_center()
 
 
 func _add_feedback_nodes() -> void:
@@ -289,8 +305,22 @@ func _add_habitat(parent: Node3D) -> void:
 
 func _add_solar_array(parent: Node3D) -> void:
 	var array := SOLAR_SCENE.instantiate() as Node3D
+	# Retain the original scene root/path and replace only its visual children.
+	for child in array.get_children():
+		array.remove_child(child)
+		child.free()
 	array.position = Vector3(-6.0, 0.0, -5.5)
 	parent.add_child(array)
+	for index in range(2):
+		# Fit an identity wrapper so the GLB root's authored transform is included.
+		var panel := Node3D.new()
+		panel.name = "Panel%d" % (index + 1)
+		array.add_child(panel)
+		panel.add_child(preload("res://Assets/expedition/solar_panel.glb").instantiate())
+		preload("res://src/world/imported_asset_fit.gd").fit(panel, 3.0)
+		# Both footprints are inside every site's level landing pad (height zero).
+		# Bury the frame feet slightly to avoid a visible daylight gap.
+		panel.position += Vector3(-1.8 if index == 0 else 1.8, -0.015, 0)
 
 func _add_astronaut(parent: Node3D) -> void:
 	var astronaut := LunarAstronautScript.new()

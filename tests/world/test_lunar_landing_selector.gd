@@ -106,6 +106,12 @@ func _run() -> void:
 			var anchor: Vector3 = selector.call("_globe_position", site.coordinates.latitude_deg, site.coordinates.longitude_deg)
 			_assert((callout.button.position + callout.button.size * 0.5).distance_to(camera.unproject_position(anchor)) < 0.1, "Blocks follow their coordinates after orbit and zoom.")
 	print("LunarLandingSelector tests passed.")
+	selector.queue_free()
+	root.get_node("GameAudio").click_player.stop()
+	root.get_node("GameAudio").hover_player.stop()
+	await create_timer(0.1).timeout
+	await process_frame
+	await process_frame
 	quit(0)
 
 

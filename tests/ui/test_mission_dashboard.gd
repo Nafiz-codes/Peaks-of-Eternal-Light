@@ -166,4 +166,10 @@ func _verify() -> void:
 		failure_report_text += str(label.text) + "\n"
 	check(failure_report_text.contains("Food reserves reached zero"), "Failure report uses Member 2's authored guidance")
 	print("Member 3 UI integration: %d failures; four site flows, terminal guards, previews, missing values and load recovery checked." % failures)
+	app.queue_free()
+	root.get_node("GameAudio").click_player.stop()
+	root.get_node("GameAudio").hover_player.stop()
+	await create_timer(0.1).timeout
+	await process_frame
+	await process_frame
 	quit(1 if failures else 0)

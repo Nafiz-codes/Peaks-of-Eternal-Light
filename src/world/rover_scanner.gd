@@ -24,7 +24,7 @@ func validate(driver: Node3D, target: Area3D, require_aim: bool = true) -> Strin
 	var hit := driver.get_world_3d().direct_space_state.intersect_ray(ray)
 	if not hit.is_empty():
 		var collider: Node = hit.collider
-		if not target.is_ancestor_of(collider): return "Signal blocked by terrain or equipment"
+		if not target.is_ancestor_of(collider) and collider.get_meta("rover_target", "") != target.target_id: return "Signal blocked by terrain or equipment"
 	return ""
 
 func advance(delta: float, held: bool, id: String, eligible: bool, rejection: String) -> bool:
