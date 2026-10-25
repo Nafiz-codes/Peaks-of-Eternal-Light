@@ -37,6 +37,7 @@ var dialogue := 0.0
 var sound: AudioStreamPlayer
 var last_sol := -1
 var cinematic_camera: Camera3D
+var cinematic_bars: Array[ColorRect] = []
 var follower: CharacterBody3D
 var stuck_time := 0.0
 var generation := 0
@@ -116,6 +117,16 @@ func _ready() -> void:
 	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(fade)
 	fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for bottom in [false, true]:
+		var bar := ColorRect.new()
+		bar.color = Color.BLACK
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		layer.add_child(bar)
+		bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		bar.anchor_top = 0.88 if bottom else 0.0
+		bar.anchor_bottom = 1.0 if bottom else 0.12
+		bar.hide()
+		cinematic_bars.append(bar)
 	lights = SpotLight3D.new()
 	lights.position = Vector3(0,0.9,1.4)
 	lights.rotation = Vector3(deg_to_rad(-15),PI,0)
@@ -174,6 +185,7 @@ func _sync() -> void:
 		transition_tween.finished.emit()
 	transitioning = false
 	cinematic_motion = false
+	for bar in cinematic_bars: bar.hide()
 	fade.color.a = 0
 	departure.show()
 	if is_instance_valid(cinematic_camera):
@@ -320,7 +332,7 @@ func _physics_process(delta: float) -> void:
 	_sync()
 	if data.is_empty(): return
 	var audible: bool = cinematic_motion or (driver.active and absf(driver.speed)>0.05) or busy_id != ""
-	driver.repair_label.visible = not driver.active
+	driver.repair_label.visible = not driver.active and not cinematic_motion
 	motor.volume_db = move_toward(motor.volume_db,-28.0 if audible else -80.0,delta*35)
 	elapsed += delta
 	if last_sol != bound_state.sol:
@@ -379,11 +391,14 @@ func _physics_process(delta: float) -> void:
 func _escort(delta: float) -> void:
 	var route: PackedVector3Array = data.route
 	if route.is_empty() or route[-1].distance_to(driver.position) > 2: route.append(driver.position)
-	var distance := crew.global_position.distance_to(driver.position)
+	var distance := Vector2(crew.global_position.x-driver.position.x,crew.global_position.z-driver.position.z).length()
 	if distance > 12: feedback = "WARNING: Astronaut falling behind. Reduce speed."
 	elif feedback.begins_with("WARNING:"): feedback = "Escort the astronaut to extraction."
-	if route.size() > 1 and distance > 5:
-		if crew.global_position.distance_to(route[0]) < 1.2: route.remove_at(0)
+	# The last breadcrumb is still a destination. Requiring two points here
+	# stranded the astronaut after consuming the initial rescue position.
+	while route.size() > 1 and Vector2(crew.global_position.x-route[0].x,crew.global_position.z-route[0].z).length() < 1.2:
+		route.remove_at(0)
+	if not route.is_empty() and distance > 5:
 		var goal: Vector3 = route[0]
 		var direction := (goal-crew.global_position)
 		direction.y = 0
@@ -514,19 +529,23 @@ func _transition(outward: bool) -> void:
 func _arrival() -> void:
 	var token := generation
 	cinematic_motion = true
+	for bar in cinematic_bars: bar.show()
 	hud.hide()
 	driver.overlay.hide()
+	driver.repair_label.hide()
 	departure.hide()
 	# Existing outpost's eastern raised terrain supplies the distant approach.
 	_place_rover(Vector3(38,ground_y(Vector3(38,0,26)),26))
-	crew.global_position = Vector3(43,ground_y(Vector3(43,0,26)),26)
+	driver.heading = atan2(-14,-8)
+	driver._sync_visual(1.0)
+	crew.global_position = driver.position + Vector3(2.4,0,-3.8)
+	crew.position.y = ground_y(crew.position)
 	_stand()
 	crew_player.play("moon_walk",0.2)
 	cinematic_camera = Camera3D.new()
 	add_child(cinematic_camera)
-	cinematic_camera.position = Vector3(49,7,34)
-	cinematic_camera.fov = 50
-	cinematic_camera.look_at(driver.position)
+	cinematic_camera.fov = 48
+	_frame_arrival(0.0)
 	cinematic_camera.make_current()
 	var tween := create_tween()
 	transition_tween = tween
@@ -548,11 +567,10 @@ func _arrival() -> void:
 		driver.heading = atan2(-14,-8)
 		driver._sync_visual(delta)
 		driver.rover.get_node("Wheels").update_motion(previous.distance_to(p),0,2.2)
-		crew.global_position = p + Vector3(4,0,2)
+		crew.global_position = p + Vector3(2.4,0,-3.8)
 		crew.position.y = ground_y(crew.position)
 		crew.rotation.y = atan2(14,8)
-		cinematic_camera.position = Vector3(49,7,34).lerp(Vector3(32,3.5,26),t/16)
-		cinematic_camera.look_at(p)
+		_frame_arrival(clampf(t/16,0,1))
 	tween = create_tween()
 	transition_tween = tween
 	tween.tween_property(fade,"color:a",1.0,0.5)
@@ -562,8 +580,25 @@ func _arrival() -> void:
 	driver.camera.make_current()
 	cinematic_camera.queue_free()
 	cinematic_motion = false
+	for bar in cinematic_bars: bar.hide()
 	driver.overlay.show()
 	departure.show()
+
+func _frame_arrival(progress: float) -> void:
+	var forward := Vector3(-14,0,-8).normalized()
+	var side := Vector3(-forward.z,0,forward.x)
+	var focus: Vector3 = (driver.rover.global_position + crew.global_position) * 0.5 + Vector3.UP * 1.1
+	# A distant front three-quarter shot tracks backward with the returning crew.
+	var position_ := driver.global_position + forward * lerpf(20,17,progress) + side * 4
+	position_.y = maxf(ground_y(position_) + 4.5, focus.y + 3.5)
+	# Keep intervening ridges out of the sightline as well as staying above the
+	# terrain directly beneath the camera. Heights are never fixed world values.
+	for attempt in range(6):
+		var ray := PhysicsRayQueryParameters3D.create(focus,position_,1,[driver.get_rid(),crew.get_node("CrewBody").get_rid(),follower.get_rid()])
+		if get_world_3d().direct_space_state.intersect_ray(ray).is_empty(): break
+		position_.y += 1.5
+	cinematic_camera.global_position = position_
+	cinematic_camera.look_at(focus)
 
 func _refresh_targets() -> void:
 	if data.is_empty(): return
