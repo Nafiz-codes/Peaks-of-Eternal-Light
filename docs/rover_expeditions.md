@@ -88,3 +88,11 @@ The two ground-mounted solar panels face the average above-horizon Sun direction
 
 Rover health only falls for horizontal obstacle impacts of at least 0.65 m/s. Crew and terrain contacts never cause damage, vertical settling is ignored, and repeated impacts have a one-second cooldown. Rocks, structures, and boundary walls remain solid and can cause bounded impact damage (maximum 30 per impact).
 Verified 2026-10-25: the regression suites passed across the main run and targeted reruns after updating legacy ten-Sol fixtures. Checks include 62 driving assertions, 68 site-access assertions, 92 expedition assertions, 1,506 orbital checks, six impact-rule checks, 15 developer-skip checks, dashboard outcomes, and save/restart behavior. Solar placement and mission navigation were also inspected in rendered captures.
+
+## Developer mission selection, boost, and ground contact
+
+In debug builds, press Alt at the outpost, choose an operation from the developer mission dropdown, then click **DEV: Select rover mission**. Stop rover control first. Selection replaces rover expedition progress with fresh objectives and advances the calendar to at least the selected mission's unlock Sol. Drive through the departure circle normally. Completed campaigns must be reset before using this testing override. The selector shares `DEV_SOL_SKIP_ENABLED` and is unavailable in release builds.
+
+Hold **Left Shift** while driving for 4.8 m/s forward or 2.0 m/s reverse. Releasing it restores the normal 2.4/1.0 m/s limits. Rescue escort separation limits still take priority.
+
+The visual rover uses surface samples beneath its tires to avoid floating above slopes due to the upright collision hull. Parked/restored rovers are settled onto the surface after physics initialization. These adjustments preserve obstacle collisions and normal airborne gravity.
