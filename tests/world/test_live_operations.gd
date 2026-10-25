@@ -152,6 +152,16 @@ func run() -> void:
 	check(is_equal_approx(driver.speed, -2.0), "Left Shift doubles reverse speed.")
 	shift.pressed = false
 	driver._input(shift)
+	# A continuous incline must not pin acceleration or reduce ground speed.
+	curb.position.x = 50
+	platform.rotation.x = deg_to_rad(15)
+	driver.position = Vector3(0, 100.8, 0)
+	driver.heading = 0
+	driver.speed = 0
+	driver.velocity = Vector3.ZERO
+	await drive(driver, 300, 1, 0)
+	check(driver.position.z > 7.0, "Rover accelerates and traverses a walkable incline.")
+	check(is_equal_approx(driver.speed, 2.4), "Terrain slope does not pin rover speed.")
 	driver.position = saved_position
 	driver.heading = original_heading
 	driver.speed = 0

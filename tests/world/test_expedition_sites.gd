@@ -36,6 +36,10 @@ func run():
 			driver.position = hit.position+Vector3.UP*0.65
 			check(controller.scanner.validate(driver,target) == "",site.site_id+" / "+id+" unobstructed interaction")
 		check(controller.departure.ring.mesh is ArrayMesh,"Circle follows actual outpost ground")
+		for sample in range(16):
+			var angle := TAU * sample / 16.0
+			var point: Vector3 = controller.departure.position + Vector3(cos(angle), 0, sin(angle)) * 5.0
+			check(absf(controller.ground_y(point) - 1.0) < 0.02, "Departure footprint is flat: " + site.site_id)
 		check(controller.crew.get_meta("crew_id") == "commander","Existing commander identity used for rescue")
 		check(world.find_children("StationAstronaut","Node3D",true,false).size() == 4,"No duplicate crew")
 		driver.active = false

@@ -37,6 +37,7 @@ func _ready() -> void:
 	rover = world.get_node("Outpost/Rover")
 	session = get_node("/root/MissionSession")
 	floor_snap_length = 0.6
+	floor_constant_speed = true
 	floor_max_angle = deg_to_rad(32)
 	camera = Camera3D.new()
 	camera.name = "RemoteCamera"
@@ -304,6 +305,7 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 	var incoming := velocity
 	_try_step(Vector3(velocity.x, 0, velocity.z) * delta)
 	move_and_slide()
+	apply_floor_snap()
 	var metres := Vector2(global_position.x - before.x, global_position.z - before.z).length()
 	if metres > 0.000001:
 		var result: Dictionary = session.send_rover("traverse", metres / 1000.0)
@@ -399,7 +401,8 @@ func _try_step(motion: Vector3) -> void:
 		return
 	if hit.get_normal().dot(Vector3.UP) < cos(floor_max_angle):
 		return
-	global_position += lift
+	# Settle onto the measured ledge instead of jumping the full step height.
+	global_position.y = raised.origin.y + hit.get_travel().y
 	velocity.y = 0.0
 
 func _update_camera() -> void:

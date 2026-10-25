@@ -21,6 +21,9 @@ static func build(site: Dictionary) -> MeshInstance3D:
 				var height := blend * (1.5 + noise.get_noise_2d(px, pz) * amplitude)
 				if str(site.get("site_id", "")) == "crater_rim_b":
 					height = TychoElevation.height(px, pz)
+				# Level departure clearing, blended into the surrounding terrain.
+				var departure_distance := Vector2(px - 32.0, pz - 12.0).length()
+				height = lerpf(1.0, height, smoothstep(8.0, 16.0, departure_distance))
 				points.append(Vector3(px, height, pz))
 			for index in [0, 1, 2, 1, 3, 2]:
 				surface.set_uv(Vector2(points[index].x, points[index].z) * 0.12)

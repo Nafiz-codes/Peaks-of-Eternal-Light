@@ -320,7 +320,9 @@ func _add_solar_array(parent: Node3D) -> void:
 		if sample.sun_direction.y > 0:
 			sunlight += sample.sun_direction
 	var azimuth := atan2(sunlight.x, sunlight.z) if sunlight.length_squared() > 0.001 else 0.0
+	var side := Vector3(cos(azimuth), 0, -sin(azimuth))
 	for index in range(2):
+		var panel_center := array.position + side * (-1.575 if index == 0 else 1.575)
 		# Fit an identity wrapper so the GLB root's authored transform is included.
 		var panel := Node3D.new()
 		panel.name = "Panel%d" % (index + 1)
@@ -330,7 +332,7 @@ func _add_solar_array(parent: Node3D) -> void:
 		panel.rotation.y = azimuth
 		# Both footprints are inside every site's level landing pad (height zero).
 		# Bury the frame feet slightly to avoid a visible daylight gap.
-		panel.position += Vector3(-1.8 if index == 0 else 1.8, -0.015, 0)
+		panel.position.y = -0.015
 		# Rotated bounding boxes include empty space below the real frame feet.
 		var lowest := INF
 		var minimum := Vector3(INF, INF, INF)
@@ -344,8 +346,8 @@ func _add_solar_array(parent: Node3D) -> void:
 		if is_finite(lowest):
 			panel.global_position.y -= lowest + 0.015
 			var center := (minimum + maximum) * 0.5
-			panel.global_position.x += -6.0 + (-1.8 if index == 0 else 1.8) - center.x
-			panel.global_position.z += -5.5 - center.z
+			panel.global_position.x += panel_center.x - center.x
+			panel.global_position.z += panel_center.z - center.z
 
 func _add_astronaut(parent: Node3D) -> void:
 	var astronaut := LunarAstronautScript.new()
