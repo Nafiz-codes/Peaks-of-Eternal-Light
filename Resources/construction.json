@@ -21,14 +21,14 @@
       "structure_id": "greenhouse",
       "name": "Greenhouse Module",
       "build_cost": { "materials": 80, "power": 18 },
-      "effect": "Gameplay effect: produces 1.2 kg dry food per sol while consuming 6 kWh and 4 L water per sol. Intended to offset, but not completely erase, the four-person food draw.",
+      "effect": "Gameplay effect: produces 1.2 kg dry food per sol It has no separate power or water draw in the current simulation. Intended to offset, but not completely erase, the five-person food draw.",
       "build_time_sols": 3
     },
     {
       "structure_id": "shielding_wall",
       "name": "Radiation Shielding Wall",
       "build_cost": { "materials": 55, "power": 6 },
-      "effect": "Gameplay effect: reduces the crew's unshielded radiation dose by 25%. This stacks with terrain shielding only when the simulation integration defines the combination rule.",
+      "effect": "Gameplay effect: reduces the crew's unshielded radiation dose by 25%. It multiplies with the terrain shielding factor.",
       "build_time_sols": 2
     },
     {

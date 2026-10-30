@@ -17,7 +17,7 @@
         "coordinate_frame": "Planetocentric latitude; east-positive longitude, 0\u2013360 degrees",
         "verified": true,
         "source_id": "nasa_apollo11_landing_coordinates",
-        "source": "NASA Apollo Landing Sites chart (2023), Apollo 11 / Mare Tranquillitatis; 0.67416\u00b0N, 23.47314\u00b0E. https://www.nasa.gov/wp-content/uploads/2023/10/south-pole.pdf",
+        "source": "NASA NSSDC Apollo landing site coordinates, Apollo 11 / Mare Tranquillitatis; 0.67416\u00b0N, 23.47314\u00b0E. https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html",
         "date_read": "2026-09-30"
       },
       "observer_altitude_km": -1.883
