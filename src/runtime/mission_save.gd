@@ -2,7 +2,8 @@ extends RefCounted
 ## Save data is plain Variant data, never serialized executable objects.
 const State = preload("res://src/simulation/mission_state.gd")
 const Simulator = preload("res://src/simulation/mission_simulator.gd")
-const VERSION := 3
+const VERSION := 4
+const Planner = preload("res://src/simulation/mission_planner.gd")
 const Commander = preload("res://src/runtime/commander_identity.gd")
 const MAX_BYTES := 8 * 1024 * 1024
 
@@ -17,19 +18,32 @@ static func state_data(state: RefCounted) -> Dictionary:
 static func capture(session: Node) -> Dictionary:
 	var tick: Dictionary = session.dashboard_last_tick.duplicate(true)
 	tick.erase("state")
-	return {"version": VERSION, "saved_at": Time.get_datetime_string_from_system(),
+	return {"version": VERSION, "saved_at": Time.get_datetime_string_from_system(), "planning_draft":session.planning_draft.duplicate(true), "approved_plan":session.approved_plan.duplicate(true),
 		"site_id": session.selected_site_id, "state": state_data(session.dashboard_state),
 		"last_tick": tick, "pose": session.outpost_pose.duplicate(true), "crew_read_reports": session.crew_read_reports.duplicate(true),
 		"orbital_clock": session.orbital_clock.duplicate(true), "player_character": session.player_character.duplicate(true)}
 
 static func decode(data: Variant) -> Dictionary:
-	if not data is Dictionary or data.get("version") not in [1, 2, VERSION]:
+	if not data is Dictionary or data.get("version") not in [1, 2, 3, VERSION]:
 		return {}
 	var identity: Variant = data.get("player_character", {})
 	if not Commander.valid(identity): return {}
 	if not data.get("site_id") is String or not data.get("state") is Dictionary or not data.get("pose") is Dictionary or not data.get("last_tick") is Dictionary:
 		return {}
 	var simulator := Simulator.new()
+	var draft: Variant = data.get("planning_draft", {})
+	var approved: Variant = data.get("approved_plan", {})
+	if not draft is Dictionary or not approved is Dictionary: return {}
+	var planner := Planner.new()
+	if not draft.is_empty() and (not planner.shape_valid(draft) or draft.site_id != data.site_id): return {}
+	if not approved.is_empty():
+		if not planner.shape_valid(approved.get("plan")) or approved.plan.site_id != data.site_id or approved.get("completed") != true or approved.get("delivery_status") != "pending": return {}
+		var signature := planner.data_signature(data.site_id)
+		if approved.get("plan_id") != var_to_bytes([approved.plan,signature,Planner.MODEL_REVISION]).hex_encode().sha256_text() or approved.get("model_revision") != Planner.MODEL_REVISION or approved.get("data_signature") != signature: return {}
+		var evaluation := planner.evaluate(approved.plan)
+		if not evaluation.valid: return {}
+		approved = approved.duplicate(true)
+		approved.evaluation = evaluation # Never trust saved derived totals.
 	var orbital_clock: Variant = data.get("orbital_clock", preload("res://src/world/orbital_model.gd").default_clock())
 	if not preload("res://src/world/orbital_model.gd").valid_clock(orbital_clock):
 		return {}
@@ -104,7 +118,7 @@ static func decode(data: Variant) -> Dictionary:
 			return {}
 		if not pose.transform.is_finite() or not is_finite(pose.yaw) or not is_finite(pose.pitch):
 			return {}
-	return {"simulator": simulator, "state": state, "site_id": data.site_id,
+	return {"simulator": simulator, "state": state, "site_id": data.site_id, "planning_draft":draft.duplicate(true), "approved_plan":approved.duplicate(true),
 		"pose": pose.duplicate(true), "last_tick": data.last_tick.duplicate(true), "crew_read_reports": read_reports.duplicate(true), "orbital_clock": orbital_clock.duplicate(true), "player_character": identity.duplicate(true)}
 
 static func restore(session: Node, data: Dictionary) -> Error:
@@ -112,6 +126,8 @@ static func restore(session: Node, data: Dictionary) -> Error:
 	if restored.is_empty():
 		return ERR_INVALID_DATA
 	session.selected_site_id = restored.site_id
+	session.planning_draft = restored.planning_draft
+	session.approved_plan = restored.approved_plan
 	session.player_character = restored.player_character
 	session.dashboard_simulator = restored.simulator
 	session.dashboard_state = restored.state

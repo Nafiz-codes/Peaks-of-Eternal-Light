@@ -289,7 +289,7 @@ func _load(index: int) -> void:
 		notice.text = "Could not load this save. Your current mission is intact."
 		show_page("saves")
 		return
-	_go_to(OUTPOST)
+	_go_to("res://scenes/mission_planning.tscn" if not session.planning_draft.is_empty() and session.dashboard_state == null else OUTPOST)
 
 func _settings() -> void:
 	body.add_child(UI.label("Audio", 21, UI.BLUE))

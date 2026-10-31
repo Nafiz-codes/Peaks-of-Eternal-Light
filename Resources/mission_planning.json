@@ -1,0 +1,169 @@
+{
+  "reserve_hours": 12,
+  "deployments": [
+    {
+      "id": "north",
+      "name": "Northeast deployment",
+      "z": -20,
+      "x": 22
+    },
+    {
+      "id": "east",
+      "name": "East deployment",
+      "z": 12,
+      "x": 48
+    }
+  ],
+  "max_slope_deg": 18,
+  "revision": 1,
+  "equipment": [
+    {
+      "id": "habitat",
+      "units": 110,
+      "name": "Habitat and life support",
+      "mandatory": true,
+      "max": 1,
+      "benefit": "Essential four-person shelter and electrical loads"
+    },
+    {
+      "id": "supplies",
+      "units": 100,
+      "name": "Oxygen, water and food",
+      "mandatory": true,
+      "max": 1,
+      "benefit": "Simulator initial reserves; BVAD consumption"
+    },
+    {
+      "id": "recycler",
+      "units": 30,
+      "name": "Water recycler",
+      "mandatory": true,
+      "max": 1,
+      "benefit": "Existing ECLSS recovery proxy; no local ice supply"
+    },
+    {
+      "id": "base_solar",
+      "units": 60,
+      "name": "Baseline solar system",
+      "mandatory": true,
+      "max": 1,
+      "benefit": "65 kWh per day potential generation"
+    },
+    {
+      "id": "base_battery",
+      "units": 75,
+      "name": "Baseline battery",
+      "mandatory": true,
+      "max": 1,
+      "benefit": "300 kWh capacity; 290 kWh initial charge"
+    },
+    {
+      "id": "comms",
+      "units": 20,
+      "name": "Communications",
+      "mandatory": true,
+      "max": 1,
+      "benefit": "Essential communications equipment"
+    },
+    {
+      "id": "robotics",
+      "units": 50,
+      "name": "Rover and construction tools",
+      "mandatory": true,
+      "max": 1,
+      "benefit": "Supports transportation and construction"
+    },
+    {
+      "id": "medical",
+      "units": 15,
+      "name": "Medical supplies",
+      "mandatory": true,
+      "max": 1,
+      "benefit": "Mandatory crew medical kit"
+    },
+    {
+      "id": "maintenance",
+      "units": 20,
+      "name": "Critical spares",
+      "mandatory": true,
+      "max": 1,
+      "benefit": "Mandatory maintenance kit"
+    },
+    {
+      "id": "materials",
+      "units": 12,
+      "name": "Construction material pack",
+      "mandatory": false,
+      "max": 20,
+      "benefit": "35 materials reserved for later construction"
+    },
+    {
+      "id": "cable",
+      "units": 5,
+      "name": "Cable spool",
+      "mandatory": false,
+      "max": 20,
+      "benefit": "20 m of electrical connection"
+    },
+    {
+      "id": "array",
+      "units": 18,
+      "name": "Additional solar array",
+      "mandatory": false,
+      "max": 20,
+      "benefit": "18 kWh per day potential; needs 35 materials and 8 kWh construction"
+    },
+    {
+      "id": "battery",
+      "units": 30,
+      "name": "Additional battery",
+      "mandatory": false,
+      "max": 20,
+      "benefit": "100 kWh capacity; 90 kWh precharged; gameplay hardware"
+    },
+    {
+      "id": "handling",
+      "units": 15,
+      "name": "Cargo handling kit",
+      "mandatory": false,
+      "max": 1,
+      "benefit": "Doubles cargo load per trip; maximum one"
+    }
+  ],
+  "zones": [
+    {
+      "radius": 5,
+      "id": "compact",
+      "name": "Compact east clearing",
+      "z": -16,
+      "x": 18
+    },
+    {
+      "radius": 6,
+      "id": "south",
+      "name": "South expansion area",
+      "z": 24,
+      "x": 18
+    },
+    {
+      "radius": 7,
+      "id": "outer",
+      "name": "Outer east terrace",
+      "z": -20,
+      "x": 40
+    }
+  ],
+  "battery_kwh": 100,
+  "cargo_units_per_trip": 100,
+  "material_pack": 35,
+  "cable_loss_per_m": 0.0005,
+  "battery_initial_kwh": 90,
+  "capacity_units": 1000,
+  "cable_pack_m": 20,
+  "_meta": {
+    "description": "Authored gameplay planning rules, equipment capacity units, layout footprints and transport factors; not NASA hardware or measured zone specifications. Scientific site data remain in sites.json and Resources/polar.",
+    "revision": "planning-1",
+    "terrain": "Same playable LOLA-derived mesh with authored flattening; source compact patches use 20 m spacing.",
+    "solar": "Shared site horizon and existing Horizons epoch; no per-zone illumination claims."
+  }
+}

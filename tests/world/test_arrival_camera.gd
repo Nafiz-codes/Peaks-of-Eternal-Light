@@ -7,6 +7,9 @@ func run() -> void:
 	session.reduce_motion = false
 	for scenario in ["ridge_a", "crater_rim_b", "shadow_zone", "plateau_d", "blocked"]:
 		var site: String = "ridge_a" if scenario == "blocked" else scenario
+		# Arrival camera is the established-mission return path; new missions plan first.
+		session.select_landing_site(site)
+		session.start_selected_mission()
 		session.outpost_pose = {}
 		change_scene_to_file("res://scenes/lunar_landing_selector.tscn")
 		await scene_changed

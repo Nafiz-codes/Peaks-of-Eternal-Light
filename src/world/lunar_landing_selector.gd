@@ -143,6 +143,11 @@ func site_camera_target(site_id: String) -> Transform3D:
 	return Transform3D(Basis.looking_at(-normal, up), target + normal * 20.0)
 
 func _open_selected_outpost() -> void:
+	var session := get_node("/root/MissionSession")
+	if session.dashboard_state == null:
+		session.begin_planning()
+		get_tree().change_scene_to_file("res://scenes/mission_planning.tscn")
+		return
 	var transition := preload("res://src/world/lunar_landing_blend.gd").new()
 	get_tree().root.add_child(transition)
 	transition.begin(self)

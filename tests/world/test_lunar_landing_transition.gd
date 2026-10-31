@@ -23,9 +23,14 @@ func _run() -> void:
 	selector.call("_zoom_by", 1.25)
 	_assert(camera.size == locked_size, "Manual zoom cannot interrupt landing.")
 	await create_timer(1.3).timeout
-	_assert(current_scene != null and current_scene.name == "LunarOutpost", "A landing-site selection opens the walkable lunar outpost.")
+	_assert(current_scene != null and current_scene.name == "MissionPlanning", "A landing-site selection opens pre-landing planning.")
 	var session := root.get_node_or_null("MissionSession")
 	_assert(session != null and session.get("selected_site_id") == "ridge_a", "The selected site survives the scene transition.")
+	current_scene._step(5)
+	current_scene._approve()
+	_assert(not session.approved_plan.is_empty(), "A valid mission is approved before handoff.")
+	current_scene._handoff()
+	await scene_changed
 	await create_timer(1.4).timeout
 	_assert(root.get_viewport().get_camera_3d().name == "ThirdPersonCamera", "Arrival returns control to the gameplay camera.")
 	_assert(current_scene.get_node("Outpost/Astronaut").process_mode == Node.PROCESS_MODE_INHERIT, "Player control is restored after arrival.")

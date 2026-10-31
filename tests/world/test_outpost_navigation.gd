@@ -48,6 +48,11 @@ func _run() -> void:
 	await scene_changed
 	current_scene.select_site("plateau_d")
 	await scene_changed
+	check(current_scene.name == "MissionPlanning", "New destination opens planning even with reduced motion.")
+	current_scene._step(5)
+	current_scene._approve()
+	current_scene._handoff()
+	await scene_changed
 	check(current_scene.name == "LunarOutpost" and current_scene.get_node("Outpost/Astronaut").process_mode == Node.PROCESS_MODE_INHERIT, "Reduced-motion landing reaches an immediately playable outpost.")
 	print("Outpost navigation: %d failures; scene return, pose, success report, restart and site change checked." % failures)
 	quit(1 if failures else 0)

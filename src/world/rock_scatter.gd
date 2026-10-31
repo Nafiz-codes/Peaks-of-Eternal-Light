@@ -19,6 +19,7 @@ static func build(ground: MeshInstance3D, site_id: String) -> Node3D:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = absi(site_id.hash()) + 8197
 	var occupied: Array[Vector3] = []
+	var planning: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/mission_planning.json"))
 	for attempt in range(1200):
 		if occupied.size() >= 40:
 			break
@@ -32,6 +33,8 @@ static func build(ground: MeshInstance3D, site_id: String) -> Node3D:
 		# Keep the full base, construction slots, and boundary approaches open.
 		if Vector2(point.x, point.z).length() < 34.0 or maxf(absf(point.x), absf(point.z)) > 56.0:
 			continue
+		if _planning_clearance(Vector2(point.x, point.z), planning):
+			continue
 		var width := rng.randf_range(0.2, 0.65) if rng.randf() < 0.7 else rng.randf_range(0.8, 2.0)
 		var crowded := false
 		for other in occupied:
@@ -41,6 +44,8 @@ static func build(ground: MeshInstance3D, site_id: String) -> Node3D:
 			continue
 		occupied.append(Vector3(point.x, width, point.z))
 		var variant := rng.randi_range(0, variants.size() - 1)
+		# Keep the complete authored set represented after corridor exclusions.
+		if occupied.size() <= variants.size(): variant = occupied.size() - 1
 		var mesh := variants[variant]
 		var bounds := mesh.get_aabb()
 		var scale_factor := width / maxf(bounds.size.x, bounds.size.z)
@@ -68,3 +73,17 @@ static func build(ground: MeshInstance3D, site_id: String) -> Node3D:
 			anchor.add_child(collision)
 		result.add_child(anchor)
 	return result
+
+static func _planning_clearance(point: Vector2, planning: Dictionary) -> bool:
+	# Authored planning footprints/corridors remain free of procedural stone hulls.
+	# This is a gameplay clearing, not a claim about the source LOLA surface.
+	for zone in planning.zones:
+		var finish := Vector2(zone.x, zone.z)
+		if maxf(absf(point.x-finish.x),absf(point.y-finish.y)) < float(zone.radius)+2.0: return true
+		for deployment in planning.deployments:
+			var start := Vector2(deployment.x,deployment.z)
+			var detour_a := Vector2(52,start.y)
+			var detour_b := Vector2(52,finish.y)
+			for segment in [[start,finish],[start,detour_a],[detour_a,detour_b],[detour_b,finish]]:
+				if point.distance_to(Geometry2D.get_closest_point_to_segment(point,segment[0],segment[1]))<3.0: return true
+	return false

@@ -166,7 +166,7 @@ func run() -> void:
 	click(label.get_global_rect().get_center())
 	check(world.selected_site_id == "ridge_a" and world.landing_in_progress, "Surface name launches correct outpost")
 	await create_timer(3.8).timeout
-	check(current_scene != null and current_scene.name == "LunarOutpost", "Original gameplay entry succeeds")
+	check(current_scene != null and current_scene.name == "MissionPlanning", "Pre-landing planning entry succeeds")
 	# Every sidebar choice must deploy without a second surface click.
 	for index in range(4):
 		change_scene_to_file("res://scenes/lunar_landing_selector.tscn")
@@ -198,8 +198,8 @@ func run() -> void:
 		await create_timer(3.55).timeout
 		check(world.landing_in_progress and world.selected_site_id == site.site_id, "Focus automatically continues into landing")
 		await create_timer(3.7).timeout
-		check(current_scene != null and current_scene.name == "LunarOutpost", "Sidebar arrives in actual location scene")
+		check(current_scene != null and current_scene.name == "MissionPlanning", "Sidebar arrives in actual location scene")
 		check(root.get_node("MissionSession").selected_site_id == site.site_id, "Actual location matches sidebar choice")
-		check(root.get_camera_3d().name == "ThirdPersonCamera", "Player camera restored after automatic arrival")
+		check(root.get_camera_3d() == null, "Planning has no astronaut arrival or surface camera")
 	print("LUNAR NAVIGATION TEST: %d failures" % failures)
 	quit(failures)

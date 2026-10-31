@@ -6,6 +6,38 @@ extends Node
 var selected_site_id := ""
 var player_character: Dictionary = {}
 var commander_draft: Dictionary = {}
+var planning_draft: Dictionary = {}
+var approved_plan: Dictionary = {}
+signal mission_plan_approved(record: Dictionary)
+const Planner = preload("res://src/simulation/mission_planner.gd")
+
+func begin_planning() -> void:
+	if planning_draft.get("site_id", "") != selected_site_id:
+		planning_draft = Planner.new().default_plan(selected_site_id)
+
+func approve_planning() -> Dictionary:
+	var planner := Planner.new()
+	var result := planner.evaluate(planning_draft)
+	if planning_draft.get("site_id") != selected_site_id:
+		return {"valid":false,"errors":["The plan must match the selected outpost."]}
+	if not result.valid: return result
+	var plan := planning_draft.duplicate(true)
+	plan.step = 5
+	var signature := planner.data_signature(selected_site_id)
+	if approved_plan.get("plan", {}) == plan and approved_plan.get("data_signature") == signature and approved_plan.get("model_revision") == Planner.MODEL_REVISION: return result
+	var previous := approved_plan.duplicate(true)
+	approved_plan = {"plan":plan,"plan_id":var_to_bytes([plan,signature,Planner.MODEL_REVISION]).hex_encode().sha256_text(),"data_signature":signature,"evaluation":result,"completed":true,"delivery_status":"pending","model_revision":Planner.MODEL_REVISION}
+	var error := save_slot("user://mission-planning.save")
+	if error != OK:
+		approved_plan = previous
+		return {"valid":false,"errors":["Approval could not be saved: " + error_string(error)]}
+	mission_plan_approved.emit(approved_plan.duplicate(true))
+	state_changed.emit()
+	return result
+
+func pending_mission_plan() -> Dictionary:
+	# Future delivery must consume this ID transactionally, once, before granting cargo.
+	return approved_plan.duplicate(true) if approved_plan.get("delivery_status") == "pending" else {}
 const Commander = preload("res://src/runtime/commander_identity.gd")
 
 func confirm_new_commander(appearance: String, player_name: String) -> bool:
@@ -15,6 +47,8 @@ func confirm_new_commander(appearance: String, player_name: String) -> bool:
 	commander_draft = {"appearance_id": appearance, "name": identity.name}
 	# Commit a fresh in-memory playthrough only after confirmation. Disk slots stay intact.
 	selected_site_id = ""
+	planning_draft = {}
+	approved_plan = {}
 	dashboard_simulator = null
 	dashboard_state = null
 	dashboard_last_tick = {}
@@ -202,6 +236,8 @@ func send_rover(action_id: String, distance_km: float) -> Dictionary:
 
 func select_landing_site(site_id: String) -> void:
 	if selected_site_id != site_id:
+		planning_draft = {}
+		approved_plan = {}
 		crew_read_reports = {}
 		outpost_pose = {}
 		sol_checkpoint = {}

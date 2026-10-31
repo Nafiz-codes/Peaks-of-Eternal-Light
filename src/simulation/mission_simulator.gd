@@ -36,6 +36,7 @@ const TERRAIN_SLOPE_REFERENCE_DEG := 30.0
 const TERRAIN_DEPTH_WEIGHT := 0.12
 const TERRAIN_SLOPE_WEIGHT := 0.08
 const BASE_SOLAR_GENERATION_KWH_PER_SOL := 65.0
+const SOLAR_ARRAY_GENERATION_KWH_PER_SOL := 18.0
 
 var sites: Array[Dictionary] = []
 var bvad_constants: Dictionary = {}
@@ -495,7 +496,7 @@ func _calculate_power(state: Variant, site: Dictionary) -> Dictionary:
 	var illumination_fraction := PolarSolar.daily_fraction(site, maxi(0, state.sol - 1))
 	var solar_yield := PolarSolar.daily_fraction(site, maxi(0, state.sol - 1), true)
 	var active_effect_multiplier := _active_power_generation_multiplier(state.active_events)
-	var solar_array_output := 18.0 if state.built_structures.has("solar_array") and not state.damaged_structures.has("solar_array") else 0.0
+	var solar_array_output := SOLAR_ARRAY_GENERATION_KWH_PER_SOL if state.built_structures.has("solar_array") and not state.damaged_structures.has("solar_array") else 0.0
 	var generated_kwh := (BASE_SOLAR_GENERATION_KWH_PER_SOL + solar_array_output) * solar_yield * active_effect_multiplier * _active_effect_multiplier_for(state.active_events, "output_multiplier")
 	var baseline_kw_per_person := _field_value(bvad_constants, "power_baseline_kw_per_person")
 	var consumed_kwh := baseline_kw_per_person * float(state.crew_size) * 24.0 * _active_effect_multiplier_for(state.active_events, "power_consumption_multiplier")
