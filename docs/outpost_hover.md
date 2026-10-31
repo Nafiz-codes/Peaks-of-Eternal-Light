@@ -6,6 +6,11 @@ Potential, Terrain Suitability, and Resource Accessibility. Elevation and slope
 remain below the bars. Moving away closes the card. It hides while dragging,
 pausing, or transitioning to an outpost and never intercepts clicks.
 
+Hovering for 250 ms reveals the card with a 300 ms fade. The four bars fill
+smoothly over 450 ms each, staggered by 70 ms. Leaving or switching outposts
+cancels the reveal, so quickly passing across labels does not flash cards.
+The Reduce Motion setting shows the card and final bar values immediately.
+
 Values come from `Resources/sites.json`. Sunlight is the modeled first-30-Earth-day
 illumination percentage, not a permanent or measured sunlight guarantee. Ratings
 use unrounded values: Excellent ≥80%, Good ≥60%, Limited ≥40%, Poor <40%.

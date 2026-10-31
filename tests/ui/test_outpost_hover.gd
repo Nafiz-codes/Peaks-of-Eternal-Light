@@ -43,14 +43,40 @@ func run() -> void:
 	var motion := InputEventMouseMotion.new()
 	motion.position = point
 	root.push_input(motion)
-	card._process(0.0)
+	var session := root.get_node("MissionSession")
+	var previous_reduce_motion: bool = session.reduce_motion
+	session.reduce_motion = false
+	card._process(0.1)
+	check(not card.panel.visible, "Brief hover waits before revealing the card.")
+	card._process(0.16)
 	check(card.panel.visible and card.shown_site == world.site_records[0].site_id, "Hovering the overview entry shows its card.")
+	check(card.panel.modulate.a == 0 and card.sunlight_bar.value == 0, "Reveal starts transparent with empty bars.")
+	await create_timer(0.15).timeout
+	check(card.panel.modulate.a > 0 and card.panel.modulate.a < 1, "Card fades in gradually.")
+	card.pointer_position = point
+	card._process(0.0)
+	check(card.panel.visible and card.panel.modulate.a > 0 and card.panel.modulate.a < 1, "Remaining over an outpost does not restart the animation.")
+	await create_timer(0.7).timeout
+	check(is_equal_approx(card.sunlight_bar.value, world.site_records[0].illumination_pct.value), "Animated bar reaches the real site value.")
+	check(is_equal_approx(card.panel.modulate.a, 1), "Card finishes fully visible.")
 	if DisplayServer.get_name() != "headless":
 		for i in range(4):
 			await process_frame
+			card.pointer_position = point
 			card._process(0.0)
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("/tmp/hover-overview.png")
+	card.clear()
+	card._process(0.1)
+	card.pointer_position = Vector2(-1, -1)
+	card._process(0.2)
+	card.pointer_position = point
+	card._process(0.1)
+	check(not card.panel.visible, "Leaving cancels the pending reveal delay.")
+	session.reduce_motion = true
+	card._process(0.0)
+	check(card.panel.visible and card.panel.modulate.a == 1 and card.sunlight_bar.value > 0, "Reduced motion shows information immediately without animation.")
+	session.reduce_motion = previous_reduce_motion
 	for pressed in [true, false]:
 		var click := InputEventMouseButton.new()
 		click.position = point

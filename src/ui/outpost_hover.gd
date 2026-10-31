@@ -7,6 +7,10 @@ var content: VBoxContainer
 var shown_site := ""
 var sunlight_bar: ProgressBar
 var pointer_position := Vector2(-1, -1)
+const HOVER_DELAY := 0.25
+var pending_site := ""
+var hover_elapsed := 0.0
+var reveal_tween: Tween
 
 static func sunlight_rating(value: float) -> Dictionary:
 	if value >= 80.0: return {"label": "Excellent", "color": Color("72df9a")}
@@ -40,7 +44,7 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion or event is InputEventMouseButton:
 		pointer_position = event.position
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if get_tree().paused or selector.landing_in_progress or not selector.is_visible_in_tree():
 		clear()
 		return
@@ -63,26 +67,54 @@ func _process(_delta: float) -> void:
 	for candidate in candidates:
 		var button: Button = candidate.button
 		if button.is_visible_in_tree() and not button.disabled and button.get_global_rect().has_point(point):
-			show_site(selector._site_by_id(candidate.site_id), button.get_global_rect())
+			if pending_site != str(candidate.site_id):
+				clear()
+				pending_site = str(candidate.site_id)
+			hover_elapsed += delta
+			if hover_elapsed >= HOVER_DELAY or get_node("/root/MissionSession").reduce_motion:
+				show_site(selector._site_by_id(candidate.site_id), button.get_global_rect(), true)
 			return
 	clear()
 
 func clear() -> void:
+	if reveal_tween != null:
+		reveal_tween.kill()
+		reveal_tween = null
+	pending_site = ""
+	hover_elapsed = 0.0
 	shown_site = ""
 	panel.hide()
+	panel.modulate.a = 1.0
 
-func show_site(site: Dictionary, anchor: Rect2) -> void:
+func show_site(site: Dictionary, anchor: Rect2, animate: bool = false) -> void:
 	var bounds := get_viewport().get_visible_rect().size
 	var width := minf(430.0, bounds.x - 24.0)
 	if shown_site != str(site.site_id) or not is_equal_approx(panel.size.x, width):
+		if reveal_tween != null:
+			reveal_tween.kill()
 		shown_site = str(site.site_id)
 		populate(site, width)
+		panel.modulate.a = 1.0
+		if animate and not get_node("/root/MissionSession").reduce_motion:
+			_reveal()
 	panel.show()
 	panel.size = Vector2(width, panel.get_combined_minimum_size().y)
 	var x := anchor.end.x + 14.0
 	if x + width > bounds.x - 12.0:
 		x = anchor.position.x - width - 14.0
 	panel.position = Vector2(clampf(x, 12.0, maxf(12.0, bounds.x - width - 12.0)), clampf(anchor.position.y, 12.0, maxf(12.0, bounds.y - panel.size.y - 12.0)))
+
+func _reveal() -> void:
+	panel.modulate.a = 0.0
+	reveal_tween = create_tween().set_parallel(true)
+	reveal_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	reveal_tween.tween_property(panel, "modulate:a", 1.0, 0.3)
+	var index := 0
+	for bar in content.find_children("*", "ProgressBar", true, false):
+		var target: float = bar.value
+		bar.value = 0.0
+		reveal_tween.tween_property(bar, "value", target, 0.45).set_delay(0.08 + index * 0.07)
+		index += 1
 
 func populate(site: Dictionary, width: float) -> void:
 	for child in content.get_children():
