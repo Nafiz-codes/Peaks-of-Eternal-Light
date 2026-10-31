@@ -33,7 +33,7 @@ func run():
 	check(controller.data.location == "outpost" and controller.data.mission == -1,"Old transition cannot mutate replacement campaign")
 	var save = preload("res://src/runtime/mission_save.gd")
 	var legacy: Dictionary = save.capture(session)
-	check(legacy.version == 2, "Canonical saves use version 2")
+	check(legacy.version == save.VERSION, "Canonical saves use current version")
 	check(world.find_children("StationAstronaut", "Node3D", true, false).size() == 3, "Three reused NPC models")
 	check(world.get_node("Outpost/Astronaut").get_meta("crew_id") == "CREW_01", "Player is the sole Commander")
 	check(world.get_node("Outpost/crew_briefing").get_meta("crew_id") == "CREW_02", "Maya uses the existing briefing astronaut")

@@ -48,6 +48,12 @@ func run() -> void:
 	var original_transform: Transform3D = moon.transform
 	var original_material = moon.material_override
 	click(boot.buttons[0])
+	check(boot.state == boot.State.SELECTING_COMMANDER, "Start opens Commander selection before the Moon")
+	boot.commander_menu.select_appearance("commander-02", false)
+	boot.commander_menu.name_input.text = "Arham"
+	boot.commander_menu._validate()
+	boot.commander_menu._confirm()
+	await create_timer(0.6).timeout
 	var first_tween = boot.sequence
 	boot._start_mission()
 	check(first_tween == boot.sequence, "Repeated start ignored")

@@ -1,6 +1,6 @@
 extends Node
 ## Owns every cinematic tween. The original selector becomes current_scene at handoff.
-enum State { INTRO, MENU_ENTERING, MENU_IDLE, STARTING_MISSION, GAMEPLAY }
+enum State { INTRO, MENU_ENTERING, MENU_IDLE, SELECTING_COMMANDER, STARTING_MISSION, GAMEPLAY }
 const SELECTOR := "res://scenes/lunar_landing_selector.tscn"
 const UI = preload("res://src/ui/ui_style.gd")
 var state := State.INTRO
@@ -24,6 +24,7 @@ var ready_for_mission := false
 var reduced := false
 var menu_reveal := 0.0
 var load_failed := false
+var commander_menu: Control
 
 func _ready() -> void:
 	get_node("/root/GameMenu").set_process_input(false)
@@ -227,6 +228,7 @@ func _process(delta: float) -> void:
 	astronaut.position = Vector2(viewport.x * 0.67 - astronaut.size.x * 0.5 - astronaut_departure * viewport.x * 1.65, viewport.y - astronaut.size.y + maxf(0.0, (astronaut.size.y - astronaut.size.x * 412.0 / 735.0) * 0.5) + 8.0) + drift
 
 func _input(event: InputEvent) -> void:
+	if state == State.SELECTING_COMMANDER: return
 	if event.is_action_pressed("ui_cancel"):
 		if state == State.INTRO: _enter_menu()
 		elif dialog.visible: _close_dialog()
@@ -235,6 +237,25 @@ func _input(event: InputEvent) -> void:
 func _start_mission() -> void:
 	if state != State.MENU_IDLE or not ready_for_mission or dialog.visible:
 		return
+	state = State.SELECTING_COMMANDER
+	navigation.hide()
+	astronaut.hide()
+	commander_menu = preload("res://src/ui/commander_selection.gd").new()
+	canvas.add_child(commander_menu)
+	commander_menu.back_requested.connect(func():
+		commander_menu.queue_free()
+		state = State.MENU_IDLE
+		navigation.show()
+		astronaut.show()
+		buttons[0].grab_focus())
+	commander_menu.confirmed.connect(_begin_selected_mission)
+
+func _begin_selected_mission() -> void:
+	if state != State.SELECTING_COMMANDER: return
+	commander_menu.queue_free()
+	# Continue the established lunar-globe transition after identity confirmation.
+	navigation.show()
+	astronaut.show()
 	state = State.STARTING_MISSION
 	for button in buttons:
 		button.disabled = true

@@ -30,6 +30,11 @@ func run() -> void:
 	paused = false
 	while not boot.ready_for_mission: await process_frame
 	boot._start_mission()
+	boot.commander_menu.select_appearance("commander-01", false)
+	boot.commander_menu.name_input.text = "Music test"
+	boot.commander_menu._validate()
+	boot.commander_menu._confirm()
+	await create_timer(0.6).timeout
 	await create_timer(3.0).timeout
 	check(player.playing and not music.mission_active, "Start Mission overview keeps music")
 	var nav = current_scene.navigation_controller
@@ -83,6 +88,11 @@ func run() -> void:
 		root.get_texture().get_image().save_png("res://.tools/ambient-settings.png")
 	current_scene._close_dialog()
 	current_scene._start_mission()
+	current_scene.commander_menu.select_appearance("commander-01", false)
+	current_scene.commander_menu.name_input.text = "Music test"
+	current_scene.commander_menu._validate()
+	current_scene.commander_menu._confirm()
+	await create_timer(0.6).timeout
 	await create_timer(3.0).timeout
 	nav = current_scene.navigation_controller
 	if DisplayServer.get_name() != "headless":

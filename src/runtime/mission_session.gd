@@ -4,6 +4,34 @@ extends Node
 ## mission dashboard. MissionSimulator remains authoritative for mission state.
 
 var selected_site_id := ""
+var player_character: Dictionary = {}
+var commander_draft: Dictionary = {}
+const Commander = preload("res://src/runtime/commander_identity.gd")
+
+func confirm_new_commander(appearance: String, player_name: String) -> bool:
+	var identity := Commander.create(appearance, player_name)
+	if identity.is_empty(): return false
+	player_character = identity
+	commander_draft = {"appearance_id": appearance, "name": identity.name}
+	# Commit a fresh in-memory playthrough only after confirmation. Disk slots stay intact.
+	selected_site_id = ""
+	dashboard_simulator = null
+	dashboard_state = null
+	dashboard_last_tick = {}
+	outpost_pose = {}
+	sol_checkpoint = {}
+	crew_read_reports = {}
+	return_scene_path = ""
+	action_busy = false
+	orbital_clock = preload("res://src/world/orbital_model.gd").default_clock()
+	state_changed.emit()
+	return true
+
+func commander_name() -> String:
+	return str(player_character.get("name", "Commander"))
+
+func commander_portrait(expression := "neutral") -> Dictionary:
+	return Commander.portrait(player_character, expression)
 var skip_next_startup_intro := false
 var return_scene_path := ""
 var dashboard_simulator: RefCounted = null

@@ -2,7 +2,8 @@ extends RefCounted
 ## Save data is plain Variant data, never serialized executable objects.
 const State = preload("res://src/simulation/mission_state.gd")
 const Simulator = preload("res://src/simulation/mission_simulator.gd")
-const VERSION := 2
+const VERSION := 3
+const Commander = preload("res://src/runtime/commander_identity.gd")
 const MAX_BYTES := 8 * 1024 * 1024
 
 static func state_data(state: RefCounted) -> Dictionary:
@@ -19,11 +20,13 @@ static func capture(session: Node) -> Dictionary:
 	return {"version": VERSION, "saved_at": Time.get_datetime_string_from_system(),
 		"site_id": session.selected_site_id, "state": state_data(session.dashboard_state),
 		"last_tick": tick, "pose": session.outpost_pose.duplicate(true), "crew_read_reports": session.crew_read_reports.duplicate(true),
-		"orbital_clock": session.orbital_clock.duplicate(true)}
+		"orbital_clock": session.orbital_clock.duplicate(true), "player_character": session.player_character.duplicate(true)}
 
 static func decode(data: Variant) -> Dictionary:
-	if not data is Dictionary or data.get("version") not in [1, VERSION]:
+	if not data is Dictionary or data.get("version") not in [1, 2, VERSION]:
 		return {}
+	var identity: Variant = data.get("player_character", {})
+	if not Commander.valid(identity): return {}
 	if not data.get("site_id") is String or not data.get("state") is Dictionary or not data.get("pose") is Dictionary or not data.get("last_tick") is Dictionary:
 		return {}
 	var simulator := Simulator.new()
@@ -102,13 +105,14 @@ static func decode(data: Variant) -> Dictionary:
 		if not pose.transform.is_finite() or not is_finite(pose.yaw) or not is_finite(pose.pitch):
 			return {}
 	return {"simulator": simulator, "state": state, "site_id": data.site_id,
-		"pose": pose.duplicate(true), "last_tick": data.last_tick.duplicate(true), "crew_read_reports": read_reports.duplicate(true), "orbital_clock": orbital_clock.duplicate(true)}
+		"pose": pose.duplicate(true), "last_tick": data.last_tick.duplicate(true), "crew_read_reports": read_reports.duplicate(true), "orbital_clock": orbital_clock.duplicate(true), "player_character": identity.duplicate(true)}
 
 static func restore(session: Node, data: Dictionary) -> Error:
 	var restored := decode(data)
 	if restored.is_empty():
 		return ERR_INVALID_DATA
 	session.selected_site_id = restored.site_id
+	session.player_character = restored.player_character
 	session.dashboard_simulator = restored.simulator
 	session.dashboard_state = restored.state
 	session.dashboard_last_tick = restored.last_tick

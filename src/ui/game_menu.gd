@@ -181,6 +181,7 @@ func _site_name() -> String:
 
 func _home() -> void:
 	body.add_child(UI.label(_site_name(), 23, UI.BLUE))
+	body.add_child(UI.label(session.commander_name() + " · Commander", 18, UI.AMBER))
 	var state: Variant = session.dashboard_state
 	if state == null:
 		body.add_child(UI.label("Exploration · Mission not started", 17, UI.MUTED))
