@@ -48,6 +48,7 @@ func _ready() -> void:
 	_add_polar_grid()
 	_add_camera()
 	_add_menu()
+	add_child(preload("res://src/ui/outpost_hover.gd").new())
 	_update_site_callouts()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -338,7 +339,6 @@ func _add_menu() -> void:
 		button.name = str(site.site_id) + "_SurfaceLabel"
 		var coordinates: Dictionary = site.coordinates
 		button.text = str(site.name)
-		button.tooltip_text = "%.4f°%s / %.4f°E · Click to land" % [ absf(float(coordinates.latitude_deg)), "S" if float(coordinates.latitude_deg) < 0 else "N", float(coordinates.longitude_deg)]
 		button.add_theme_font_size_override("font_size", 14)
 		var style := StyleBoxFlat.new()
 		style.bg_color = Color(0.12, 0.22, 0.32, 0.25)
