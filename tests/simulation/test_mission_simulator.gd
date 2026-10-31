@@ -12,7 +12,7 @@ func _init() -> void:
 	for site in simulator.get("sites"):
 		_assert(not site.get("illumination_pct", {}).get("verified", true), "Modeled illumination must remain explicitly unverified.")
 		_assert(site.get("elevation_m", {}).get("verified", false), "Every selected site has verified elevation data.")
-		_assert(site.get("slope_deg", {}).get("verified", false), "Every selected site has verified slope data.")
+		_assert(not site.get("slope_deg", {}).get("verified", true), "Derived LOLA slope remains explicitly unverified as a measurement.")
 		_assert(site.get("hydrogen_ppm", {}).get("available", true) == false, "Site hydrogen must remain unavailable until the current global map is sampled.")
 
 	var state: Object = simulator.call("begin_mission", "ridge_a", 2)
@@ -41,9 +41,9 @@ func _init() -> void:
 	var first_tick: Dictionary = simulator.call("advance_sol", state)
 	_assert(state.get("sol") == 1, "A sol tick increments the mission clock exactly once.")
 	_assert(not first_tick.get("completed", true), "A two-sol mission is not complete after its first tick.")
-	_assert(is_equal_approx(state.get("power_generated_kwh"), 32.5), "Ridge A solar generation uses the disclosed 50% ideal-horizon model.")
+	_assert(state.get("power_generated_kwh") > 60.0 and state.get("power_generated_kwh") < 70.0, "Ridge A solar generation uses its date-specific polar illumination and Sun-distance geometry.")
 	_assert(is_equal_approx(state.get("power_consumed_kwh"), 60.0), "Baseline power consumption uses crew size and the contract value.")
-	_assert(is_equal_approx(state.get("power_kwh"), 262.5), "The battery reserve receives the sol power balance.")
+	_assert(is_equal_approx(state.get("power_kwh"), 230.0 + state.get("power_generated_kwh")), "The battery reserve receives the date-specific sol power balance.")
 	_assert(state.get("radiation_this_sol_msv") > 0.0, "Every sol adds a positive radiation dose.")
 	_assert(state.get("radiation_this_sol_msv") > 0.80 and state.get("radiation_this_sol_msv") < 0.90, "Radiation uses the NASA lunar-surface baseline and terrain proxy.")
 	_assert(state.get("terrain_shielding_factor") > 0.0, "Terrain fields produce a shielding factor.")
@@ -84,8 +84,8 @@ func _init() -> void:
 
 	var power_failure_state: Object = simulator.call("begin_mission", "shadow_zone", 5)
 	power_failure_state.set("power_kwh", 0.0)
-	power_failure_state.set("active_events", [{"event_id": "power_shutdown", "effects": {"power_generation_multiplier": 0.0}}])
-	for _tick in range(4):
+	power_failure_state.active_events.append({"event_id": "power_shutdown", "effects": {"power_generation_multiplier": 0.0}, "remaining_sols": 10, "started_sol": -1})
+	for _tick in range(2):
 		simulator.call("advance_sol", power_failure_state)
 	_assert(power_failure_state.get("mission_outcome").get("status") == "failure", "Two consecutive sols with an empty battery fail the mission.")
 	_assert(power_failure_state.get("mission_outcome").get("failure_reason") == "sustained_power_depletion", "The outcome distinguishes sustained power loss from a warning.")
@@ -102,13 +102,13 @@ func _init() -> void:
 	_assert(duration_state.active_events[0].remaining_sols == 3, "A newly triggered timed effect retains its full configured duration.")
 	for expected_remaining in [2, 1, 0]:
 		var duration_tick: Dictionary = simulator.call("advance_sol", duration_state)
-		_assert(is_equal_approx(duration_tick.power.generated_kwh, 16.25), "Timed generation modifier applies through each configured sol.")
+		_assert(duration_tick.power.generated_kwh >= 0.0 and duration_tick.power.generated_kwh < 35.0, "Timed generation modifier applies through each configured sol's solar geometry.")
 		if expected_remaining > 0:
 			_assert(duration_state.active_events.size() == 1 and duration_state.active_events[0].remaining_sols == expected_remaining, "Timed duration decrements after an affected sol.")
 		else:
 			_assert(duration_state.active_events.is_empty(), "Timed effect expires after its final affected sol.")
 	var expired_tick: Dictionary = simulator.call("advance_sol", duration_state)
-	_assert(is_equal_approx(expired_tick.power.generated_kwh, 32.5), "Expired solar modifier no longer affects the following sol.")
+	_assert(expired_tick.power.generated_kwh >= 60.0 and expired_tick.power.generated_kwh < 70.0, "Expired solar modifier no longer affects the following sol.")
 
 	var terrain_only_state: Object = simulator.call("begin_mission", "ridge_a", 2)
 	var wall_state: Object = simulator.call("begin_mission", "ridge_a", 2)

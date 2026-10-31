@@ -185,10 +185,10 @@ func show_sites() -> void:
 		if coordinates is Dictionary and coordinates.has("latitude_deg") and coordinates.has("longitude_deg"):
 			details.add_child(UI.label("Coordinates: %s°, %s° east" % [coordinates.latitude_deg, coordinates.longitude_deg], 14, UI.MUTED))
 		UI.disclosure(details, "Measurement sources and reading dates", _site_sources(selected))
-		details.add_child(UI.label("Solar availability is an ideal-horizon lunar-day estimate. Current site hydrogen estimates are unavailable: the recorded global map has not been sampled at these coordinates.", 14, UI.AMBER))
+		details.add_child(UI.label("South-pole study sites. Solar availability varies with date and the sampled terrain horizon; the displayed average is not guaranteed daylight. Local water-ice abundance remains unmeasured.", 14, UI.AMBER))
 		if not _valid_site(selected):
 			details.add_child(UI.label("Required numeric site data is missing. This site cannot start a mission.", 14, UI.AMBER))
-	column.add_child(UI.label("Construction and rover operations use authored costs and simulation-owned results. The modeled solar average is not a site-specific lighting forecast.", 14, UI.AMBER))
+		column.add_child(UI.label("Power uses date-dependent NASA/JPL Sun distance, solar-disk visibility, and a NASA LOLA-derived local horizon. The displayed 30-day average is context; each sol uses its own modeled geometry. Construction costs and tracking-array capacity are gameplay values.", 14, UI.AMBER))
 	start_button = UI.button("Establish outpost", start_mission, not _valid_site(selected))
 	column.add_child(start_button)
 	_add_previews()

@@ -1,0 +1,797 @@
+{
+  "source": "NASA/JPL Horizons DE441; independent direct queries at each polar site, off table grid",
+  "sites": [
+    {
+      "site_id": "ridge_a",
+      "coordinates": {
+        "latitude_deg": -89.45,
+        "longitude_deg": 222.69,
+        "coordinate_frame": "Planetocentric latitude; east-positive longitude 0\u00e2\u20ac\u201c360 degrees",
+        "verified": true,
+        "source_id": "nasa_isru_polar_sites_2020",
+        "source": "NASA GRC/JSC Kleinhenz & Paz (2020), Case Study for Lunar ISRU Systems Utilizing Polar Water, slide 6, Artemis 001. https://ntrs.nasa.gov/api/citations/20205008303/downloads/AIAA_ASCEND2020_Kleinhenz_presentation_final.pdf",
+        "date_read": "2026-10-31"
+      },
+      "samples": [
+        {
+          "target": 10,
+          "elapsed_seconds": 10800.0,
+          "azimuth_deg": 218.951038306,
+          "elevation_deg": 0.891144513,
+          "distance_km": 149060697.88
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 2602800.0,
+          "azimuth_deg": 213.692739904,
+          "elevation_deg": 1.092948367,
+          "distance_km": 147944011.54
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 5194800.0,
+          "azimuth_deg": 208.813753109,
+          "elevation_deg": 0.837873047,
+          "distance_km": 147280207.62
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 7786800.0,
+          "azimuth_deg": 204.080965886,
+          "elevation_deg": 0.183908878,
+          "distance_km": 147267075.32
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 10378800.0,
+          "azimuth_deg": 199.224897607,
+          "elevation_deg": -0.673952652,
+          "distance_km": 147918740.52
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 12970800.0,
+          "azimuth_deg": 194.023248219,
+          "elevation_deg": -1.474666253,
+          "distance_km": 149059853.53
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 15562800.0,
+          "azimuth_deg": 188.355192642,
+          "elevation_deg": -1.985886255,
+          "distance_km": 150385486.91
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 18154800.0,
+          "azimuth_deg": 182.218953198,
+          "elevation_deg": -2.07431009,
+          "distance_km": 151556085.32
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 20746800.0,
+          "azimuth_deg": 175.723541498,
+          "elevation_deg": -1.730154192,
+          "distance_km": 152286699.54
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 23338800.0,
+          "azimuth_deg": 169.063190364,
+          "elevation_deg": -1.054098833,
+          "distance_km": 152408080.12
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 25930800.0,
+          "azimuth_deg": 162.47666616,
+          "elevation_deg": -0.2256759,
+          "distance_km": 151897477.51
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 28522800.0,
+          "azimuth_deg": 156.193285592,
+          "elevation_deg": 0.535625854,
+          "distance_km": 150882533.99
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 31114800.0,
+          "azimuth_deg": 150.37241273,
+          "elevation_deg": 1.017129953,
+          "distance_km": 149618131.13
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 10800.0,
+          "azimuth_deg": 134.08020309,
+          "elevation_deg": -3.691995879,
+          "distance_km": 401703.40437
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 2602800.0,
+          "azimuth_deg": 130.973267997,
+          "elevation_deg": 0.249330691,
+          "distance_km": 394511.67386
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 5194800.0,
+          "azimuth_deg": 129.421582736,
+          "elevation_deg": 4.010782038,
+          "distance_km": 384600.49771
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 7786800.0,
+          "azimuth_deg": 130.118436874,
+          "elevation_deg": 6.080916807,
+          "distance_km": 374656.09622
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 10378800.0,
+          "azimuth_deg": 132.859093521,
+          "elevation_deg": 5.258160045,
+          "distance_km": 367860.79847
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 12970800.0,
+          "azimuth_deg": 136.518938067,
+          "elevation_deg": 1.646764592,
+          "distance_km": 366914.65892
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 15562800.0,
+          "azimuth_deg": 139.873311535,
+          "elevation_deg": -3.004843801,
+          "distance_km": 372557.3958
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 18154800.0,
+          "azimuth_deg": 142.106877307,
+          "elevation_deg": -6.428342818,
+          "distance_km": 382828.86211
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 20746800.0,
+          "azimuth_deg": 142.686761947,
+          "elevation_deg": -7.286169439,
+          "distance_km": 394057.96845
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 23338800.0,
+          "azimuth_deg": 141.448976077,
+          "elevation_deg": -5.586345424,
+          "distance_km": 402619.01309
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 25930800.0,
+          "azimuth_deg": 138.836546598,
+          "elevation_deg": -2.204413829,
+          "distance_km": 406048.50864
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 28522800.0,
+          "azimuth_deg": 135.795209415,
+          "elevation_deg": 1.66346585,
+          "distance_km": 403345.8196
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 31114800.0,
+          "azimuth_deg": 133.39090758,
+          "elevation_deg": 4.762495727,
+          "distance_km": 394967.3367
+        }
+      ],
+      "10_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27222.69%2C-89.45%2C1.954598%27&START_TIME=%272026-10-19+03%3A00%27&STOP_TIME=%272027-10-19+03%3A00%27&STEP_SIZE=%2730+d%27&QUANTITIES=%274%2C20%27&RANGE_UNITS=%27KM%27&SUPPRESS_RANGE_RATE=%27YES%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27",
+      "399_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27222.69%2C-89.45%2C1.954598%27&START_TIME=%272026-10-19+03%3A00%27&STOP_TIME=%272027-10-19+03%3A00%27&STEP_SIZE=%2730+d%27&QUANTITIES=%274%2C20%27&RANGE_UNITS=%27KM%27&SUPPRESS_RANGE_RATE=%27YES%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27"
+    },
+    {
+      "site_id": "shadow_zone",
+      "coordinates": {
+        "latitude_deg": -89.56,
+        "longitude_deg": 214.73,
+        "coordinate_frame": "Planetocentric latitude; east-positive longitude 0\u00e2\u20ac\u201c360 degrees",
+        "verified": true,
+        "source_id": "nasa_isru_polar_sites_2020",
+        "source": "NASA GRC/JSC Kleinhenz & Paz (2020), Case Study for Lunar ISRU Systems Utilizing Polar Water, slide 6, ISRU Ridge 1. https://ntrs.nasa.gov/api/citations/20205008303/downloads/AIAA_ASCEND2020_Kleinhenz_presentation_final.pdf",
+        "date_read": "2026-10-31"
+      },
+      "samples": [
+        {
+          "target": 10,
+          "elapsed_seconds": 10800.0,
+          "azimuth_deg": 226.911153295,
+          "elevation_deg": 1.018291393,
+          "distance_km": 149060694.03
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 2602800.0,
+          "azimuth_deg": 221.652703711,
+          "elevation_deg": 1.221799308,
+          "distance_km": 147944007.64
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 5194800.0,
+          "azimuth_deg": 216.773487016,
+          "elevation_deg": 0.967335282,
+          "distance_km": 147280203.69
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 7786800.0,
+          "azimuth_deg": 212.040634229,
+          "elevation_deg": 0.313067594,
+          "distance_km": 147267071.4
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 10378800.0,
+          "azimuth_deg": 207.184816973,
+          "elevation_deg": -0.54602075,
+          "distance_km": 147918736.64
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 12970800.0,
+          "azimuth_deg": 201.983730117,
+          "elevation_deg": -1.349066757,
+          "distance_km": 149059849.71
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 15562800.0,
+          "azimuth_deg": 196.316367847,
+          "elevation_deg": -1.864005037,
+          "distance_km": 150385483.2
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 18154800.0,
+          "azimuth_deg": 190.180647586,
+          "elevation_deg": -1.957796346,
+          "distance_km": 151556081.78
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 20746800.0,
+          "azimuth_deg": 183.685274705,
+          "elevation_deg": -1.620775345,
+          "distance_km": 152286696.21
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 23338800.0,
+          "azimuth_deg": 177.024324933,
+          "elevation_deg": -0.953493736,
+          "distance_km": 152408077.06
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 25930800.0,
+          "azimuth_deg": 170.436663864,
+          "elevation_deg": -0.135083782,
+          "distance_km": 151897474.76
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 28522800.0,
+          "azimuth_deg": 164.151968653,
+          "elevation_deg": 0.615548812,
+          "distance_km": 150882531.56
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 31114800.0,
+          "azimuth_deg": 158.330109874,
+          "elevation_deg": 1.086309312,
+          "distance_km": 149618129.03
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 10800.0,
+          "azimuth_deg": 142.047362225,
+          "elevation_deg": -3.656258436,
+          "distance_km": 401702.30552
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 2602800.0,
+          "azimuth_deg": 138.931838131,
+          "elevation_deg": 0.278272242,
+          "distance_km": 394510.79782
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 5194800.0,
+          "azimuth_deg": 137.371785662,
+          "elevation_deg": 4.036294629,
+          "distance_km": 384599.74544
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 7786800.0,
+          "azimuth_deg": 138.064033314,
+          "elevation_deg": 6.107972485,
+          "distance_km": 374655.30965
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 10378800.0,
+          "azimuth_deg": 140.806648984,
+          "elevation_deg": 5.291243494,
+          "distance_km": 367859.82474
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 12970800.0,
+          "azimuth_deg": 144.474488142,
+          "elevation_deg": 1.68777203,
+          "distance_km": 366913.42379
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 15562800.0,
+          "azimuth_deg": 147.838716796,
+          "elevation_deg": -2.956727636,
+          "distance_km": 372555.924
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 18154800.0,
+          "azimuth_deg": 150.079311551,
+          "elevation_deg": -6.375587232,
+          "distance_km": 382827.241
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 20746800.0,
+          "azimuth_deg": 150.6609387,
+          "elevation_deg": -7.232222626,
+          "distance_km": 394056.31016
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 23338800.0,
+          "azimuth_deg": 149.419737998,
+          "elevation_deg": -5.534949445,
+          "distance_km": 402617.43455
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 25930800.0,
+          "azimuth_deg": 146.80034676,
+          "elevation_deg": -2.158481527,
+          "distance_km": 406047.1058
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 28522800.0,
+          "azimuth_deg": 143.750760799,
+          "elevation_deg": 1.702914191,
+          "distance_km": 403344.63153
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 31114800.0,
+          "azimuth_deg": 141.339621838,
+          "elevation_deg": 4.796736365,
+          "distance_km": 394966.3245
+        }
+      ],
+      "10_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27214.73%2C-89.56%2C1.686383%27&START_TIME=%272026-10-19+03%3A00%27&STOP_TIME=%272027-10-19+03%3A00%27&STEP_SIZE=%2730+d%27&QUANTITIES=%274%2C20%27&RANGE_UNITS=%27KM%27&SUPPRESS_RANGE_RATE=%27YES%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27",
+      "399_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27214.73%2C-89.56%2C1.686383%27&START_TIME=%272026-10-19+03%3A00%27&STOP_TIME=%272027-10-19+03%3A00%27&STEP_SIZE=%2730+d%27&QUANTITIES=%274%2C20%27&RANGE_UNITS=%27KM%27&SUPPRESS_RANGE_RATE=%27YES%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27"
+    },
+    {
+      "site_id": "crater_rim_b",
+      "coordinates": {
+        "latitude_deg": -89.78,
+        "longitude_deg": 204.27,
+        "coordinate_frame": "Planetocentric latitude; east-positive longitude 0\u00e2\u20ac\u201c360 degrees",
+        "verified": true,
+        "source_id": "nasa_isru_polar_sites_2020",
+        "source": "NASA GRC/JSC Kleinhenz & Paz (2020), Case Study for Lunar ISRU Systems Utilizing Polar Water, slide 6, Artemis 004. https://ntrs.nasa.gov/api/citations/20205008303/downloads/AIAA_ASCEND2020_Kleinhenz_presentation_final.pdf",
+        "date_read": "2026-10-31"
+      },
+      "samples": [
+        {
+          "target": 10,
+          "elapsed_seconds": 10800.0,
+          "azimuth_deg": 237.373635916,
+          "elevation_deg": 1.200243374,
+          "distance_km": 149060688.51
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 2602800.0,
+          "azimuth_deg": 232.115286487,
+          "elevation_deg": 1.415454584,
+          "distance_km": 147944001.76
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 5194800.0,
+          "azimuth_deg": 227.235236102,
+          "elevation_deg": 1.170394631,
+          "distance_km": 147280197.53
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 7786800.0,
+          "azimuth_deg": 222.501101204,
+          "elevation_deg": 0.523843458,
+          "distance_km": 147267065.0
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 10378800.0,
+          "azimuth_deg": 217.644155551,
+          "elevation_deg": -0.328822711,
+          "distance_km": 147918730.05
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 12970800.0,
+          "azimuth_deg": 212.442568492,
+          "elevation_deg": -1.126720903,
+          "distance_km": 149059842.96
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 15562800.0,
+          "azimuth_deg": 206.775465758,
+          "elevation_deg": -1.63813578,
+          "distance_km": 150385476.35
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 18154800.0,
+          "azimuth_deg": 200.640487155,
+          "elevation_deg": -1.730602287,
+          "distance_km": 151556074.89
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 20746800.0,
+          "azimuth_deg": 194.14579182,
+          "elevation_deg": -1.395014617,
+          "distance_km": 152286689.36
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 23338800.0,
+          "azimuth_deg": 187.484928577,
+          "elevation_deg": -0.73221249,
+          "distance_km": 152408070.34
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 25930800.0,
+          "azimuth_deg": 180.896547207,
+          "elevation_deg": 0.078828249,
+          "distance_km": 151897468.27
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 28522800.0,
+          "azimuth_deg": 174.610567741,
+          "elevation_deg": 0.819795107,
+          "distance_km": 150882525.36
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 31114800.0,
+          "azimuth_deg": 168.787483403,
+          "elevation_deg": 1.279407776,
+          "distance_km": 149618123.17
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 10800.0,
+          "azimuth_deg": 152.517052177,
+          "elevation_deg": -3.504497791,
+          "distance_km": 401697.70971
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 2602800.0,
+          "azimuth_deg": 149.389824497,
+          "elevation_deg": 0.420648418,
+          "distance_km": 394506.47636
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 5194800.0,
+          "azimuth_deg": 147.817831276,
+          "elevation_deg": 4.173819668,
+          "distance_km": 384595.58028
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 7786800.0,
+          "azimuth_deg": 148.503645509,
+          "elevation_deg": 6.24768778,
+          "distance_km": 374651.0911
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 10378800.0,
+          "azimuth_deg": 151.249494264,
+          "elevation_deg": 5.439374128,
+          "distance_km": 367855.34624
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 12970800.0,
+          "azimuth_deg": 154.92855161,
+          "elevation_deg": 1.846596266,
+          "distance_km": 366908.60459
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 15562800.0,
+          "azimuth_deg": 158.305519361,
+          "elevation_deg": -2.788688105,
+          "distance_km": 372550.83065
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 18154800.0,
+          "azimuth_deg": 160.554596526,
+          "elevation_deg": -6.20173644,
+          "distance_km": 382821.99763
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 20746800.0,
+          "azimuth_deg": 161.138240415,
+          "elevation_deg": -7.056904175,
+          "distance_km": 394051.03207
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 23338800.0,
+          "azimuth_deg": 159.893073564,
+          "elevation_deg": -5.362778939,
+          "distance_km": 402612.23377
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 25930800.0,
+          "azimuth_deg": 157.265175397,
+          "elevation_deg": -1.993228105,
+          "distance_km": 406042.09346
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 28522800.0,
+          "azimuth_deg": 154.204783187,
+          "elevation_deg": 1.859671882,
+          "distance_km": 403339.87458
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 31114800.0,
+          "azimuth_deg": 151.78414489,
+          "elevation_deg": 4.946456913,
+          "distance_km": 394961.79399
+        }
+      ],
+      "10_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27204.27%2C-89.78%2C1.728469%27&START_TIME=%272026-10-19+03%3A00%27&STOP_TIME=%272027-10-19+03%3A00%27&STEP_SIZE=%2730+d%27&QUANTITIES=%274%2C20%27&RANGE_UNITS=%27KM%27&SUPPRESS_RANGE_RATE=%27YES%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27",
+      "399_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27204.27%2C-89.78%2C1.728469%27&START_TIME=%272026-10-19+03%3A00%27&STOP_TIME=%272027-10-19+03%3A00%27&STEP_SIZE=%2730+d%27&QUANTITIES=%274%2C20%27&RANGE_UNITS=%27KM%27&SUPPRESS_RANGE_RATE=%27YES%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27"
+    },
+    {
+      "site_id": "plateau_d",
+      "coordinates": {
+        "latitude_deg": -89.69,
+        "longitude_deg": 197.05,
+        "coordinate_frame": "Planetocentric latitude; east-positive longitude 0\u00e2\u20ac\u201c360 degrees",
+        "verified": true,
+        "source_id": "nasa_isru_polar_sites_2020",
+        "source": "NASA GRC/JSC Kleinhenz & Paz (2020), Case Study for Lunar ISRU Systems Utilizing Polar Water, slide 6, ISRU Ridge 4. https://ntrs.nasa.gov/api/citations/20205008303/downloads/AIAA_ASCEND2020_Kleinhenz_presentation_final.pdf",
+        "date_read": "2026-10-31"
+      },
+      "samples": [
+        {
+          "target": 10,
+          "elapsed_seconds": 10800.0,
+          "azimuth_deg": 244.591587116,
+          "elevation_deg": 1.185855425,
+          "distance_km": 149060688.94
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 2602800.0,
+          "azimuth_deg": 239.332930902,
+          "elevation_deg": 1.392444879,
+          "distance_km": 147944002.46
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 5194800.0,
+          "azimuth_deg": 234.453331197,
+          "elevation_deg": 1.139555775,
+          "distance_km": 147280198.46
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 7786800.0,
+          "azimuth_deg": 229.720251297,
+          "elevation_deg": 0.485623128,
+          "distance_km": 147267066.16
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 10378800.0,
+          "azimuth_deg": 224.864597158,
+          "elevation_deg": -0.374344442,
+          "distance_km": 147918731.43
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 12970800.0,
+          "azimuth_deg": 219.6641,
+          "elevation_deg": -1.179698562,
+          "distance_km": 149059844.57
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 15562800.0,
+          "azimuth_deg": 213.99755202,
+          "elevation_deg": -1.698738499,
+          "distance_km": 150385478.19
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 18154800.0,
+          "azimuth_deg": 207.862485669,
+          "elevation_deg": -1.798790107,
+          "distance_km": 151556076.96
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 20746800.0,
+          "azimuth_deg": 201.367196327,
+          "elevation_deg": -1.470379752,
+          "distance_km": 152286691.65
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 23338800.0,
+          "azimuth_deg": 194.705528321,
+          "elevation_deg": -0.813933059,
+          "distance_km": 152408072.82
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 25930800.0,
+          "azimuth_deg": 188.116447053,
+          "elevation_deg": -0.008093435,
+          "distance_km": 151897470.91
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 28522800.0,
+          "azimuth_deg": 181.830079451,
+          "elevation_deg": 0.728980621,
+          "distance_km": 150882528.12
+        },
+        {
+          "target": 10,
+          "elapsed_seconds": 31114800.0,
+          "azimuth_deg": 176.006952309,
+          "elevation_deg": 1.18596079,
+          "distance_km": 149618126.01
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 10800.0,
+          "azimuth_deg": 159.736640404,
+          "elevation_deg": -3.600112613,
+          "distance_km": 401700.60608
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 2602800.0,
+          "azimuth_deg": 156.609870291,
+          "elevation_deg": 0.325465994,
+          "distance_km": 394509.36519
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 5194800.0,
+          "azimuth_deg": 155.03880316,
+          "elevation_deg": 4.078947857,
+          "distance_km": 384598.45231
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 7786800.0,
+          "azimuth_deg": 155.724988634,
+          "elevation_deg": 6.152642614,
+          "distance_km": 374653.95897
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 10378800.0,
+          "azimuth_deg": 158.470207455,
+          "elevation_deg": 5.34384383,
+          "distance_km": 367858.23286
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 12970800.0,
+          "azimuth_deg": 162.148542089,
+          "elevation_deg": 1.750780867,
+          "distance_km": 366911.51129
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 15562800.0,
+          "azimuth_deg": 165.525616896,
+          "elevation_deg": -2.884407199,
+          "distance_km": 372553.73234
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 18154800.0,
+          "azimuth_deg": 167.775318769,
+          "elevation_deg": -6.297205972,
+          "distance_km": 382824.87805
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 20746800.0,
+          "azimuth_deg": 168.359195421,
+          "elevation_deg": -7.152286568,
+          "distance_km": 394053.90481
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 23338800.0,
+          "azimuth_deg": 167.113585462,
+          "elevation_deg": -5.458338201,
+          "distance_km": 402615.12121
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 25930800.0,
+          "azimuth_deg": 164.48516648,
+          "elevation_deg": -2.089008819,
+          "distance_km": 406044.99879
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 28522800.0,
+          "azimuth_deg": 161.4248168,
+          "elevation_deg": 1.763887947,
+          "distance_km": 403342.78049
+        },
+        {
+          "target": 399,
+          "elapsed_seconds": 31114800.0,
+          "azimuth_deg": 159.004706192,
+          "elevation_deg": 4.850862949,
+          "distance_km": 394964.68505
+        }
+      ],
+      "10_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27197.05%2C-89.69%2C1.7150509999999999%27&START_TIME=%272026-10-19+03%3A00%27&STOP_TIME=%272027-10-19+03%3A00%27&STEP_SIZE=%2730+d%27&QUANTITIES=%274%2C20%27&RANGE_UNITS=%27KM%27&SUPPRESS_RANGE_RATE=%27YES%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27",
+      "399_url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27197.05%2C-89.69%2C1.7150509999999999%27&START_TIME=%272026-10-19+03%3A00%27&STOP_TIME=%272027-10-19+03%3A00%27&STEP_SIZE=%2730+d%27&QUANTITIES=%274%2C20%27&RANGE_UNITS=%27KM%27&SUPPRESS_RANGE_RATE=%27YES%27&CSV_FORMAT=%27YES%27&EXTRA_PREC=%27YES%27"
+    }
+  ]
+}

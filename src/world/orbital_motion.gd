@@ -1,5 +1,6 @@
 extends Node
 const Model = preload("res://src/world/orbital_model.gd")
+const Solar = preload("res://src/simulation/polar_solar.gd")
 var session: Node
 var world: Node3D
 var material: ShaderMaterial
@@ -45,7 +46,18 @@ func apply_sky() -> void:
 	var direction: Vector3 = observation.sun_direction
 	light.look_at(light.global_position - direction, Vector3.FORWARD if absf(direction.y) > 0.999 else Vector3.UP)
 	# No direct sunlight from below the lunar horizon; keep artistic ambient fill.
-	light.light_energy = 1.1 * smoothstep(-sin(radius), sin(radius), direction.y)
+	var visibility := Solar.visibility(world.site_record, observation)
+	light.light_energy = 1.1 * visibility * pow(Model.AU_KM / float(observation.sun_distance_km), 2.0)
+	material.set_shader_parameter("sun_visibility", visibility)
+	world.set_meta("sun_visibility", visibility)
+	world.set_meta("sun_elevation_deg", rad_to_deg(asin(clampf(direction.y, -1.0, 1.0))))
+	# Polar arrays track the Sun's azimuth; capacity is an ideal tracking-array
+	# gameplay rating. Geometry of the imported panel's hinges remains illustrative.
+	var array := world.get_node_or_null("Outpost/SolarArray")
+	if array != null:
+		for panel in array.get_children():
+			if panel is Node3D and panel.name.begins_with("Panel"):
+				panel.rotation.y = atan2(direction.x, direction.z)
 	world.set_meta("earth_distance_km", observation.earth_position_km.length())
 	world.set_meta("earth_render_distance_km", observation.earth_position_km.length() * world.EARTH_DISTANCE_SCALE)
 	world.set_meta("earth_render_elevation_deg", rad_to_deg(asin(observation.earth_position_km.normalized().y)))

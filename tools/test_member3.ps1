@@ -19,6 +19,7 @@ $tests = @(
     'tests/world/test_developer_sol_skip.gd',
     'tests/world/test_rover_expedition.gd',
     'tests/world/test_orbital_motion.gd',
+    'tests/world/test_polar_ephemeris.gd',
     'tests/world/test_sun_lighting.gd',
     'tests/world/test_live_operations.gd',
     'tests/world/test_rover_impact_rules.gd',

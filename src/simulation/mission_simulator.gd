@@ -10,6 +10,7 @@ const CREW_PATH := "res://Resources/crew.json"
 const CONSTRUCTION_PATH := "res://Resources/construction.json"
 const EVENTS_PATH := "res://Resources/events.json"
 const MissionStateScript = preload("res://src/simulation/mission_state.gd")
+const PolarSolar = preload("res://src/simulation/polar_solar.gd")
 
 # Five-person provisioning: retain the previous ten-sol reserve margin while
 # accounting for the player (12 kWh/sol extra baseline, 25% more consumables).
@@ -264,7 +265,7 @@ func _evaluate_event_triggers(state: Variant) -> void:
 
 func _event_condition_met(event_id: String, state: Variant) -> bool:
 	var site: Dictionary = _find_site(state.site_id)
-	var illumination := _field_value(site, "illumination_pct")
+	var illumination := 100.0 * PolarSolar.daily_fraction(site, maxi(0, state.sol - 1))
 	match event_id:
 		"solar_array_dust_accumulation": return state.sol > 3 and _has_rover_or_eva_activity(state)
 		"solar_particle_event": return true
@@ -491,10 +492,11 @@ func _evaluate_mission_outcome(state: Variant) -> Dictionary:
 
 
 func _calculate_power(state: Variant, site: Dictionary) -> Dictionary:
-	var illumination_fraction := clampf(_field_value(site, "illumination_pct") / 100.0, 0.0, 1.0)
+	var illumination_fraction := PolarSolar.daily_fraction(site, maxi(0, state.sol - 1))
+	var solar_yield := PolarSolar.daily_fraction(site, maxi(0, state.sol - 1), true)
 	var active_effect_multiplier := _active_power_generation_multiplier(state.active_events)
 	var solar_array_output := 18.0 if state.built_structures.has("solar_array") and not state.damaged_structures.has("solar_array") else 0.0
-	var generated_kwh := (BASE_SOLAR_GENERATION_KWH_PER_SOL + solar_array_output) * illumination_fraction * active_effect_multiplier * _active_effect_multiplier_for(state.active_events, "output_multiplier")
+	var generated_kwh := (BASE_SOLAR_GENERATION_KWH_PER_SOL + solar_array_output) * solar_yield * active_effect_multiplier * _active_effect_multiplier_for(state.active_events, "output_multiplier")
 	var baseline_kw_per_person := _field_value(bvad_constants, "power_baseline_kw_per_person")
 	var consumed_kwh := baseline_kw_per_person * float(state.crew_size) * 24.0 * _active_effect_multiplier_for(state.active_events, "power_consumption_multiplier")
 	return {

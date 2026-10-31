@@ -2,7 +2,7 @@
 
 **Game title:** Peaks of Eternal Light · **Team:** TRIARCHY
 
-**Current Day 1–20 status — October 17, 2026:** Runtime/content/presentation implementation and automated integration are complete, including live rover animation and construction completion checks. The combined runner passes 12 suites. Member 1's global hydrogen sampling remains blocked by archive HTTP 403; illumination stays explicitly modeled under the revised Day 11 contract. Human playtest/team acceptance remains unrecorded. See [current audit](docs/day20_completion.md); the dated progress notes below describe earlier builds.
+**Current follow-up — October 31, 2026:** The earlier Day 1–20 runtime/content/presentation work remains complete. A subsequent polar-data integration replaces the four active site coordinates with notional south-polar study sites, NASA LOLA-derived local terrain/horizons, and date-dependent JPL Horizons solar geometry. The off-grid ephemeris, simulator, landing selector, lighting, dashboard, and menu regressions pass. Local water-ice abundance remains unmeasured; human playtest/team acceptance remains unrecorded. See [polar data contract](Resources/README.md), [orbital model](docs/earth_sky.md), and the historical [Day 20 audit](docs/day20_completion.md).
 
 **Timeline:** Sept 26 – Oct 31 (~5 weeks) · Local qualifier the day before the main Nov 14–15 event
 

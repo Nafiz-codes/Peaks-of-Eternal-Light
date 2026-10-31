@@ -197,7 +197,7 @@ The existing `scenes/mission_dashboard.tscn` entry scene now hosts site selectio
 | Member 2: `events.json` | Two representative modal previews, one choice event and one notification | No trigger parsing, effect execution, or claim that a live event resolved |
 | Member 2: construction/rover content | Controls remain visibly unavailable | Await authoritative action and runtime-state contracts |
 
-The current four sites share a disclosed 50% ideal-horizon illumination model, so baseline solar generation is the same at each site; the screen explains this model and its lack of local horizon sampling. Sourced fields retain their source labels, while unverified power/hygiene choices and the ISS water-recovery proxy are explained separately. Do not describe source verification as proof of a safe or balanced mission.
+The current four sites use date-dependent NASA/JPL Horizons Sun/Earth positions and a NASA LOLA-derived local horizon for daily solar visibility. The displayed 30-day average is context; simulation power is calculated from each sol's geometry and Sun distance. Derived slope remains unverified as a direct measurement, while local hydrogen is unavailable. Sourced fields retain their source labels, and unverified power/hygiene choices plus the ISS water-recovery proxy are explained separately. Do not describe source verification as proof of a safe or balanced mission.
 
 ### Interaction and test results
 

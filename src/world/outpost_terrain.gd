@@ -1,6 +1,7 @@
 extends RefCounted
 
 const TychoElevation = preload("res://src/world/tycho_elevation.gd")
+const PolarTerrain = preload("res://src/world/polar_terrain.gd")
 
 # Deterministic art direction per site, not a reconstruction of LOLA pixels.
 static func build(site: Dictionary) -> MeshInstance3D:
@@ -19,8 +20,10 @@ static func build(site: Dictionary) -> MeshInstance3D:
 				var pz: float = (float(z) + offset.y) * 2.0
 				var blend := smoothstep(12.0, 27.0, Vector2(px, pz).length())
 				var height := blend * (1.5 + noise.get_noise_2d(px, pz) * amplitude)
-				if str(site.get("site_id", "")) == "crater_rim_b":
+				if str(site.get("terrain_model", "")) == "tycho_sldem2015":
 					height = TychoElevation.height(px, pz)
+				elif str(site.get("terrain_model", "")) == "polar_lola":
+					height = PolarTerrain.height(str(site.site_id), px, pz)
 				# Level departure clearing, blended into the surrounding terrain.
 				var departure_distance := Vector2(px - 32.0, pz - 12.0).length()
 				height = lerpf(1.0, height, smoothstep(8.0, 16.0, departure_distance))
@@ -62,8 +65,11 @@ static func build_surroundings(site: Dictionary, material: Material) -> MeshInst
 		var ring: Array[Vector3] = []
 		for point in perimeter:
 			var p: Vector2 = point * (radius / 60.0)
+			if str(site.get("terrain_model", "")) == "polar_lola":
+				ring.append(Vector3(p.x, PolarTerrain.height(str(site.site_id), p.x, p.y), p.y))
+				continue
 			var height := 1.5 + noise.get_noise_2d(p.x, p.y) * amplitude
-			if str(site.get("site_id", "")) == "crater_rim_b":
+			if str(site.get("terrain_model", "")) == "tycho_sldem2015":
 				height = TychoElevation.height(p.x, p.y)
 			var distant_blend := smoothstep(60.0, 220.0, radius)
 			var relief := 1.5 + broad_noise.get_noise_2d(p.x, p.y) * 2.5

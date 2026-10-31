@@ -353,8 +353,8 @@ func _help() -> void:
 func _science() -> void:
 	heading.text = "SCIENCE & SOURCES"
 	body.add_child(UI.label("NASA data and game assumptions", 22, UI.BLUE))
-	body.add_child(UI.label("LOLA elevation and slope are coarse NASA samples, not surveys of this terrain. Solar availability is modeled. Polar LEND hydrogen coverage does not apply to these landing sites. Radiation uses a NASA model with a gameplay terrain modifier; water recycling uses an ISS proxy.", 16))
-	body.add_child(UI.label("The visible Sun and Earth use an approximate analytic orbit model built from NASA/JPL published elements, with an enlarged Earth for visibility. During a mission the sky advances one modeled Earth day per sol. Solar power uses a fixed illumination assumption, not the rendered Sun. Suits, structures, terrain, starting reserves, and event choices include authored game content.", 16, UI.MUTED))
+	body.add_child(UI.label("LOLA elevation comes from 5 m regional polar DEMs; slope is a derived estimate, not a verified slope measurement or landing-pad survey. Solar visibility uses NASA/JPL Horizons geometry and a regional NASA LOLA-derived terrain horizon. Local hydrogen is unmeasured at these study coordinates. Radiation uses a NASA model with a gameplay terrain modifier; water recycling uses an ISS proxy.", 16))
+	body.add_child(UI.label("The visible Sun and Earth use NASA/JPL Horizons DE441 positions with linear interpolation and an enlarged Earth for visibility. During a mission the sky advances one modeled Earth day per sol. Solar power uses date-dependent Sun distance, solar-disk visibility, and a NASA LOLA-derived local horizon; tracking-array capacity is a gameplay rating. Suits, structures, terrain, starting reserves, and event choices include authored game content.", 16, UI.MUTED))
 	var registry: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/data_sources.json"))
 	for source in registry.sources:
 		var url: String = source.get("landing_page", source.get("url", ""))

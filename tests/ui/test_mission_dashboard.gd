@@ -31,7 +31,7 @@ func _verify() -> void:
 	var source_disclosure := ""
 	for label in app.find_children("*", "Label", true, false):
 		source_disclosure += str(label.text) + "\n"
-	check(source_disclosure.contains("recorded global map has not been sampled"), "Site screen must not imply the recorded global hydrogen map excludes these coordinates")
+	check(source_disclosure.contains("Local water-ice abundance remains unmeasured"), "Site screen must not imply measured local water-ice abundance")
 	check(app.field_text({}, "slope_deg").contains("Unavailable"), "Missing site values must be labeled")
 	check(app.field_text({"slope_deg": {"value": 3, "verified": false}}, "slope_deg").contains("Model estimate"), "Unverified values must remain labeled")
 	check(app.field_text({"hydrogen_ppm": {"available": false, "verified": false, "availability_note": "No applicable LEND coverage"}}, "hydrogen_ppm").contains("Not available"), "Unavailable hydrogen coverage must remain labeled")

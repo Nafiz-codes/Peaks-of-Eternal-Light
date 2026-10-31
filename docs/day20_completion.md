@@ -2,6 +2,8 @@
 
 **Subsequent user-requested change:** Lander-only WASD rover driving replaces automatic dispatch and its loop animation. See [current rover controls and validation](rover_control.md). The earlier dispatch counts and behavior below are historical.
 
+**October 31 follow-up:** The active site contract and solar model were subsequently replaced by the polar-data integration documented in [Resources/README.md](../Resources/README.md) and [earth_sky.md](earth_sky.md). The Day 20 site-data blocker and illumination assumptions below describe the October 17 snapshot only.
+
 Scope: the outstanding work through Day 20 for all three members. This is the current status; dated earlier logs describe earlier builds.
 
 **Rover follow-up:** The loop now lasts 7.5 seconds. Fresh-landed players can start a mission inside the operations dialog; rejected commands keep that dialog open with a visible reason and recovery instruction. The strengthened live test passes 219 assertions with mouse input, including fresh starts and rejection feedback while the HUD is hidden. Earlier assertion counts below record the initial completion pass.

@@ -2,7 +2,17 @@
 
 Reference: `TRIARCHY_Workflow_Split.md` for what each day's task is.
 
-## Current cross-member audit — October 17, 2026
+## Current cross-member audit — October 31, 2026
+
+### Polar site, terrain and solar integration — October 31
+
+- Status: ✅ Implemented and integration checks passed; physical playtest remains open
+- What was completed: Replaced active landing coordinates with the four notional sites published in NASA's 2020 lunar ISRU case study. Added reproducible 5 m LOLA regional terrain patches, source-derived elevation/local horizon, explicitly derived slope, and frozen 20-year NASA/JPL Horizons DE441 Sun/Earth vectors and scalar ranges. Mission power and the outpost Sun/light use per-sol, date-specific solar-disk visibility, geometric Earth occultation, and distance. Local water-ice abundance remains unavailable; the 30-day illumination field is a labeled model, not an observation or forecast. Updated site, orbital and science copy.
+- Validation: New off-grid Horizons regression passes 260 assertions across four sites; mission simulator, selector, outpost, dashboard, orbital motion (1,506 checks), solar lighting, and game-menu persistence checks pass. `git diff --check` passes.
+- Issues / blockers: Godot cannot write `user://logs/godot.log` in this sandbox; test assertions pass despite that environment diagnostic. Human keyboard/controller playtesting and team acceptance are not claimed.
+- Notes for teammates: Regenerate the polar snapshot with `tools/prepare_polar_data.py`; independent direct Horizons inputs are preserved in `Resources/polar/validation.json`. The old Oct 17 Day 20 audit remains historical for its former site coordinates and fixed/model illumination contract.
+
+---
 
 ### Lander-only manual rover control — October 17
 

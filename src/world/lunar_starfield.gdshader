@@ -1,4 +1,5 @@
 shader_type sky;
+uniform float sun_visibility = 1.0;
 
 uniform sampler2D earth_surface : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D earth_clouds : source_color, filter_linear_mipmap, repeat_enable;
@@ -85,7 +86,7 @@ void sky() {
 	COLOR = vec3(0.0003, 0.0004, 0.0007) + tint * star * mix(0.45, 1.8, hash(cell + 71.0));
 	// Display only: exclude the Sun from sky radiance/reflections and scene lighting.
 	if (!AT_CUBEMAP_PASS) {
-		COLOR += visible_sun(direction);
+		COLOR += visible_sun(direction) * sun_visibility;
 	}
 	vec3 earth_relative_km = earth_position_km - POSITION * 0.001;
 	vec3 earth_center = normalize(earth_relative_km);

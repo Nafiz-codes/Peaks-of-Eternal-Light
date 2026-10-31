@@ -26,12 +26,16 @@ func _run() -> void:
 	click.position = camera.unproject_position(marker.global_position)
 	selector.call("_unhandled_input", click)
 	_assert(selector.get("selected_site_id") == "ridge_a", "Selecting a map marker preserves its site identifier.")
-	var features: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/landing_features/coordinates.json"))
-	for feature in features.features:
-		for site in selector.get("site_records"):
-			if site.name == feature.name:
-				_assert(is_equal_approx(float(site.coordinates.latitude_deg), -absf(float(feature.latitude_deg))), "Site latitude uses the confirmed south-pole shapefile correction.")
-				_assert(is_equal_approx(float(site.coordinates.longitude_deg), float(feature.longitude_deg)), "Site longitude is matched by shapefile name, not record order.")
+	var expected_sites := {
+		"ridge_a": Vector2(-89.45, 222.69),
+		"shadow_zone": Vector2(-89.56, 214.73),
+		"crater_rim_b": Vector2(-89.78, 204.27),
+		"plateau_d": Vector2(-89.69, 197.05),
+	}
+	for site in selector.get("site_records"):
+		var expected: Vector2 = expected_sites[site.site_id]
+		_assert(is_equal_approx(float(site.coordinates.latitude_deg), expected.x), "Site latitude matches the frozen NASA study coordinate.")
+		_assert(is_equal_approx(float(site.coordinates.longitude_deg), expected.y), "Site longitude matches the frozen NASA study coordinate.")
 	var moon := selector.get_node("SouthPoleMap") as MeshInstance3D
 	_assert(moon.mesh is SphereMesh and is_equal_approx(moon.mesh.radius, 10.0), "The Moon becomes a sphere without changing its radius.")
 	_assert(selector.call("_globe_position", 0.0, 0.0).is_equal_approx(Vector3(0, 0, 10)), "Prime meridian faces the photograph.")
@@ -43,10 +47,10 @@ func _run() -> void:
 		var base: Vector3 = pin.position - pin.basis.y * pin.mesh.height * 0.5
 		_assert(absf(base.length() - 10.0) < 0.003, "Each outpost base touches the Moon instead of floating beside it.")
 		_assert(pin.basis.y.dot(pin.position.normalized()) > 0.9999, "Each post stands perpendicular to its local lunar surface.")
-		var actual := pin.position.normalized()
-		_assert(absf(rad_to_deg(asin(actual.y)) - float(coordinates.latitude_deg)) < 0.001, "Pin latitude matches its named site.")
+		var actual := base.normalized()
+		_assert(absf(rad_to_deg(asin(actual.y)) - float(coordinates.latitude_deg)) < 0.002, "Pin latitude matches its named site within mesh precision.")
 		var longitude := fposmod(rad_to_deg(atan2(actual.x, actual.z)), 360.0)
-		_assert(absf(longitude - float(coordinates.longitude_deg)) < 0.001, "Pin longitude matches its named site.")
+		_assert(absf(longitude - float(coordinates.longitude_deg)) < 0.002, "Pin longitude matches its named site within mesh precision.")
 		camera.position = pin.position.normalized() * 30.0
 		camera.look_at(Vector3.ZERO, Vector3.UP)
 		camera.force_update_transform()
