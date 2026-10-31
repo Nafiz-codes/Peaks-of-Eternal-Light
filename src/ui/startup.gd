@@ -1,6 +1,6 @@
 extends Node
 ## Owns every cinematic tween. The original selector becomes current_scene at handoff.
-enum State { INTRO, MENU_ENTERING, MENU_IDLE, SELECTING_COMMANDER, STARTING_MISSION, GAMEPLAY }
+enum State { INTRO, MENU_ENTERING, MENU_IDLE, PLAYING_OPENING, SELECTING_COMMANDER, STARTING_MISSION, GAMEPLAY }
 const SELECTOR := "res://scenes/lunar_landing_selector.tscn"
 const UI = preload("res://src/ui/ui_style.gd")
 var state := State.INTRO
@@ -24,6 +24,9 @@ var ready_for_mission := false
 var reduced := false
 var menu_reveal := 0.0
 var load_failed := false
+var opening_finishing := false
+var opening_video: VideoStreamPlayer
+var opening_cover: ColorRect
 var commander_menu: Control
 
 func _ready() -> void:
@@ -205,6 +208,8 @@ func _enter_menu() -> void:
 		buttons[0].grab_focus() if ready_for_mission else buttons[1].grab_focus())
 
 func _process(delta: float) -> void:
+	if state == State.PLAYING_OPENING and is_instance_valid(opening_video) and opening_video.stream_position >= 25.3:
+		_finish_opening()
 	elapsed += delta
 	if not ready_for_mission and not load_failed and ResourceLoader.load_threaded_get_status(SELECTOR) == ResourceLoader.THREAD_LOAD_FAILED:
 		load_failed = true
@@ -237,6 +242,53 @@ func _input(event: InputEvent) -> void:
 func _start_mission() -> void:
 	if state != State.MENU_IDLE or not ready_for_mission or dialog.visible:
 		return
+	state = State.PLAYING_OPENING
+	opening_finishing = false
+	opening_cover = ColorRect.new()
+	opening_cover.color = Color.BLACK
+	opening_cover.modulate.a = 0.0
+	canvas.add_child(opening_cover)
+	opening_cover.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var fade := create_tween().set_parallel(true)
+	fade.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	fade.tween_property(opening_cover, "modulate:a", 1.0, 1.2)
+	fade.tween_property(get_node("/root/MenuMusic").player, "volume_linear", 0.0, 1.2)
+	await fade.finished
+	var aspect := AspectRatioContainer.new()
+	aspect.ratio = 1920.0 / 1080.0
+	opening_cover.add_child(aspect)
+	aspect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	opening_video = VideoStreamPlayer.new()
+	opening_video.expand = true
+	opening_video.stream = preload("res://Assets/video/chapter_one_opening.ogv")
+	opening_video.modulate.a = 0.0
+	opening_video.volume = 0.0
+	aspect.add_child(opening_video)
+	opening_video.finished.connect(_finish_opening, CONNECT_ONE_SHOT)
+	opening_video.play()
+	fade = create_tween().set_parallel(true)
+	fade.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	fade.tween_property(opening_video, "modulate:a", 1.0, 1.2)
+	fade.tween_property(opening_video, "volume", 1.0, 1.2)
+
+func _finish_opening() -> void:
+	if state != State.PLAYING_OPENING or opening_finishing: return
+	opening_finishing = true
+	var fade := create_tween().set_parallel(true)
+	fade.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	fade.tween_property(opening_video, "modulate:a", 0.0, 1.0)
+	fade.tween_property(opening_video, "volume", 0.0, 1.0)
+	await fade.finished
+	_show_commander_selection()
+	canvas.move_child(opening_cover, -1)
+	fade = create_tween().set_parallel(true)
+	fade.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	fade.tween_property(opening_cover, "modulate:a", 0.0, 1.2)
+	fade.tween_property(get_node("/root/MenuMusic").player, "volume_linear", 1.0, 1.2)
+	await fade.finished
+	opening_cover.queue_free()
+
+func _show_commander_selection() -> void:
 	state = State.SELECTING_COMMANDER
 	navigation.hide()
 	astronaut.hide()
