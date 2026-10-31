@@ -1,16 +1,15 @@
 # Existing crew fieldwork
 
-The four existing station astronauts retain their node IDs, suit models, armband
-colors, original display names, resource reports, mission decisions and dashboard
-links. The player remains the only player-controlled astronaut. No characters were
-added. The station interaction area travels with its original astronaut.
+The player Commander and three NPCs reuse the existing 3D astronaut models and
+animations. Stable node IDs retain interaction routing; names and identification
+colors now match the canonical crew. The power console is an unstaffed terminal.
+See [active roster and save migration](canonical_crew.md).
 
 | Existing identity / node | Added specialty | Complete playable task |
 | --- | --- | --- |
-| Water specialist / `water_recycler` | Geology and sample collection | Prepare container and tongs; travel with player to sample A or B; inspect, photograph, collect and label; carry sample to the marked locker; return to station. |
-| Energy specialist / `power_console` | Scientific instruments | Take the equipment specialist to instrument A or B; unpack, position/level, charge and verify a local battery-powered seismometer; photograph installation; return. |
-| Food specialist / `food_storage` | Equipment and surface systems | Inspect the existing rover's condition, power and exposed equipment; optionally replace a component using a kit and mission materials; verify and record readiness. |
-| Crew lead / `crew_briefing` | Navigation and excursion coordination | Review a marked local science route, local communications, modeled return oxygen and crew status; persist route assessment and activity log. |
+| Dr. Alex Rivera / `water_recycler` | Geology, samples and scientific instruments | Collect, photograph, label and store samples; deploy and service the seismometer with Sam. Alex handles these jobs sequentially. |
+| Sam Okafor / `food_storage` | Robotics, habitat engineering and cross-trained medical support | Inspect and repair the rover with finite supplies; assist instrument deployment; report on power and life support. |
+| Dr. Maya Chen / `crew_briefing` | Flight engineering, training and safety | Review local routes, communications, return oxygen and crew status; advise the Commander. |
 
 ## Play
 
@@ -106,7 +105,7 @@ Crew outside the configured local radio range are reported as unconfirmed.
 All durations, speeds, local-range/slope assumptions, oxygen thresholds, battery
 lifetime and supply/repair costs are game tuning, **not NASA-certified values**.
 Most tuning lives in `Resources/fieldwork.json`; navigation clearance and the bounded
-2 m graph are in `crew_routes.gd`. The four specialties are a gameplay arrangement,
+2 m graph are in `crew_routes.gd`. The crew specialties are a gameplay arrangement,
 not a historical NASA crew structure.
 
 ## Scientific grounding
@@ -133,7 +132,7 @@ wind, Earth weather or wind-driven dust-storm behavior.
 ## Validation
 
 Run `tests/world/test_crew_fieldwork.gd` with the bundled Godot console executable.
-It exercises the real outpost, original four models, assignment, walking, assistance,
+It exercises the real outpost, three reused NPC models, assignment, walking, assistance,
 pause/resume, shared-camera contention, sample transport, save/restore, deployment,
 finite maintenance, local navigation, communications blackout, blocked-path recovery,
 delivery, hazard interruption, follow/return, autonomous startup and old-save decoding.

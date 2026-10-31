@@ -7,7 +7,7 @@ var radius := 14.0
 func _init(scene: Node3D, survey_radius: float) -> void:
 	world = scene
 	radius = survey_radius
-	for id in ["power_console", "water_recycler", "food_storage", "crew_briefing"]:
+	for id in ["water_recycler", "food_storage", "crew_briefing"]:
 		excluded.append(world.get_node("Outpost/" + id + "/CrewBody").get_rid())
 	excluded.append(world.get_node("Outpost/Astronaut").get_rid())
 

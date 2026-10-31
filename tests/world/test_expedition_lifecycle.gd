@@ -33,13 +33,38 @@ func run():
 	check(controller.data.location == "outpost" and controller.data.mission == -1,"Old transition cannot mutate replacement campaign")
 	var save = preload("res://src/runtime/mission_save.gd")
 	var legacy: Dictionary = save.capture(session)
+	check(legacy.version == 2, "Canonical saves use version 2")
+	check(world.find_children("StationAstronaut", "Node3D", true, false).size() == 3, "Three reused NPC models")
+	check(world.get_node("Outpost/Astronaut").get_meta("crew_id") == "CREW_01", "Player is the sole Commander")
+	check(world.get_node("Outpost/crew_briefing").get_meta("crew_id") == "CREW_02", "Maya uses the existing briefing astronaut")
+	check(world.get_node("Outpost/water_recycler").get_meta("crew_id") == "CREW_03", "Alex uses the existing science astronaut")
+	check(world.get_node("Outpost/food_storage").get_meta("crew_id") == "CREW_04", "Sam uses the existing engineering astronaut")
+	check(not world.get_node("Outpost/power_console").has_node("StationAstronaut"), "Power console has no fourth NPC")
+	var old_five: Dictionary = legacy.duplicate(true)
+	old_five.version = 1
+	old_five.state.crew_size = 5
+	var old_field: Dictionary = old_five.state.fieldwork
+	old_field.crew.power_console = old_field.crew.water_recycler.duplicate(true)
+	old_field.crew.power_console.task = "deploy"
+	old_field.crew.power_console.site = "instrument_a"
+	old_field.crew.power_console.phase = "Paused"
+	old_field.locks["seismometer"] = "power_console"
+	var migrated: Dictionary = save.decode(old_five)
+	check(not migrated.is_empty(), "Version 1 five-person save migrates")
+	if not migrated.is_empty():
+		check(migrated.state.crew_size == 4 and migrated.state.fieldwork.crew.size() == 3, "Migration removes only retired actor")
+		check(migrated.state.fieldwork.pending_deployment == "instrument_a", "Old deployment queued for Alex")
+		check(not migrated.state.fieldwork.locks.has("seismometer"), "Retired actor cannot retain tool locks")
+		check(migrated.state.fieldwork.crew.water_recycler == old_field.crew.water_recycler, "Alex's current checkpoint remains intact")
+		check(migrated.state.water_l == legacy.state.water_l and migrated.state.power_kwh == legacy.state.power_kwh, "Migration preserves earned reserves")
+	legacy.version = 1
 	legacy.state.crew_size = 4
 	legacy.state.erase("rover_expedition")
 	var restored: Dictionary = save.decode(legacy)
-	check(not restored.is_empty() and restored.state.crew_size == 5,"Older four-person saves migrate")
+	check(not restored.is_empty() and restored.state.crew_size == 4,"Older four-person saves migrate")
 	var provisions: float = restored.state.power_kwh
 	check(save.restore(session,legacy) == OK,"Older save restores")
-	check(is_equal_approx(save.decode(save.capture(session)).state.power_kwh,provisions),"Fifth-person provision applies once")
+	check(is_equal_approx(save.decode(save.capture(session)).state.power_kwh,provisions),"Repeated save load preserves reserves")
 	controller._sync()
 	controller.data.mission = 0
 	controller.data.surveys = ["alpha","beta","gamma"]

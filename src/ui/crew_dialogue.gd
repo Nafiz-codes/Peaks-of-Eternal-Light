@@ -24,7 +24,7 @@ func _ready() -> void:
 	if fieldwork != null:
 		fieldwork.changed.connect(func():
 			if visible:
-				var phase: String = "" if fieldwork.data.is_empty() else str(fieldwork.data.crew[specialist_id].phase)
+				var phase: String = "" if fieldwork.data.is_empty() or not fieldwork.data.crew.has(specialist_id) else str(fieldwork.data.crew[specialist_id].phase)
 				if phase != field_phase:
 					refresh_report()
 				elif is_instance_valid(field_status):
@@ -76,10 +76,12 @@ func refresh_report() -> void:
 	for child in content.get_children():
 		content.remove_child(child)
 		child.queue_free()
+	field_phase = ""
+	field_status = null
 	title = report.role + " · Crew radio"
 	add_theme_stylebox_override("panel", UI.style(Color("101a29"), report.color))
 	content.add_child(UI.label(report.role.to_upper(), 24, report.color.lightened(0.25)))
-	if fieldwork != null:
+	if fieldwork != null and specialist_id in fieldwork.IDS:
 		_add_fieldwork()
 	content.add_child(UI.label(report.status, 16, UI.AMBER))
 	content.add_child(UI.label(report.task, 17, UI.MUTED))
@@ -114,7 +116,7 @@ func _field_action(action: String, argument := "") -> void:
 
 func _add_fieldwork() -> void:
 	field_status = UI.label(fieldwork.describe(specialist_id), 16, UI.TEXT)
-	field_phase = "" if fieldwork.data.is_empty() else str(fieldwork.data.crew[specialist_id].phase)
+	field_phase = "" if fieldwork.data.is_empty() or not fieldwork.data.crew.has(specialist_id) else str(fieldwork.data.crew[specialist_id].phase)
 	field_summary = UI.label(fieldwork.SPECIALTIES[specialist_id] + " · " + field_phase, 19, UI.AMBER)
 	content.add_child(field_summary)
 	if fieldwork.data.is_empty():
@@ -139,7 +141,6 @@ func _add_fieldwork() -> void:
 				content.add_child(UI.button("Assign: sample A (accompany on foot)", func(): _field_action("sample", "sample_a")))
 				content.add_child(UI.button("Approve optional sample B detour", func(): _field_action("sample", "sample_b")))
 				content.add_child(UI.button("Decline detour / stay at base", func(): _field_action("decline")))
-			"power_console":
 				for site in ["instrument_a", "instrument_b"]:
 					content.add_child(UI.button("Assign deployment: " + site.replace("_", " "), func(): _field_action("deploy", site)))
 			"food_storage":

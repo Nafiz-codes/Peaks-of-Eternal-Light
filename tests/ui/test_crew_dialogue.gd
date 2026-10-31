@@ -62,7 +62,7 @@ func run() -> void:
 		check(session.dashboard_state.resolved_events.size() > 0, "NPC decision uses the authoritative simulator.")
 		hud.event_dialog.hide()
 	var water_event := {"event_id": "test_water", "effects": {"water_loss_l": 3}}
-	check(Report.relevant("water_recycler", water_event) and not Report.relevant("food_storage", water_event), "Specialists filter unrelated decisions.")
+	check(Report.relevant("water_recycler", water_event) and Report.relevant("food_storage", water_event), "Alex and Sam both receive water-related decisions.")
 	session.dashboard_state.mission_outcome.status = "failure"
 	session.dashboard_state.mission_outcome.failure_reason = "water_depleted"
 	var terminal := Report.build("crew_briefing", session.dashboard_state)

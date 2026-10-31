@@ -1,16 +1,16 @@
 extends RefCounted
 ## Read-only specialist reports from the authoritative mission state.
 const ROLES := {
-	"power_console": ["Energy specialist", "203a72", "I monitor solar generation, consumption, and our stored power."],
-	"water_recycler": ["Water specialist", "79c8df", "I monitor our water reserve and the recycler's recovery each sol."],
-	"food_storage": ["Food specialist", "b5d878", "I monitor food reserves, crew consumption, and supply decisions."],
-	"crew_briefing": ["Crew lead", "b7a2ff", "I coordinate mission decisions and track oxygen, crew stress, and radiation exposure."]
+	"power_console": ["Power console · Sam Okafor", "f58a28", "Habitat power telemetry: generation, consumption and stored energy."],
+	"water_recycler": ["Dr. Alex Rivera · Planetary Geologist", "e8ae45", "I lead geological surveys, sample collection and scientific instruments. Water telemetry supports our resource planning; it does not confirm local water ice."],
+	"food_storage": ["Sam Okafor · Habitat Engineer & Medical Officer", "f58a28", "I maintain robotics, habitat systems, power and life support, and provide cross-trained medical support."],
+	"crew_briefing": ["Dr. Maya Chen · Flight Engineer & Training Officer", "36b7bd", "I guide training, mission procedures, navigation and safety. Commander, the final decisions are yours."]
 }
 
 static func relevant(id: String, event: Dictionary) -> bool:
 	if id == "crew_briefing":
 		return true
-	var terms: Array = {"power_console": ["power", "solar_array", "battery"], "water_recycler": ["water", "recycl"], "food_storage": ["food", "ration"]}.get(id, [])
+	var terms: Array = {"power_console": ["power", "solar_array", "battery"], "water_recycler": ["water", "recycl"], "food_storage": ["food", "ration", "power", "solar", "battery", "water", "recycl", "oxygen", "health", "radiation", "repair", "habitat"]}.get(id, [])
 	var description := JSON.stringify(event).to_lower()
 	for term in terms:
 		if term in description:
@@ -39,6 +39,8 @@ static func build(id: String, state: Variant, catalog: Array = []) -> Dictionary
 				report.update = "We have %.2f kg of food. The crew consumed %.2f kg last sol. Food status: %s." % [state.food_kg, state.food_consumed_kg, state.life_support_status.get("food", "unavailable")]
 			"crew_briefing":
 				report.update = "We have %d crew, %.2f kg of oxygen (%s), and average crew stress of %.2f. Accumulated modeled radiation dose is %.3f mSv. There are %d decisions awaiting your orders." % [state.crew_size, state.oxygen_kg, state.life_support_status.get("oxygen", "unavailable"), state.crew_stress_avg, state.radiation_msv, state.pending_events.size()]
+		if id == "food_storage":
+			report.update += "\nPower: %.2f kWh; water: %.2f L; oxygen: %.2f kg; crew stress: %.2f; modeled radiation: %.3f mSv." % [state.power_kwh, state.water_l, state.oxygen_kg, state.crew_stress_avg, state.radiation_msv]
 		if state.sol == 0:
 			report.update += " This is our initial inventory; no sol has run yet."
 		if report.terminal:

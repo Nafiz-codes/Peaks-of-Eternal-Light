@@ -1,5 +1,5 @@
 extends Node3D
-## One physical rover and five existing crew identities across connected locations.
+## One physical rover and four canonical crew identities across connected locations.
 signal hud_changed(view: Dictionary)
 const Rules = preload("res://src/simulation/rover_expedition.gd")
 const Terrain = preload("res://src/world/expedition_terrain.gd")
@@ -81,7 +81,7 @@ func _ready() -> void:
 	target.caption.hide()
 	targets.astronaut = target
 	crew = get_parent().get_node("Outpost/crew_briefing")
-	for pair in [["Astronaut","player"],["crew_briefing","commander"],["power_console","engineer"],["water_recycler","medic"],["food_storage","botanist"]]:
+	for pair in [["Astronaut","CREW_01"],["crew_briefing","CREW_02"],["water_recycler","CREW_03"],["food_storage","CREW_04"]]:
 		get_parent().get_node("Outpost/"+pair[0]).set_meta("crew_id",pair[1])
 	crew.get_node("CrewBody").set_meta("rover_target","astronaut")
 	crew_home = crew.transform
@@ -512,7 +512,7 @@ func _transition(outward: bool) -> void:
 		data.location = "outpost"
 		if not data.completed.has(data.mission): data.completed.append(data.mission)
 		feedback = Rules.TITLES[data.mission].to_upper()+" COMPLETE"
-		if data.mission == 2: feedback += "\nMissing crew member recovered.\nAll five astronauts accounted for."
+		if data.mission == 2: feedback += "\nMissing crew member recovered.\nAll four astronauts accounted for."
 		data.mission = -1
 		data.phase = "completed"
 		_restore_crew()
@@ -623,7 +623,7 @@ func _publish() -> void:
 			prompt = "Brake, face a droplet within 2.5 m, press E to sample."
 		else:
 			objective = "Search beyond the eastern saddle for the missing crew member."
-			details = "Crew: four at outpost, one missing.\nCritical oxygen — locate and assist the astronaut."
+			details = "Crew: Commander, Alex, Sam accounted for; Maya missing.\nCritical oxygen — locate and assist the astronaut."
 			prompt = "Approach carefully. E: emergency oxygen and communications."
 			if data.stabilized:
 				objective = "Escort the astronaut on foot to extraction."

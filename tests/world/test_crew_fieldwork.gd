@@ -61,13 +61,13 @@ func run() -> void:
 	session.start_selected_mission()
 	for id in field.IDS:
 		field.data.crew[id].auto_attempted = true
-	check(world.find_children("StationAstronaut", "Node3D", true, false).size() == 4, "Exactly four original NPC models.")
-	check(field.actors.size() == 4 and field.SPECIALTIES.size() == 4, "Four existing identities receive specialties.")
+	check(world.find_children("StationAstronaut", "Node3D", true, false).size() == 3, "Exactly three existing NPC models.")
+	check(field.actors.size() == 3 and field.SPECIALTIES.size() == 3, "Three canonical identities receive specialties.")
 	var path: PackedVector3Array = field.route_service.route(field.homes.water_recycler, field.SITES.sample_a)
 	check(not path.is_empty(), "Sampling location reachable on real terrain.")
 	player.position = field.actors.water_recycler.position + Vector3(0, 0, 1.5)
 	check(field.assign("water_recycler", "sample", "sample_a"), "Assign geology collection.")
-	check(not field.reserve("power_console", ["camera"]), "Shared camera cannot be double-booked.")
+	check(not field.reserve("crew_briefing", ["camera"]), "Shared camera cannot be double-booked.")
 	check(await tick_until("water_recycler", "Working", 600, true), "Geologist physically reaches sampling location.")
 	check(field.data.samples.is_empty(), "No samples before collection.")
 	check(field.assist("water_recycler"), "Nearby player assists the current work step.")
@@ -75,9 +75,9 @@ func run() -> void:
 	var progress: float = field.data.crew.water_recycler.progress
 	field._tick("water_recycler", 50)
 	check(field.data.crew.water_recycler.progress == progress, "Pause preserves progress.")
-	check(field.reserve("power_console", ["camera"]), "Paused task releases shared camera.")
+	check(field.reserve("crew_briefing", ["camera"]), "Paused task releases shared camera.")
 	check(not field.resume_work("water_recycler"), "Cannot resume while another user owns required tool.")
-	field._release("power_console")
+	field._release("crew_briefing")
 	check(field.resume_work("water_recycler"), "Resume at valid checkpoint.")
 	check(await tick_until("water_recycler", "Returning", 600, true), "Collection, photo and label finish before transport.")
 	check(field.data.samples.sample_a.storage == "carried" and field.data.samples.sample_a.photographed and field.data.samples.sample_a.labelled, "Sample record captures evidence and carrier, not storage.")
@@ -92,23 +92,23 @@ func run() -> void:
 	check(field.data.samples.sample_a.storage == "base", "Storage changes only after physical return.")
 	check(not field.assign("water_recycler", "sample", "sample_a"), "Duplicate collection refused.")
 	check(field.sample_visuals.sample_a.visible == false and field.storage_visual.visible, "Collected rock disappears and stored container becomes visible.")
-	check(field.assign("power_console", "deploy", "instrument_a"), "Assign instrument deployment with equipment buddy.")
+	check(field.assign("water_recycler", "deploy", "instrument_a"), "Assign instrument deployment with equipment buddy.")
 	for i in range(600):
 		await physics_frame
 		for other in field.IDS:
 			field._tick(other, 0.25)
-		if field.data.crew.power_console.phase == "Working" and field.data.crew.power_console.step == 2:
+		if field.data.crew.water_recycler.phase == "Working" and field.data.crew.water_recycler.step == 2:
 			break
 	check(field.data.instrument.get("status") == "positioned", "Positioning leaves a real but unverified instrument.")
-	field.return_to_base("power_console")
-	check(await tick_until("power_console", "Available"), "Deployment can be interrupted after positioning.")
+	field.return_to_base("water_recycler")
+	check(await tick_until("water_recycler", "Available"), "Deployment can be interrupted after positioning.")
 	await tick_until("food_storage", "Available")
-	check(field.assign("power_console", "deploy", "instrument_b"), "Reassignment recovers incomplete deployment.")
-	check(field.data.crew.power_console.site == "instrument_a" and field.data.crew.power_console.step == 2, "Recovery uses existing site and verification checkpoint, not a duplicate instrument.")
-	check(await tick_until("power_console", "Available"), "Deployment completes and field pair returns.")
+	check(field.assign("water_recycler", "deploy", "instrument_b"), "Reassignment recovers incomplete deployment.")
+	check(field.data.crew.water_recycler.site == "instrument_a" and field.data.crew.water_recycler.step == 2, "Recovery uses existing site and verification checkpoint, not a duplicate instrument.")
+	check(await tick_until("water_recycler", "Available"), "Deployment completes and field pair returns.")
 	check(field.data.instrument.get("status") == "operational", "Deployment changes actual instrument state.")
 	check(field.data.instrument.get("photographed", false), "Installation photograph is recorded.")
-	check(not field.assign("power_console", "deploy", "instrument_b"), "Already deployed instrument cannot be duplicated.")
+	check(not field.assign("water_recycler", "deploy", "instrument_b"), "Already deployed instrument cannot be duplicated.")
 	field.data.instrument.battery_remaining = 0.1
 	field._physics_process(0.2)
 	check(field.data.instrument.status == "battery depleted", "Finite instrument battery stops operation.")
@@ -187,7 +187,7 @@ func run() -> void:
 	check(save.decode(invalid).is_empty(), "Malformed persisted crew position is rejected.")
 	captured.state.erase("fieldwork")
 	check(not save.decode(captured).is_empty(), "Old saves without fieldwork remain compatible.")
-	check(moving_crew.size() == 4, "Facing verification covers all four original NPCs in motion.")
+	check(moving_crew.size() == 3, "Facing verification covers all three existing NPCs in motion.")
 	check(facing_failures == 0, "Astronauts face their travel direction with tools in front on outbound, return and follow paths.")
 	if "--capture" in OS.get_cmdline_user_args():
 		world.get_node("MissionHUD").inspect_station("crew_briefing")

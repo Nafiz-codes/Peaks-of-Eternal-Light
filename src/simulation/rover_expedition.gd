@@ -2,7 +2,7 @@ extends RefCounted
 ## Campaign scheduling shares MissionState.sol. Overdue operations remain queued.
 const SOLS := [2, 4, 6]
 const TITLES := ["Operation Surface Survey", "Operation Frozen Horizon", "Operation Lifeline"]
-const CREW := ["player", "power_console", "water_recycler", "food_storage", "crew_briefing"]
+const CREW := ["player", "water_recycler", "food_storage", "crew_briefing"]
 static func fresh() -> Dictionary:
 	return {"completed": [], "mission": -1, "location": "outpost", "phase": "available",
 		"surveys": [], "samples": [], "discovered": false, "stabilized": false,

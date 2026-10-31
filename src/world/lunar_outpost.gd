@@ -276,9 +276,9 @@ func _add_outpost() -> void:
 	_add_astronaut(outpost)
 	_add_rover(outpost)
 	_add_interaction_station(outpost, "power_console", "ENERGY CONSOLE", Vector3(-5.5, 0.0, 3.2), SOLAR)
-	_add_interaction_station(outpost, "water_recycler", "WATER RECYCLER", Vector3(0.8, 0.0, 3.0), Color("79c8df"))
-	_add_interaction_station(outpost, "food_storage", "FOOD STORAGE", Vector3(0.0, 0.0, -4.0), Color("b5d878"))
-	_add_interaction_station(outpost, "crew_briefing", "CREW BRIEFING", Vector3(3.4, 0.0, 3.8), Color("b7a2ff"))
+	_add_interaction_station(outpost, "water_recycler", "DR. ALEX RIVERA / SCIENCE", Vector3(0.8, 0.0, 3.0), Color("e8ae45"))
+	_add_interaction_station(outpost, "food_storage", "SAM OKAFOR / ENGINEERING + MEDICAL", Vector3(0.0, 0.0, -4.0), Color("f58a28"))
+	_add_interaction_station(outpost, "crew_briefing", "DR. MAYA CHEN / TRAINING + SAFETY", Vector3(3.4, 0.0, 3.8), Color("36b7bd"))
 
 
 
@@ -435,7 +435,19 @@ func _add_interaction_station(parent: Node3D, interaction_id: String, label_text
 	station.name = interaction_id
 	station.position = position_
 	parent.add_child(station)
-	preload("res://src/world/station_astronaut.gd").populate(station, ASTRONAUT_SCENE, color)
+	if interaction_id != "power_console":
+		preload("res://src/world/station_astronaut.gd").populate(station, ASTRONAUT_SCENE, color)
+	else:
+		var console := MeshInstance3D.new()
+		console.name = "PowerTerminal"
+		var box := BoxMesh.new()
+		box.size = Vector3(0.8, 1.0, 0.5)
+		console.mesh = box
+		console.position.y = 0.5
+		var material := StandardMaterial3D.new()
+		material.albedo_color = color
+		console.material_override = material
+		station.add_child(console)
 	# Face the arrival area so the crew greet the player rather than face away.
 	station.look_at(parent.to_global(Vector3(3.4, 0.0, 6.5)), Vector3.UP)
 	var label := Label3D.new()

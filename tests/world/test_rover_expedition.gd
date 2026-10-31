@@ -71,7 +71,7 @@ func run():
 	check(Rules.assigned(controller.data,1) == -1,"Sol 1 locked")
 	check(controller.arm.triangle_count > 0,"Existing instrument geometry articulated")
 	check(controller.droplets.size() == 3,"Exactly three supplied droplet instances")
-	check(world.find_children("StationAstronaut","Node3D",true,false).size() == 4,"Exactly four NPCs plus player")
+	check(world.find_children("StationAstronaut","Node3D",true,false).size() == 3,"Exactly three NPCs plus player")
 	await capture("outpost")
 	var camera_pose: Transform3D = driver.camera.global_transform
 	driver.camera.global_position = Vector3(25,7,17)
@@ -184,8 +184,8 @@ func run():
 		check(not Save.decode(Save.capture(session)).is_empty(),"Completed mission save validates")
 	check(not controller.data.missing,"Rescued crew restored")
 	var crew_phase: String = world.get_node("CrewFieldwork").data.crew.crew_briefing.phase
-	check(controller.crew.get_node("InteractionArea").monitoring and controller.crew.get_node("CrewBody").collision_layer == 1 and crew_phase in ["Available","Preparing","Traveling","Working","Recording results","Returning"],"Rescued commander resumes normal fieldwork: "+crew_phase)
-	check(world.find_children("StationAstronaut","Node3D",true,false).size() == 4,"Five unique crew after cinematic")
+	check(controller.crew.get_node("InteractionArea").monitoring and controller.crew.get_node("CrewBody").collision_layer == 1 and crew_phase in ["Available","Preparing","Traveling","Working","Recording results","Returning"],"Rescued Maya resumes normal fieldwork: "+crew_phase)
+	check(world.find_children("StationAstronaut","Node3D",true,false).size() == 3,"Four unique crew after cinematic")
 	await capture("completed")
 	print("EXPEDITION: %d failures / %d assertions" % [failures,assertions])
 	quit(1 if failures else 0)

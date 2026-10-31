@@ -1,47 +1,47 @@
 {
   "_meta": {
-    "description": "Named crew, owned by Member 2. Names and modifier values are editable gameplay content. Feed the combined modifiers into the simulation's aggregate crew health/stress/productivity state; do not create a separate per-person health system."
+    "description": "Canonical four-person crew: player Commander plus Maya, Alex and Sam. Modifier values remain gameplay tuning."
   },
   "crew": [
     {
-      "crew_id": "player",
-      "name": "Expedition Operator",
-      "role": "Rover Operations",
+      "crew_id": "CREW_01",
+      "name": "Commander",
+      "role": "Surface Mission Commander & Exploration Lead",
       "base_stress": 0.15,
       "base_productivity": 1.0,
-      "notes": "The player is the fifth unique crew member. Remote rover control leaves this astronaut at the outpost."
+      "notes": "Player-controlled Commander. Callsign and appearance remain player-defined. No NPC commander.",
+      "station_id": "player",
+      "player_controlled": true
     },
     {
-      "crew_id": "commander",
-      "name": "Leila Navarro",
-      "role": "Mission Commander",
+      "crew_id": "CREW_02",
+      "name": "Dr. Maya Chen",
+      "role": "Senior Flight Engineer & Training Officer",
       "base_stress": 0.18,
       "base_productivity": 1.08,
-      "notes": "Operations lead. Apply as a modest aggregate morale-recovery bonus after a resolved event; her responsibility keeps the team's baseline stress slightly above the crew average."
+      "notes": "Instructor, mentor, mission procedures, navigation and safety adviser. Commander makes final decisions.",
+      "station_id": "crew_briefing",
+      "player_controlled": false
     },
     {
-      "crew_id": "engineer",
-      "name": "Devon Okoye",
-      "role": "Systems Engineer",
-      "base_stress": 0.14,
-      "base_productivity": 1.18,
-      "notes": "Power and maintenance specialist. Apply a targeted aggregate productivity bonus to repair and construction actions; do not reduce passive resource consumption."
-    },
-    {
-      "crew_id": "botanist",
-      "name": "Dr. Jia Chen",
-      "role": "Life Support Botanist",
+      "crew_id": "CREW_03",
+      "name": "Dr. Alex Rivera",
+      "role": "Planetary Geologist & Lunar Resource Specialist",
       "base_stress": 0.16,
       "base_productivity": 1.12,
-      "notes": "Crop and life-support specialist. Apply a targeted aggregate productivity bonus to greenhouse actions and lower food-output variance once that system is implemented."
+      "notes": "Geology, samples, scientific instruments and lunar resources. Preserve scientific uncertainty.",
+      "station_id": "water_recycler",
+      "player_controlled": false
     },
     {
-      "crew_id": "medic",
-      "name": "Dr. Amara Sethi",
-      "role": "Medical Officer",
-      "base_stress": 0.12,
-      "base_productivity": 1.05,
-      "notes": "Crew-care specialist. Apply a modest aggregate stress-mitigation bonus during health or radiation events; this is not a second health pool."
+      "crew_id": "CREW_04",
+      "name": "Sam Okafor",
+      "role": "Robotics & Habitat Operations Specialist; Cross-Trained Medical Officer",
+      "base_stress": 0.14,
+      "base_productivity": 1.18,
+      "notes": "Robotics, habitat, power, life support, repairs and cross-trained medical support. No separate medic.",
+      "station_id": "food_storage",
+      "player_controlled": false
     }
   ]
 }

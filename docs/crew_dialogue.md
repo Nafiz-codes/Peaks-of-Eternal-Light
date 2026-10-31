@@ -5,10 +5,10 @@ the dashboard or review a relevant pending decision. **Esc**, the close button,
 or **End conversation** returns to the outpost. Movement and camera controls are
 blocked while a conversation or decision is open.
 
-- Blue: energy specialist, generation/consumption, stored power, depletion risk.
-- Cyan: water specialist, reserve, consumption, recovery, water status.
-- Green: food specialist, reserve, consumption, food status.
-- Purple: crew lead, oxygen, stress, modeled radiation, and all pending decisions.
+- Teal: Dr. Maya Chen, training, mission safety, navigation and all pending decisions.
+- Amber: Dr. Alex Rivera, geology, samples, scientific instruments and water telemetry.
+- Orange: Sam Okafor, engineering, habitat operations and medical support; food, power and life-support reports.
+- The unstaffed power console retains energy telemetry without a fourth NPC.
 
 Reports read the existing mission state. Before mission start, each specialist
 introduces their task and offers Start mission. Sol 0 distinguishes initial

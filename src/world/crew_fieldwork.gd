@@ -1,9 +1,9 @@
 extends Node3D
-## Persistent field routines attached to the four existing station astronauts.
-const IDS := ["water_recycler", "power_console", "food_storage", "crew_briefing"]
+## Persistent field routines attached to the three canonical station astronauts.
+const IDS := ["water_recycler", "food_storage", "crew_briefing"]
 const SPECIALTIES := {
-	"water_recycler": "Geology and samples", "power_console": "Scientific instruments",
-	"food_storage": "Equipment and surface systems", "crew_briefing": "Navigation and coordination"}
+	"water_recycler": "Alex Rivera · Geology, samples and scientific instruments",
+	"food_storage": "Sam Okafor · Engineering, habitat and medical support", "crew_briefing": "Maya Chen · Training, safety and navigation"}
 const STEPS := {
 	"sample": ["Inspect rock and surroundings", "Photograph undisturbed sample", "Collect with tongs", "Label sample and location"],
 	"deploy": ["Unpack seismometer", "Position and level sensor", "Connect local battery and verify", "Photograph installation"],
@@ -163,7 +163,7 @@ func _physics_process(delta: float) -> void:
 			data.instrument.status = "battery depleted"
 			data.instrument.measurements = "Battery depleted. Reassign instrument service to charge and verify the existing installation."
 			_restore_instrument()
-			_report("power_console", data.crew.power_console.phase, "Instrument battery depleted. Local data retained; service requires allocated power.")
+			_report("water_recycler", data.crew.water_recycler.phase, "Instrument battery depleted. Local data retained; service requires allocated power.")
 	notify_elapsed += delta
 	if notify_elapsed >= 1.0:
 		notify_elapsed = 0.0
@@ -191,6 +191,8 @@ func _tools(task: String) -> Array:
 	return []
 
 func reserve(id: String, items: Array) -> bool:
+	if id not in IDS:
+		return false
 	for item in items:
 		if data.locks.has(item) and data.locks[item] != id:
 			return false
@@ -211,7 +213,7 @@ func assign(id: String, task: String, site := "") -> bool:
 	var c: Dictionary = data.crew[id]
 	if c.phase != "Available":
 		return false
-	if not task in {"water_recycler": ["sample"], "power_console": ["deploy"], "food_storage": ["inspect", "repair"], "crew_briefing": ["navigate"]}[id]:
+	if not task in {"water_recycler": ["sample", "deploy"], "food_storage": ["inspect", "repair"], "crew_briefing": ["navigate"]}[id]:
 		return false
 	if site.is_empty():
 		site = "sample_a" if task in ["sample", "navigate"] else "instrument_a"
@@ -330,9 +332,15 @@ func _player_near(id: String, distance: float = 3.2) -> bool:
 func _tick(id: String, delta: float) -> void:
 	var c: Dictionary = data.crew[id]
 	if c.phase == "Available":
+		if id == "water_recycler" and data.has("pending_deployment"):
+			var site: String = data.pending_deployment
+			assign(id, "deploy", site)
+			if c.task == "deploy" or data.instrument.get("status", "") == "operational":
+				data.erase("pending_deployment")
+			return
 		if elapsed >= config.autonomy_delay_seconds and not c.auto_attempted:
 			c.auto_attempted = true
-			var task: String = {"water_recycler": "sample", "power_console": "deploy", "food_storage": "inspect", "crew_briefing": "navigate"}[id]
+			var task: String = {"water_recycler": "sample", "food_storage": "inspect", "crew_briefing": "navigate"}[id]
 			assign(id, task)
 		return
 	if c.phase in ["Paused", "Blocked", "Responding to a hazard"]:
@@ -389,6 +397,10 @@ func _tick(id: String, delta: float) -> void:
 
 func _move(id: String, delta: float) -> void:
 	var c: Dictionary = data.crew[id]
+	# Let the equipment buddy clear the shared deployment area before Alex returns.
+	if id == "water_recycler" and c.task == "deploy" and c.phase == "Returning" and data.crew.food_storage.task == "buddy" and data.crew.food_storage.phase == "Returning":
+		_update_visual(id, false)
+		return
 	var actor: Node3D = actors[id]
 	if c.path.is_empty():
 		if c.phase == "Returning":
@@ -508,7 +520,7 @@ func return_to_base(id: String) -> bool:
 		_block(id, "Return path blocked. Holding tools and samples here; request a route assessment.")
 		return false
 	_report(id, "Returning", "Returning with carried items; nothing is transferred until arrival.")
-	if id == "power_console" and data.crew.food_storage.task == "buddy":
+	if id == "water_recycler" and data.crew.food_storage.task == "buddy":
 		return_to_base("food_storage")
 	return true
 
@@ -600,7 +612,7 @@ func assist(id: String) -> bool:
 	_report(id, "Working", "Thank you. Working together: " + str(STEPS[c.task][c.step]))
 	return true
 
-static func valid_save(saved: Dictionary) -> bool:
+static func valid_save(saved: Dictionary, legacy := false) -> bool:
 	if saved.is_empty():
 		return true
 	for key in ["crew", "locks", "samples", "instrument", "stock", "player_cargo", "routes", "readiness"]:
@@ -608,11 +620,16 @@ static func valid_save(saved: Dictionary) -> bool:
 			return false
 	if not saved.get("log") is Array or saved.log.size() > 100 or not saved.get("power_priority") in ["science", "maintenance"]:
 		return false
+	if saved.has("pending_deployment") and saved.pending_deployment not in ["instrument_a", "instrument_b"]:
+		return false
+	if not legacy and saved.crew.size() != IDS.size():
+		return false
 	for inventory in [saved.stock, saved.player_cargo]:
 		for item in ["container", "repair_kit"]:
 			if not inventory.get(item) is int or inventory[item] < 0:
 				return false
-	for id in IDS:
+	var valid_ids: Array = IDS + (["power_console"] if legacy and saved.crew.has("power_console") else [])
+	for id in valid_ids:
 		if not saved.crew.get(id) is Dictionary:
 			return false
 		var c: Dictionary = saved.crew[id]
@@ -641,7 +658,7 @@ static func valid_save(saved: Dictionary) -> bool:
 		if not c.get("last_sol") is int:
 			return false
 	for item in saved.locks:
-		if not item is String or not saved.locks[item] in IDS:
+		if not item is String or not saved.locks[item] in valid_ids:
 			return false
 	for site in saved.samples:
 		var sample: Variant = saved.samples[site]
@@ -674,6 +691,29 @@ static func valid_save(saved: Dictionary) -> bool:
 		if not entry is Dictionary or not entry.get("sol") is int or not entry.get("text") is String:
 			return false
 	return true
+
+static func migrate_legacy(saved: Dictionary) -> void:
+	if saved.is_empty() or not saved.crew.has("power_console"):
+		return
+	# Keep Alex's current job and carried sample; queue the retired actor's
+	# deployment using the instrument's existing recorded progress.
+	var retired: Dictionary = saved.crew.power_console
+	if retired.task == "deploy" and retired.site in ["instrument_a", "instrument_b"]:
+		saved.pending_deployment = retired.site
+	if retired.container:
+		saved.stock.container += 1
+	if retired.kit:
+		saved.stock.repair_kit += 1
+	for item in saved.locks.keys():
+		if saved.locks[item] == "power_console":
+			saved.locks.erase(item)
+	if saved.crew.food_storage.task == "buddy":
+		var buddy: Dictionary = saved.crew.food_storage
+		buddy.task = ""
+		buddy.phase = "Available"
+		buddy.path = PackedVector3Array()
+		buddy.message = "Instrument team reassigned to Alex. Ready for orders."
+	saved.crew.erase("power_console")
 
 func collect_supply(item: String) -> bool:
 	if data.is_empty() or not item in ["container", "repair_kit"] or world.get_node("Outpost/Astronaut").global_position.distance_to(LOCKER) > 3.5:
@@ -774,6 +814,8 @@ func _update_visual(id: String, moving: bool) -> void:
 			node.speed_scale = 0.55 if moving else 1.0
 
 func describe(id: String) -> String:
+	if id not in IDS:
+		return "Power console: engineering telemetry. Speak with Sam for fieldwork."
 	if data.is_empty():
 		return SPECIALTIES[id] + ": start the mission to begin fieldwork."
 	var c: Dictionary = data.crew[id]
@@ -783,7 +825,7 @@ func describe(id: String) -> String:
 	if id == "water_recycler":
 		for sample in data.samples.values():
 			text += "\n%s · %s · %s · %s" % [sample.id, sample.location, sample.storage, sample.observation]
-	elif id == "power_console":
+	if id == "water_recycler":
 		text += "Seismometers detect ground motion. This battery-powered game instrument needs leveling and a local self-test; it logs locally, without a cable to base.\n"
 		text += str(data.instrument.get("measurements", "Instrument packed. Choose a marked deployment site."))
 	elif id == "food_storage":

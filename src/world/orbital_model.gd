@@ -62,7 +62,7 @@ static func sampled_body_vectors(days: float) -> Dictionary:
 	return result
 
 static func default_clock() -> Dictionary:
-	return {"elapsed_seconds": 0.0, "time_scale": 3600.0, "paused": false}
+	return {"elapsed_seconds": 0.0, "time_scale": 1.0, "paused": false}
 
 static func valid_clock(clock: Variant) -> bool:
 	return clock is Dictionary and clock.get("elapsed_seconds") is float and is_finite(clock.elapsed_seconds) and clock.elapsed_seconds >= 0.0 and clock.elapsed_seconds <= MAX_ELAPSED and clock.get("time_scale") in SPEEDS and clock.get("paused") is bool

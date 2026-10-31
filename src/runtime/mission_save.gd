@@ -2,7 +2,7 @@ extends RefCounted
 ## Save data is plain Variant data, never serialized executable objects.
 const State = preload("res://src/simulation/mission_state.gd")
 const Simulator = preload("res://src/simulation/mission_simulator.gd")
-const VERSION := 1
+const VERSION := 2
 const MAX_BYTES := 8 * 1024 * 1024
 
 static func state_data(state: RefCounted) -> Dictionary:
@@ -22,7 +22,7 @@ static func capture(session: Node) -> Dictionary:
 		"orbital_clock": session.orbital_clock.duplicate(true)}
 
 static func decode(data: Variant) -> Dictionary:
-	if not data is Dictionary or data.get("version") != VERSION:
+	if not data is Dictionary or data.get("version") not in [1, VERSION]:
 		return {}
 	if not data.get("site_id") is String or not data.get("state") is Dictionary or not data.get("pose") is Dictionary or not data.get("last_tick") is Dictionary:
 		return {}
@@ -68,15 +68,15 @@ static func decode(data: Variant) -> Dictionary:
 				state.set(key, value.duplicate(true) if value is Dictionary else value)
 		if state.site_id != data.site_id or state.sol < 0 or state.sol > state.mission_length_sols or state.mission_length_sols < 1:
 			return {}
-		# The previous four-person resource model omitted the visible player.
-		if state.crew_size == 4:
-			state.power_kwh += 12.0 * maxf(0,state.mission_length_sols-state.sol)
-			state.water_l *= 1.25
-			state.oxygen_kg *= 1.25
-			state.food_kg *= 1.25
-		state.crew_size = 5
+		# Canonical roster migration keeps earned resources and historical readings.
+		# Version 2 distinguishes new four-person saves from legacy versions.
+		state.crew_size = 4
 		if state.rover_health < 0.0 or state.rover_health > 100.0:
 			return {}
+		if not preload("res://src/world/crew_fieldwork.gd").valid_save(state.fieldwork, data.version == 1):
+			return {}
+		if data.version == 1:
+			preload("res://src/world/crew_fieldwork.gd").migrate_legacy(state.fieldwork)
 		if not preload("res://src/world/crew_fieldwork.gd").valid_save(state.fieldwork):
 			return {}
 		if not preload("res://src/simulation/rover_training.gd").valid_save(state.rover_training):

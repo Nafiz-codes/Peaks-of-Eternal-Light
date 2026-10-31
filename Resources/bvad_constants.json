@@ -3,7 +3,7 @@
     "description": "Per-crew-member-per-sol life-support inputs. Values marked verified:true are NASA BVAD nominal values; fields marked verified:false are deliberately retained gameplay assumptions until a mission-specific NASA source and derivation are selected.",
     "how_to_fill": "Use NASA/TP-2015-218570/REV1. Table 3-33 (PDF p. 76; printed p. 63) supplies nominal O2, CO2, food mass, and potable-water values. Table 4-57 (PDF p. 135; printed p. 122) supplies the nominal dry-food mass used by this contract."
   },
-  "crew_size": 5,
+  "crew_size": 4,
   "o2_consumption_kg_per_person_per_day": { "value": 0.816, "verified": true, "source": "NASA/TP-2015-218570/REV1, Table 3-33, PDF p. 76 (printed p. 63): nominal O2 consumed, kg/CM-d." },
   "co2_production_kg_per_person_per_day": { "value": 1.04, "verified": true, "source": "NASA/TP-2015-218570/REV1, Table 3-33, PDF p. 76 (printed p. 63): nominal carbon dioxide load, kg/CM-d." },
   "potable_water_consumption_l_per_person_per_day": { "value": 2.5, "verified": true, "source": "NASA/TP-2015-218570/REV1, Table 3-33, PDF p. 76 (printed p. 63): nominal potable water consumed, 2.5 kg/CM-d; modeled as 2.5 L/CM-d." },
