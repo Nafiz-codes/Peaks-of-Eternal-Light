@@ -72,6 +72,7 @@ func _ready() -> void:
 	add_child(training)
 	session.state_changed.connect(refresh_feedback)
 	refresh_feedback()
+	add_child(preload("res://src/world/solar_placement.gd").new())
 
 
 func _add_prop_collisions() -> void:
@@ -272,7 +273,9 @@ func _add_outpost() -> void:
 	add_child(outpost)
 
 	_add_habitat(outpost)
-	_add_solar_array(outpost)
+	var solar_root := Node3D.new()
+	solar_root.name = "SolarArray"
+	outpost.add_child(solar_root)
 	_add_astronaut(outpost)
 	_add_rover(outpost)
 	_add_interaction_station(outpost, "power_console", "ENERGY CONSOLE", Vector3(-5.5, 0.0, 3.2), SOLAR)

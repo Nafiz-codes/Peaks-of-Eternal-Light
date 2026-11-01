@@ -18,7 +18,7 @@ static func state_data(state: RefCounted) -> Dictionary:
 static func capture(session: Node) -> Dictionary:
 	var tick: Dictionary = session.dashboard_last_tick.duplicate(true)
 	tick.erase("state")
-	return {"version": VERSION, "saved_at": Time.get_datetime_string_from_system(), "planning_draft":session.planning_draft.duplicate(true), "approved_plan":session.approved_plan.duplicate(true),
+	return {"version": VERSION, "saved_at": Time.get_datetime_string_from_system(), "solar_placement":session.solar_placement.duplicate(true), "planning_draft":session.planning_draft.duplicate(true), "approved_plan":session.approved_plan.duplicate(true),
 		"site_id": session.selected_site_id, "state": state_data(session.dashboard_state),
 		"last_tick": tick, "pose": session.outpost_pose.duplicate(true), "crew_read_reports": session.crew_read_reports.duplicate(true),
 		"orbital_clock": session.orbital_clock.duplicate(true), "player_character": session.player_character.duplicate(true)}
@@ -31,6 +31,9 @@ static func decode(data: Variant) -> Dictionary:
 	if not data.get("site_id") is String or not data.get("state") is Dictionary or not data.get("pose") is Dictionary or not data.get("last_tick") is Dictionary:
 		return {}
 	var simulator := Simulator.new()
+	var placement: Variant = data.get("solar_placement", {})
+	if not placement is Dictionary: return {}
+	if not placement.is_empty() and (not placement.get("transform") is Transform3D or not placement.transform.is_finite()): return {}
 	var draft: Variant = data.get("planning_draft", {})
 	var approved: Variant = data.get("approved_plan", {})
 	if not draft is Dictionary or not approved is Dictionary: return {}
@@ -118,7 +121,7 @@ static func decode(data: Variant) -> Dictionary:
 			return {}
 		if not pose.transform.is_finite() or not is_finite(pose.yaw) or not is_finite(pose.pitch):
 			return {}
-	return {"simulator": simulator, "state": state, "site_id": data.site_id, "planning_draft":draft.duplicate(true), "approved_plan":approved.duplicate(true),
+	return {"simulator": simulator, "state": state, "site_id": data.site_id, "solar_placement":placement.duplicate(true), "planning_draft":draft.duplicate(true), "approved_plan":approved.duplicate(true),
 		"pose": pose.duplicate(true), "last_tick": data.last_tick.duplicate(true), "crew_read_reports": read_reports.duplicate(true), "orbital_clock": orbital_clock.duplicate(true), "player_character": identity.duplicate(true)}
 
 static func restore(session: Node, data: Dictionary) -> Error:
@@ -126,6 +129,7 @@ static func restore(session: Node, data: Dictionary) -> Error:
 	if restored.is_empty():
 		return ERR_INVALID_DATA
 	session.selected_site_id = restored.site_id
+	session.solar_placement = restored.solar_placement
 	session.planning_draft = restored.planning_draft
 	session.approved_plan = restored.approved_plan
 	session.player_character = restored.player_character

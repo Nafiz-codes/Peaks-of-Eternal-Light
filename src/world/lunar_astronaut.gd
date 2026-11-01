@@ -29,6 +29,7 @@ var moving := false
 var jump_requested := false
 var ui_blocked := false
 var first_person := false
+var placing_solar := false
 var seated := false
 var seated_eye := Vector3.ZERO
 var seated_yaw := PI
@@ -138,6 +139,10 @@ func _apply_mouse_look(relative: Vector2) -> void:
 
 func _physics_process(delta: float) -> void:
 	if seated:
+		return
+	if placing_solar:
+		rotation.y = camera_yaw
+		_sync_camera_rig()
 		return
 	var controls_active := not ui_blocked and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 	var input_vector := Vector2.ZERO

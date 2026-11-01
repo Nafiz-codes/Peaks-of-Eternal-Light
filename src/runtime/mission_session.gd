@@ -6,6 +6,7 @@ extends Node
 var selected_site_id := ""
 var player_character: Dictionary = {}
 var commander_draft: Dictionary = {}
+var solar_placement: Dictionary = {}
 var planning_draft: Dictionary = {}
 var approved_plan: Dictionary = {}
 signal mission_plan_approved(record: Dictionary)
@@ -47,6 +48,7 @@ func confirm_new_commander(appearance: String, player_name: String) -> bool:
 	commander_draft = {"appearance_id": appearance, "name": identity.name}
 	# Commit a fresh in-memory playthrough only after confirmation. Disk slots stay intact.
 	selected_site_id = ""
+	solar_placement = {}
 	planning_draft = {}
 	approved_plan = {}
 	dashboard_simulator = null
@@ -236,6 +238,7 @@ func send_rover(action_id: String, distance_km: float) -> Dictionary:
 
 func select_landing_site(site_id: String) -> void:
 	if selected_site_id != site_id:
+		solar_placement = {}
 		planning_draft = {}
 		approved_plan = {}
 		crew_read_reports = {}
