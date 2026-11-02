@@ -84,15 +84,16 @@ func run() -> void:
 	session.start_selected_mission()
 	check(session.dashboard_state.mission_length_sols == 7, "Campaign lasts seven Sols")
 	motion.advance(100)
-	check(session.orbital_clock.elapsed_seconds == 0, "Waiting does not advance manual campaign calendar")
+	check(session.orbital_clock.elapsed_seconds == 100, "Campaign sky advances continuously")
 	session.dashboard_state.sol = 3
 	motion.advance(12)
-	check(session.orbital_clock.elapsed_seconds == 3 * Model.DAY, "Sky follows mission Sol three")
+	check(session.orbital_clock.elapsed_seconds == 112, "Run Sol preserves continuous sky")
 	motion.advance(100)
-	check(session.orbital_clock.elapsed_seconds == 3 * Model.DAY, "Sky stops at matching calendar time")
+	check(session.orbital_clock.elapsed_seconds == 212, "Sky continues at real time")
 	session.dashboard_state.sol = 7
 	motion.advance(16)
-	check(session.orbital_clock.elapsed_seconds == 7 * Model.DAY, "Seven Sols equals seven modeled days")
+	check(session.orbital_clock.elapsed_seconds == 228, "Calendar jumps do not accelerate sky")
 	world.free()
 	print("Orbital motion: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)
+

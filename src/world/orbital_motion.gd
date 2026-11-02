@@ -21,12 +21,8 @@ func advance(delta: float) -> void:
 	if get_tree().paused or not is_finite(delta) or delta < 0.0:
 		return
 	var clock: Dictionary = session.orbital_clock
-	if session.dashboard_state != null:
-		# One gameplay Sol is one modeled Earth day. Only the mission calendar
-		# advances time; interpolate a Sol change over a few seconds for the sky.
-		var target: float = session.dashboard_state.sol * Model.DAY
-		clock.elapsed_seconds = move_toward(clock.elapsed_seconds, target, delta * Model.DAY / 4.0)
-	elif not clock.paused:
+	# Visual time remains continuous when Run Sol advances resource accounting.
+	if not clock.paused:
 		clock.elapsed_seconds = minf(Model.MAX_ELAPSED, clock.elapsed_seconds + delta * clock.time_scale)
 		if clock.elapsed_seconds >= Model.MAX_ELAPSED:
 			clock.paused = true
@@ -72,3 +68,4 @@ func set_paused(paused_: bool) -> void:
 func timestamp() -> String:
 	var seconds: float = float(Time.get_unix_time_from_datetime_string(Model.START_UTC)) + session.orbital_clock.elapsed_seconds
 	return Time.get_datetime_string_from_unix_time(int(seconds)).replace("T", " ") + " UTC (model)"
+

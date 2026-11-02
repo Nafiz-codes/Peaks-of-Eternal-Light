@@ -84,8 +84,8 @@ void sky() {
 	float star = (1.0 - smoothstep(max(0.0, radius - aa), radius + aa, distance)) * step(0.9985, chance);
 	vec3 tint = mix(vec3(0.80, 0.87, 1.0), vec3(1.0, 0.94, 0.83), hash(cell + 53.0));
 	COLOR = vec3(0.0003, 0.0004, 0.0007) + tint * star * mix(0.45, 1.8, hash(cell + 71.0));
-	// Display only: exclude the Sun from sky radiance/reflections and scene lighting.
-	if (!AT_CUBEMAP_PASS) {
+	// Compatibility displays the cubemap, so it must also contain the Sun.
+	{
 		COLOR += visible_sun(direction) * sun_visibility;
 	}
 	vec3 earth_relative_km = earth_position_km - POSITION * 0.001;
@@ -99,3 +99,4 @@ void sky() {
 		COLOR = mix(COLOR, earth_color(direction, earth_center, earth_radius), coverage);
 	}
 }
+
