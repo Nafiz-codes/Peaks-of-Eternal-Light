@@ -24,6 +24,8 @@ var ready_for_mission := false
 var reduced := false
 var menu_reveal := 0.0
 var load_failed := false
+var opening_skip_requested := false
+var opening_reveal: Tween
 var opening_finishing := false
 var opening_video: VideoStreamPlayer
 var opening_cover: ColorRect
@@ -235,7 +237,10 @@ func _process(delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	if state == State.SELECTING_COMMANDER: return
 	if event.is_action_pressed("ui_cancel"):
-		if state == State.INTRO: _enter_menu()
+		if state == State.PLAYING_OPENING:
+			opening_skip_requested = true
+			if is_instance_valid(opening_video): _finish_opening()
+		elif state == State.INTRO: _enter_menu()
 		elif dialog.visible: _close_dialog()
 		get_viewport().set_input_as_handled()
 
@@ -244,6 +249,8 @@ func _start_mission() -> void:
 		return
 	state = State.PLAYING_OPENING
 	opening_finishing = false
+	opening_skip_requested = false
+	opening_video = null
 	opening_cover = ColorRect.new()
 	opening_cover.color = Color.BLACK
 	opening_cover.modulate.a = 0.0
@@ -266,19 +273,25 @@ func _start_mission() -> void:
 	aspect.add_child(opening_video)
 	opening_video.finished.connect(_finish_opening, CONNECT_ONE_SHOT)
 	opening_video.play()
+	if opening_skip_requested:
+		_finish_opening()
+		return
 	fade = create_tween().set_parallel(true)
 	fade.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	opening_reveal = fade
 	fade.tween_property(opening_video, "modulate:a", 1.0, 1.2)
 	fade.tween_property(opening_video, "volume", 1.0, 1.2)
 
 func _finish_opening() -> void:
 	if state != State.PLAYING_OPENING or opening_finishing: return
 	opening_finishing = true
+	if opening_reveal != null: opening_reveal.kill()
 	var fade := create_tween().set_parallel(true)
 	fade.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	fade.tween_property(opening_video, "modulate:a", 0.0, 1.0)
 	fade.tween_property(opening_video, "volume", 0.0, 1.0)
 	await fade.finished
+	opening_video.stop()
 	_show_commander_selection()
 	canvas.move_child(opening_cover, -1)
 	fade = create_tween().set_parallel(true)

@@ -17,6 +17,7 @@ const SOLAR := Color("203a72")
 const STRUCTURE := Color("728096")
 # Requested visual adjustment: 25% closer, then another 30% closer (0.75 * 0.70).
 const EARTH_DISTANCE_SCALE := 0.525
+var maya_dialogue_active := false
 var site_record: Dictionary = {}
 var feedback: Dictionary = {}
 var solar_indicator: OmniLight3D
@@ -73,6 +74,7 @@ func _ready() -> void:
 	session.state_changed.connect(refresh_feedback)
 	refresh_feedback()
 	add_child(preload("res://src/world/solar_placement.gd").new())
+	add_child(preload("res://src/ui/mission_tracker.gd").new())
 
 
 func _add_prop_collisions() -> void:
@@ -489,6 +491,21 @@ func _on_interaction_area_exited(body: Node3D, area: Area3D) -> void:
 
 
 func _on_player_interaction(interaction_id: String) -> void:
+	var session := get_node("/root/MissionSession")
+	if interaction_id == "crew_briefing" and not session.maya_intro_complete:
+		if get_node("Outpost/Astronaut").global_position.distance_to(get_node("Outpost/crew_briefing").global_position) <= 2.5:
+			if maya_dialogue_active: return
+			maya_dialogue_active = true
+			var fieldwork := get_node("CrewFieldwork")
+			fieldwork._update_visual("crew_briefing", false)
+			var dialogue := preload("res://src/ui/maya_introduction.gd").new()
+			dialogue.finished.connect(func():
+				session.maya_intro_complete = true
+				maya_dialogue_active = false
+				fieldwork.data.crew.crew_briefing.auto_attempted = true
+				session.state_changed.emit())
+			add_child(dialogue)
+		return
 	if interaction_id == "rover_repair":
 		get_node("RoverHull").repair()
 		return

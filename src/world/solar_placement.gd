@@ -5,6 +5,7 @@ var player: Node3D
 var session: Node
 var build_menu: PanelContainer
 var placed := false
+var settling := false
 var active := false
 var valid := false
 var yaw := 0.0
@@ -122,10 +123,10 @@ func _physics_process(_delta: float) -> void:
 		space.exclude = [player.get_rid()]
 		if not get_world_3d().direct_space_state.intersect_shape(space, 1).is_empty(): valid = false
 	material.albedo_color = Color(0.05, 0.75, 1.0, 0.4) if valid else Color(1.0, 0.15, 0.1, 0.4)
-	label.text = "PLACE SOLAR PANEL  Â·  Move mouse to aim  Â·  Q / R rotate  Â·  Left click confirm\n" + ("Ready to place" if valid else "Aim at nearby level ground")
+	label.text = "PLACE SOLAR PANEL  ·  Move mouse to aim  ·  Q / R rotate  ·  Left click confirm\n" + ("Ready to place" if valid else "Aim at nearby level ground")
 
 func _input(event: InputEvent) -> void:
-	if get_tree().paused or player.seated: return
+	if get_tree().paused or player.seated or settling: return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_B:
 		if player.ui_blocked and not build_menu.visible: return
 		get_viewport().set_input_as_handled()
@@ -154,15 +155,64 @@ func confirm() -> void:
 	for mesh in meshes:
 		mesh.material_override = null
 		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	_add_collision()
 	player.placing_solar = false
 	pose.restore(player.get_node("AnimatedAstronaut"))
 	if player.animation_player != null: player.animation_player.play("idle")
 	placed = true
-	label.text = "Solar panel placed"
+	settling = true
+	label.text = "Deploying solar panel..."
 	var button := build_menu.get_child(0).get_child(0) as Button
 	button.text = "Solar panel placed"
 	button.disabled = true
+	# Preserve the approved ground transform; only the presentation falls.
+	var landing := panel.transform
+	panel.position = landing.origin + landing.basis.y.normalized() * 0.12
+	var drop := create_tween()
+	drop.tween_property(panel, "position", landing.origin, 0.385).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	await drop.finished
+	panel.transform = landing
+	_add_collision()
+	_dust_ring()
+	settling = false
+	label.text = "Solar panel placed"
+
+func _dust_ring() -> void:
+	var dust := Node3D.new()
+	dust.name = "LandingDust"
+	add_child(dust)
+	dust.transform = panel.transform
+	var gradient := Gradient.new()
+	gradient.colors = PackedColorArray([Color(0.65, 0.62, 0.57, 0.24), Color(0.65, 0.62, 0.57, 0.0)])
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.width = 64
+	texture.height = 64
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.0, 0.5)
+	var dust_material := StandardMaterial3D.new()
+	dust_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	dust_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	dust_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	dust_material.albedo_texture = texture
+	dust_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var animation := create_tween().set_parallel(true)
+	for index in range(20):
+		var angle := TAU * float(index) / 20.0
+		var outward := Vector3(cos(angle), 0.0, sin(angle))
+		var puff := MeshInstance3D.new()
+		var quad := QuadMesh.new()
+		quad.size = Vector2(0.65, 0.25)
+		puff.mesh = quad
+		puff.material_override = dust_material
+		puff.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		dust.add_child(puff)
+		puff.position = outward * 1.0 + Vector3.UP * 0.08
+		puff.scale = Vector3.ONE * 0.6
+		animation.tween_property(puff, "position", outward * 1.7 + Vector3.UP * 0.14, 0.85).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		animation.tween_property(puff, "scale", Vector3(1.3, 1.0, 1.0), 0.85)
+		animation.tween_property(puff, "transparency", 1.0, 0.65).set_delay(0.2)
+	animation.chain().tween_callback(dust.queue_free)
 
 func _add_collision() -> void:
 	for mesh in meshes:

@@ -151,6 +151,9 @@ func _physics_process(delta: float) -> void:
 		return
 	elapsed += delta
 	for id in IDS:
+		if id == "crew_briefing" and not session.maya_intro_complete:
+			_approach_commander(delta)
+			continue
 		if id == "crew_briefing" and not state.rover_expedition.is_empty() and state.sol >= 6 and not state.rover_expedition.completed.has(2):
 			continue
 		_tick(id, delta)
@@ -887,3 +890,21 @@ func command(id: String, action: String, argument := "") -> bool:
 		data.crew[id].message = "Cannot do that now. Check task state, proximity, shared tools and available supplies."
 	changed.emit()
 	return ok
+
+func _approach_commander(delta: float) -> void:
+	var actor: Node3D = actors.crew_briefing
+	var player: Node3D = world.get_node("Outpost/Astronaut")
+	if world.maya_dialogue_active or player.ui_blocked or player.seated: return
+	var target: Vector3 = actor.get_parent().to_local(player.global_position)
+	target.y = actor.position.y
+	var gap := actor.position.distance_to(target)
+	var moving := false
+	if gap > 1.5:
+		var after := actor.position.move_toward(target, minf(config.walk_speed_mps * delta, gap - 1.5))
+		if route_service.clear_segment(actor.position, after):
+			actor.position = after
+			data.crew.crew_briefing.position = after
+			moving = true
+	if gap > 0.1: actor.look_at(actor.get_parent().to_global(target), Vector3.UP)
+	_update_visual("crew_briefing", moving)
+	labels.crew_briefing.text = "Maya Chen · Press E to talk" if gap <= 1.8 else "Maya Chen"

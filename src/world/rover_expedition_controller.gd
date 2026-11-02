@@ -663,7 +663,7 @@ func _navigation() -> Dictionary:
 	if screen.x + 280 > size.x - 420 and screen.y < size.y * 0.6:
 		screen.y = size.y * 0.65
 	var arrow := ("▶ " if screen.x > size.x*0.5 else "◀ ") if edge else "▼ "
-	return {"screen":screen,"label":arrow+label+" · %.0f m" % driver.global_position.distance_to(destination)}
+	return {"destination":destination,"screen":screen,"label":arrow+label+" · %.0f m" % driver.global_position.distance_to(destination)}
 
 func _tone(frequency: float) -> void:
 	var stream := AudioStreamWAV.new()

@@ -86,7 +86,7 @@ func render(view: Dictionary) -> void:
 	progress.visible = view.progress > 0.0
 	result.text = view.result
 	var navigation: Dictionary = view.get("navigation", {})
-	waypoint.visible = not navigation.is_empty()
+	waypoint.visible = false # MissionTracker owns the shared crescent destination marker.
 	if waypoint.visible:
 		waypoint.text = navigation.label
 		waypoint.position = navigation.screen
