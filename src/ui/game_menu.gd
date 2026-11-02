@@ -384,6 +384,9 @@ func confirm(title: String, message: String, action: Callable) -> void:
 	_focus_first()
 
 func _restart_sol() -> void:
+	session.transition_sol(_restart_sol_now)
+
+func _restart_sol_now() -> void:
 	if session.restart_current_sol() == OK:
 		_go_to(OUTPOST)
 	else:
@@ -418,3 +421,4 @@ func _go_to(path: String) -> void:
 	if error != OK:
 		open_menu()
 		notice.text = "Could not open the destination: " + error_string(error)
+

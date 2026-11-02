@@ -41,6 +41,7 @@ func run() -> void:
 	root.add_child(world)
 	var motion := world.get_node("OrbitalMotion")
 	motion.set_process(false)
+	session.orbital_clock.elapsed_seconds = 0.0
 	motion.advance(2.0)
 	check(session.orbital_clock.elapsed_seconds == 2.0, "Default clock advances in real time")
 	session.orbital_clock.elapsed_seconds = 0.0
@@ -83,17 +84,19 @@ func run() -> void:
 	session.orbital_clock = Model.default_clock()
 	session.start_selected_mission()
 	check(session.dashboard_state.mission_length_sols == 7, "Campaign lasts seven Sols")
+	var daylight_start: float = session.orbital_clock.elapsed_seconds
 	motion.advance(100)
-	check(session.orbital_clock.elapsed_seconds == 100, "Campaign sky advances continuously")
+	check(session.orbital_clock.elapsed_seconds == daylight_start + 100, "Campaign sky advances continuously")
 	session.dashboard_state.sol = 3
 	motion.advance(12)
-	check(session.orbital_clock.elapsed_seconds == 112, "Run Sol preserves continuous sky")
+	check(session.orbital_clock.elapsed_seconds == daylight_start + 112, "Run Sol preserves continuous sky")
 	motion.advance(100)
-	check(session.orbital_clock.elapsed_seconds == 212, "Sky continues at real time")
+	check(session.orbital_clock.elapsed_seconds == daylight_start + 212, "Sky continues at real time")
 	session.dashboard_state.sol = 7
 	motion.advance(16)
-	check(session.orbital_clock.elapsed_seconds == 228, "Calendar jumps do not accelerate sky")
+	check(session.orbital_clock.elapsed_seconds == daylight_start + 228, "Calendar jumps do not accelerate sky")
 	world.free()
 	print("Orbital motion: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)
+
 

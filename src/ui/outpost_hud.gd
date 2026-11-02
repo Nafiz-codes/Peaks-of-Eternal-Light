@@ -70,12 +70,12 @@ func _ready() -> void:
 		skip_count.prefix = "Sols: "
 		skip_count.tooltip_text = "Temporary developer calendar jump. Supplies and mission objectives are preserved."
 		actions.add_child(skip_count)
-		var skip_button := UI.button("DEV: Skip Sols", func():
+		var skip_button := UI.button("DEV: Skip Sols", func(): session.transition_sol(func():
 			if _modal_visible(): return
 			if session.developer_skip_sols(int(skip_count.value)):
 				notice.text = "DEV: jumped to Sol %d. No supplies consumed or objectives completed. Pending decisions remain." % session.dashboard_state.sol
 			else:
-				notice.text = "DEV skip unavailable: return rover to outpost and stop control. Mission must be active; final Sol uses Run the sol.")
+				notice.text = "DEV skip unavailable: return rover to outpost and stop control. Mission must be active; final Sol uses Run the sol."))
 		skip_button.name = "DeveloperSkipSols"
 		actions.add_child(skip_button)
 		var mission_choice := OptionButton.new()
@@ -83,12 +83,12 @@ func _ready() -> void:
 		for title in preload("res://src/simulation/rover_expedition.gd").TITLES:
 			mission_choice.add_item(title)
 		actions.add_child(mission_choice)
-		var select_mission := UI.button("DEV: Select rover mission", func():
+		var select_mission := UI.button("DEV: Select rover mission", func(): session.transition_sol(func():
 			if _modal_visible(): return
 			if world.get_node("RoverTraining").developer_select_mission(mission_choice.selected):
 				notice.text = "DEV: mission selected with fresh objectives. Use the departure circle."
 			else:
-				notice.text = "Return to outpost and stop rover control first. Reset the campaign if it has ended.")
+				notice.text = "Return to outpost and stop rover control first. Reset the campaign if it has ended."))
 		select_mission.name = "DeveloperSelectRoverMission"
 		select_mission.tooltip_text = "Testing override: replaces rover mission progress and advances to its unlock Sol."
 		actions.add_child(select_mission)
@@ -224,6 +224,10 @@ func refresh() -> void:
 			reading_tween.tween_property(readings, "modulate", Color.WHITE, 0.5)
 
 func advance_turn() -> void:
+	if _modal_visible(): return
+	session.transition_sol(_advance_turn_now)
+
+func _advance_turn_now() -> void:
 	if _modal_visible():
 		return
 	if session.dashboard_state == null:
@@ -301,3 +305,4 @@ func _run_operation(kind: String, operation_id: String, distance_km: float) -> v
 	else:
 		operations.show_operation_error(str(result.get("error", "unknown")))
 	refresh()
+

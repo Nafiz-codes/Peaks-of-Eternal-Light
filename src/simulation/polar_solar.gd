@@ -55,3 +55,32 @@ static func daily_fraction(site: Dictionary, day_index: int, include_distance :=
 		daily_cache.clear()
 	daily_cache[key] = total / 96.0
 	return total / 96.0
+
+static var daylight_starts: Dictionary = {}
+
+static func bright_start(site: Dictionary) -> float:
+	# Choose the beginning of the longest comfortably lit window in the first modeled year.
+	# Use the same horizon and eclipse model as the rendered directional light.
+	var key := str(site.site_id)
+	if daylight_starts.has(key):
+		return daylight_starts[key]
+	var best_start := 0.0
+	var best_length := 0
+	var run_start := 0.0
+	var run_length := 0
+	for hour in range(24 * 365):
+		var elapsed := hour * 3600.0
+		var sample := observation_at(site, elapsed)
+		if sample.sun_direction.y > 0.0 and visibility(site, sample) >= 0.99:
+			if run_length == 0:
+				run_start = elapsed
+			run_length += 1
+			if run_length > best_length:
+				best_length = run_length
+				best_start = run_start
+		else:
+			run_length = 0
+	daylight_starts[key] = best_start
+	return best_start
+
+

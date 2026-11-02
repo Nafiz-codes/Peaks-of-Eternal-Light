@@ -176,7 +176,9 @@ func start_selected_mission() -> Error:
 		return ERR_INVALID_PARAMETER
 	dashboard_simulator = simulator
 	dashboard_state = simulator.begin_mission(selected_site_id)
-	orbital_clock.elapsed_seconds = 0.0
+	for site in simulator.sites:
+		if str(site.site_id) == selected_site_id:
+			orbital_clock.elapsed_seconds = preload("res://src/simulation/polar_solar.gd").bright_start(site)
 	dashboard_last_tick = {}
 	capture_sol_checkpoint()
 	state_changed.emit()
@@ -274,3 +276,12 @@ func return_to_game() -> void:
 		destination = "res://scenes/lunar_landing_selector.tscn"
 	return_scene_path = ""
 	get_tree().change_scene_to_file(destination)
+
+var sol_transition: CanvasLayer
+
+func transition_sol(action: Callable) -> void:
+	if not is_instance_valid(sol_transition):
+		sol_transition = preload("res://src/ui/sol_transition.gd").new()
+		add_child(sol_transition)
+	sol_transition.play(action)
+

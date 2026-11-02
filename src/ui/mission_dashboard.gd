@@ -339,6 +339,10 @@ func _resolve_event(event_id: String, choice_id: String) -> void:
 		show_dashboard()
 
 func advance_turn() -> void:
+	if not _can_advance(): return
+	get_node("/root/MissionSession").transition_sol(_advance_turn_now)
+
+func _advance_turn_now() -> void:
 	if not _can_advance():
 		return
 	busy = true

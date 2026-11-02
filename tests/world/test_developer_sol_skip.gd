@@ -22,6 +22,7 @@ func run() -> void:
 	check(world.get_node("MissionHUD").find_child("DeveloperSkipSols", true, false) != null, "Debug skip control exists in mission panel.")
 	world.get_node("MissionHUD").find_child("DeveloperSolCount", true, false).value = 2
 	world.get_node("MissionHUD").find_child("DeveloperSkipSols", true, false).pressed.emit()
+	await create_timer(1.5).timeout
 	check(session.dashboard_state != null, "Skip button starts selected mission.")
 	await process_frame
 	var state: Variant = session.dashboard_state
@@ -68,3 +69,4 @@ func run() -> void:
 	await process_frame
 	print("Developer Sol skip: %d failures / %d assertions." % [failures, assertions])
 	quit(1 if failures else 0)
+

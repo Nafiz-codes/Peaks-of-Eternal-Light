@@ -12,6 +12,8 @@ func _ready() -> void:
 	session = get_node("/root/MissionSession")
 	material = world.get_node("LunarEnvironment").environment.sky.sky_material
 	light = world.get_node("LowPolarSun")
+	if session.dashboard_state == null:
+		session.orbital_clock.elapsed_seconds = Solar.bright_start(world.site_record)
 	apply_sky()
 
 func _process(delta: float) -> void:
@@ -68,4 +70,5 @@ func set_paused(paused_: bool) -> void:
 func timestamp() -> String:
 	var seconds: float = float(Time.get_unix_time_from_datetime_string(Model.START_UTC)) + session.orbital_clock.elapsed_seconds
 	return Time.get_datetime_string_from_unix_time(int(seconds)).replace("T", " ") + " UTC (model)"
+
 
