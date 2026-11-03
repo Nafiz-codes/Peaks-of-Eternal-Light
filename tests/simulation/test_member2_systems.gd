@@ -26,6 +26,18 @@ func _run() -> void:
 	check(state.built_structures.has("solar_array"), "Construction completes using aggregate crew productivity.")
 	check(is_equal_approx(state.power_generated_kwh, 41.5), "A completed solar array adds its authored 18 kWh potential generation before illumination.")
 	check(not simulator.queue_construction(state, "solar_array").ok, "Completed structures cannot be queued twice.")
+	var materials_before: float = state.materials
+	check(simulator.demolish_structure(state, "solar_array").ok and not state.built_structures.has("solar_array"), "A built structure can be deleted.")
+	check(is_equal_approx(state.materials, materials_before + 35.0), "Deleting refunds the materials used to build it.")
+	check(simulator.demolish_structure(state, "solar_array").error == "structure_not_built", "Only built structures can be deleted.")
+	check(simulator.queue_construction(state, "solar_array").ok, "A deleted structure can be rebuilt.")
+	var without_panel: Object = simulator.begin_mission("ridge_a", 20)
+	var with_panel: Object = simulator.begin_mission("ridge_a", 20)
+	with_panel.placed_panel_kwh_per_sol = 4.3
+	for sol in range(3):
+		simulator.advance_sol(without_panel)
+		simulator.advance_sol(with_panel)
+		check(is_equal_approx(with_panel.power_generated_kwh - without_panel.power_generated_kwh, 4.3), "The placed panel adds exactly its shown kWh every sol.")
 
 	var rover_state: Object = simulator.begin_mission("ridge_a", 20)
 	var survey := simulator.dispatch_rover(rover_state, "survey", 6.0)

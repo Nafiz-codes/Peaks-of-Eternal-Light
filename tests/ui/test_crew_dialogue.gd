@@ -26,14 +26,14 @@ func run() -> void:
 		world._on_player_interaction(id)
 		check(dialogue.visible and player.ui_blocked, "E interaction opens a conversation and blocks movement: " + id)
 		check(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Dialogue releases the cursor.")
-		check(not "NEW UPDATE" in world.get_node("Outpost/" + id + "/StatusLabel").text, "Reading clears the update marker.")
+		check(not world.get_node("Outpost/" + id + "/StatusLabel/UpdateMarker").visible, "Reading clears the update marker.")
 		check(session.dashboard_state == null, "Talking does not start a mission implicitly.")
 		dialogue.hide()
 		check(not player.ui_blocked, "Closing restores player input.")
 	check(session.start_selected_mission() == OK, "Mission starts.")
 	var original := Save.state_data(session.dashboard_state)
 	for id in Report.ROLES:
-		check("NEW UPDATE" in world.get_node("Outpost/" + id + "/StatusLabel").text, "Mission start produces a fresh report.")
+		check(world.get_node("Outpost/" + id + "/StatusLabel/UpdateMarker").visible, "Mission start produces a fresh report.")
 		hud.inspect_station(id)
 		check("Sol 00" in Report.build(id, session.dashboard_state).status, "Report uses the actual sol.")
 		check(Save.state_data(session.dashboard_state) == original, "Reading leaves simulation values unchanged.")
@@ -44,7 +44,7 @@ func run() -> void:
 	check(not Save.decode(captured).is_empty(), "Saves from before NPC dialogue remain compatible.")
 	session.advance_mission()
 	await process_frame
-	check("NEW UPDATE" in world.get_node("Outpost/power_console/StatusLabel").text, "Advancing a sol produces a fresh update.")
+	check(world.get_node("Outpost/power_console/StatusLabel/UpdateMarker").visible, "Advancing a sol produces a fresh update.")
 	if session.dashboard_state.pending_events.is_empty():
 		session.dashboard_state.pending_events.append(session.dashboard_simulator.events[1].duplicate(true))
 		session.state_changed.emit()

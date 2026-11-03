@@ -216,7 +216,8 @@ func _focus_paths() -> void:
 
 func _hover(card: Button, active: bool) -> void:
 	if busy or reduced: return
-	var old: Tween = card.get_meta("hover_tween", null)
+	# get_meta with a null default still reports an error in Godot 4.
+	var old: Tween = card.get_meta("hover_tween") if card.has_meta("hover_tween") else null
 	if old: old.kill()
 	var tween := create_tween()
 	card.set_meta("hover_tween", tween)

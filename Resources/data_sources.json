@@ -234,6 +234,34 @@
         "sites.json coordinates.plateau_d"
       ],
       "measurement_note": "Approximate feature-center coordinate from NASA Science; it is not a surveyed landing point."
+    },
+    {
+      "source_id": "nasa_gsfc_total_solar_irradiance",
+      "agency": "NASA",
+      "mission_or_program": "SORCE / TSIS-1 (NASA Goddard Space Flight Center)",
+      "title": "Solar Irradiance Science",
+      "url": "https://earth.gsfc.nasa.gov/climate/projects/solar-irradiance/science",
+      "data_kind": "total solar irradiance at 1 AU",
+      "version_or_coverage": "SORCE-established total solar irradiance 1361 W/m²; TSIS-1 value 1361.6 ± 0.3 W/m² for the 2019 solar minimum",
+      "retrieved_on": "2026-11-03",
+      "used_by": [
+        "src/world/solar_placement.gd SOLAR_IRRADIANCE_W_M2"
+      ],
+      "measurement_note": "The placed solar panel uses 1361 W/m² as sunlight on a Sun-facing panel at 1 AU. Over the mission days (sampled every 30 minutes from the mission's start time), each modeled Sun position is weighted by date-dependent Sun distance (inverse square), solar-disk visibility over the local horizon, and the cosine of the angle between the Sun and the panel's cell face, which tilts 45° and turns with the player's chosen rotation and the ground slope. In-game shading at the chosen spot is applied last."
+    },
+    {
+      "source_id": "nasa_sst_soa_power_solar_cells",
+      "agency": "NASA",
+      "mission_or_program": "NASA Small Spacecraft Systems Virtual Institute",
+      "title": "State-of-the-Art of Small Spacecraft Technology — 3.0 Power",
+      "url": "https://www.nasa.gov/smallsat-institute/sst-soa/power-subsystems/",
+      "data_kind": "space solar cell efficiency",
+      "version_or_coverage": "2026 edition, Section 3.2.1: state-of-the-art 3- to 5-junction space solar cells with a nominal efficiency of 30% and a high of 34%; Table 3-1 lists flight cells at 28–32% beginning-of-life efficiency",
+      "retrieved_on": "2026-11-03",
+      "used_by": [
+        "src/world/solar_placement.gd CELL_EFFICIENCY"
+      ],
+      "measurement_note": "The placed panel uses the 30% nominal cell efficiency over its 4.62 m² face (3.0 m × 1.54 m, measured from the fitted solar_panel.glb model). Wiring, temperature, dust and degradation losses are not modeled, so output is a beginning-of-life upper estimate. Panel size and 24-hour sol length are game assumptions, not NASA measurements."
     }
   ]
 }

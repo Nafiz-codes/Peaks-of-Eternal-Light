@@ -33,6 +33,8 @@ var triggered_event_ids: Array[String] = []
 var built_structures: Dictionary = {}
 var construction_queue: Array[Dictionary] = []
 var damaged_structures: Dictionary = {}
+## Fixed daily output of the hand-placed solar panel, set from its placement.
+var placed_panel_kwh_per_sol: float = 0.0
 var last_rover_action: String = ""
 var rover_distance_this_sol_km: float = 0.0
 var rover_total_distance_km: float = 0.0

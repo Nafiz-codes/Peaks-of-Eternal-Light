@@ -36,6 +36,8 @@ static func decode(data: Variant) -> Dictionary:
 	var placement: Variant = data.get("solar_placement", {})
 	if not placement is Dictionary: return {}
 	if not placement.is_empty() and (not placement.get("transform") is Transform3D or not placement.transform.is_finite()): return {}
+	var panel_output: Variant = placement.get("kwh_per_sol", 0.0)
+	if not (panel_output is float or panel_output is int) or not is_finite(float(panel_output)) or float(panel_output) < 0.0 or float(panel_output) > 100.0: return {}
 	var draft: Variant = data.get("planning_draft", {})
 	var approved: Variant = data.get("approved_plan", {})
 	if not draft is Dictionary or not approved is Dictionary: return {}
@@ -74,7 +76,7 @@ static func decode(data: Variant) -> Dictionary:
 			var key: String = property.name
 			if not data.state.has(key) or typeof(data.state[key]) != property.type:
 				# Older version 1 saves omit newer fields; preserve their defaults.
-				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "rover_training", "rover_expedition"] and not data.state.has(key):
+				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "rover_training", "rover_expedition", "placed_panel_kwh_per_sol"] and not data.state.has(key):
 					continue
 				return {}
 			var value: Variant = data.state[key]
@@ -94,6 +96,9 @@ static func decode(data: Variant) -> Dictionary:
 		# Version 2 distinguishes new four-person saves from legacy versions.
 		state.crew_size = 4
 		if state.rover_health < 0.0 or state.rover_health > 100.0:
+			return {}
+		# A placed panel tops out near 45 kWh per sol; reject edited values.
+		if state.placed_panel_kwh_per_sol < 0.0 or state.placed_panel_kwh_per_sol > 100.0:
 			return {}
 		if not preload("res://src/world/crew_fieldwork.gd").valid_save(state.fieldwork, data.version == 1):
 			return {}

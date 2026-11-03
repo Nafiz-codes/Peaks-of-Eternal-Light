@@ -200,6 +200,27 @@ func queue_construction(state: Variant, structure_id: String) -> Dictionary:
 	return {"ok": true, "structure_id": structure_id, "materials_cost": materials_cost, "power_cost": power_cost}
 
 
+func demolish_structure(state: Variant, structure_id: String) -> Dictionary:
+	if state == null:
+		return {"ok": false, "error": "missing_mission_state"}
+	if state.mission_outcome.get("status", "") != "in_progress" or not state.pending_events.is_empty():
+		return {"ok": false, "error": "mission_not_ready"}
+	if not state.built_structures.has(structure_id):
+		return {"ok": false, "error": "structure_not_built"}
+	# Full refund of the authored build cost; energy cannot exceed battery capacity.
+	# shortcut: uses the current shielding discount, so a wall bought before the discount
+	# refunds less than was paid; record the paid cost per structure if that matters.
+	var cost: Dictionary = _find_structure(structure_id).get("build_cost", {})
+	var materials_refund := maxf(0.0, float(cost.get("materials", 0.0)) - _structure_material_discount(state, structure_id))
+	var power_refund := float(cost.get("power", 0.0))
+	state.built_structures.erase(structure_id)
+	state.damaged_structures.erase(structure_id)
+	state.materials += materials_refund
+	state.power_kwh = minf(state.power_kwh + power_refund, _battery_capacity(state))
+	_publish_action_state(state)
+	return {"ok": true, "structure_id": structure_id, "materials_refund": materials_refund, "power_refund": power_refund}
+
+
 func dispatch_rover(state: Variant, action_id: String, distance_km: float) -> Dictionary:
 	if state == null:
 		return {"ok": false, "error": "missing_mission_state"}
@@ -498,6 +519,9 @@ func _calculate_power(state: Variant, site: Dictionary) -> Dictionary:
 	var active_effect_multiplier := _active_power_generation_multiplier(state.active_events)
 	var solar_array_output := SOLAR_ARRAY_GENERATION_KWH_PER_SOL if state.built_structures.has("solar_array") and not state.damaged_structures.has("solar_array") else 0.0
 	var generated_kwh := (BASE_SOLAR_GENERATION_KWH_PER_SOL + solar_array_output) * solar_yield * active_effect_multiplier * _active_effect_multiplier_for(state.active_events, "output_multiplier")
+	# The placed panel's rating already includes its site and spot, so it is added unscaled:
+	# the amount shown when placing is exactly what arrives every sol.
+	generated_kwh += state.placed_panel_kwh_per_sol
 	var baseline_kw_per_person := _field_value(bvad_constants, "power_baseline_kw_per_person")
 	var consumed_kwh := baseline_kw_per_person * float(state.crew_size) * 24.0 * _active_effect_multiplier_for(state.active_events, "power_consumption_multiplier")
 	return {

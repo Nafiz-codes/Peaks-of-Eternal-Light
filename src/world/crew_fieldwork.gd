@@ -41,9 +41,11 @@ func _ready() -> void:
 		homes[id] = actor.position
 		var label := Label3D.new()
 		label.name = "FieldworkLabel"
-		label.position.y = 2.0
-		label.font_size = 22
-		label.pixel_size = 0.005
+		label.position.y = 1.95
+		label.font = world.tag_font(500)
+		label.font_size = 26
+		label.pixel_size = 0.004
+		label.outline_size = 6
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		actor.add_child(label)
 		labels[id] = label
@@ -797,7 +799,6 @@ func _update_visual(id: String, moving: bool) -> void:
 	if data.is_empty():
 		return
 	var c: Dictionary = data.crew[id]
-	labels[id].text = SPECIALTIES[id] + "\n" + c.phase + (" · " + str(c.step + 1) if c.phase == "Working" else "")
 	props[id].visible = not c.phase == "Available"
 	# Existing walk clip plus visible camera/tool movement; no new character assets.
 	props[id].position.y = 1.05 + (sin(c.progress * 2.0) * 0.08 if c.phase == "Working" else 0.0)
@@ -907,4 +908,4 @@ func _approach_commander(delta: float) -> void:
 			moving = true
 	if gap > 0.1: actor.look_at(actor.get_parent().to_global(target), Vector3.UP)
 	_update_visual("crew_briefing", moving)
-	labels.crew_briefing.text = "Maya Chen · Press E to talk" if gap <= 1.8 else "Maya Chen"
+	labels.crew_briefing.text = "Press E to talk" if gap <= 1.8 else ""

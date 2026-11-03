@@ -15,6 +15,7 @@ const LUNAR_REGOLITH := Color("5b5b63")
 const HABITAT := Color("d4d8df")
 const SOLAR := Color("203a72")
 const STRUCTURE := Color("728096")
+const TAG_FONT := preload("res://Assets/fonts/PublicSans-Variable.ttf")
 # Requested visual adjustment: 25% closer, then another 30% closer (0.75 * 0.70).
 const EARTH_DISTANCE_SCALE := 0.525
 var maya_dialogue_active := false
@@ -147,14 +148,8 @@ func refresh_feedback() -> void:
 		feedback.food = state.life_support_status.get("food", "unavailable")
 		feedback.oxygen = state.life_support_status.get("oxygen", "unavailable")
 		feedback.active_events = state.active_events.duplicate(true)
-	var energy_text := "Awaiting mission" if state == null else "%.2f kWh generated / %+.2f balance" % [state.power_generated_kwh, state.power_balance_kwh]
-	_set_station_status("power_console", energy_text, state != null and state.consecutive_power_depleted_sols > 0)
-	_set_station_status("water_recycler", "WATER / " + str(feedback.water).to_upper(), feedback.water in ["warning", "critical", "depleted"])
-	_set_station_status("food_storage", "FOOD / " + str(feedback.food).to_upper(), feedback.food in ["warning", "critical", "depleted"])
-	var event_ids := PackedStringArray()
-	for event in feedback.active_events:
-		event_ids.append(str(event.get("event_id", "")).replace("_", " "))
-	_set_station_status("crew_briefing", "%d pending decisions / O2 %s" % [feedback.pending, feedback.oxygen] + ("\nActive: " + ", ".join(event_ids) if not event_ids.is_empty() else ""), feedback.pending > 0)
+	for id in ["power_console", "water_recycler", "food_storage", "crew_briefing"]:
+		_set_station_status(id)
 	if feedback_tween != null:
 		feedback_tween.kill()
 	event_beacon.visible = feedback.pending > 0
@@ -175,15 +170,19 @@ func _sync_rover_action(_state: Variant, _reduced_motion: bool) -> void:
 	get_node("RoverHull").sync_state()
 
 
-func _set_station_status(id: String, text: String, alert: bool) -> void:
-	var label := get_node("Outpost/" + id + "/StatusLabel") as Label3D
-	label.text = str(label.get_meta("station_title")) + " [E]\n" + text
+# Readings live in the crew report; the tag only shows who it is and whether there is news.
+func _set_station_status(id: String) -> void:
 	var session := get_node("/root/MissionSession")
 	var events: Array = [] if session.dashboard_simulator == null else session.dashboard_simulator.events
 	var report := preload("res://src/ui/crew_report.gd").build(id, session.dashboard_state, events)
-	if session.crew_read_reports.get(id, "") != report.signature:
-		label.text += "\n● NEW UPDATE"
-	label.modulate = Color("ffd18a") if alert else Color("d9e9ff")
+	get_node("Outpost/" + id + "/StatusLabel/UpdateMarker").visible = session.crew_read_reports.get(id, "") != report.signature
+
+
+func _set_station_hint(station: Node, near: bool) -> void:
+	# Rover repair shares these area handlers but has no crew name tag.
+	var label := station.get_node_or_null("StatusLabel") as Label3D
+	if label == null or not label.has_meta("station_title"): return
+	label.text = str(label.get_meta("station_title")) + ("\nPress E" if near else "")
 
 
 func toggle_overview() -> void:
@@ -280,10 +279,10 @@ func _add_outpost() -> void:
 	outpost.add_child(solar_root)
 	_add_astronaut(outpost)
 	_add_rover(outpost)
-	_add_interaction_station(outpost, "power_console", "ENERGY CONSOLE", Vector3(-5.5, 0.0, 3.2), SOLAR)
-	_add_interaction_station(outpost, "water_recycler", "DR. ALEX RIVERA / SCIENCE", Vector3(0.8, 0.0, 3.0), Color("e8ae45"))
-	_add_interaction_station(outpost, "food_storage", "SAM OKAFOR / ENGINEERING + MEDICAL", Vector3(0.0, 0.0, -4.0), Color("f58a28"))
-	_add_interaction_station(outpost, "crew_briefing", "DR. MAYA CHEN / TRAINING + SAFETY", Vector3(3.4, 0.0, 3.8), Color("36b7bd"))
+	_add_interaction_station(outpost, "power_console", "Energy console", Vector3(-5.5, 0.0, 3.2), SOLAR)
+	_add_interaction_station(outpost, "water_recycler", "Dr. Alex Rivera\nScience", Vector3(0.8, 0.0, 3.0), Color("e8ae45"))
+	_add_interaction_station(outpost, "food_storage", "Sam Okafor\nEngineering + medical", Vector3(0.0, 0.0, -4.0), Color("f58a28"))
+	_add_interaction_station(outpost, "crew_briefing", "Dr. Maya Chen\nTraining + safety", Vector3(3.4, 0.0, 3.8), Color("36b7bd"))
 
 
 
@@ -457,15 +456,33 @@ func _add_interaction_station(parent: Node3D, interaction_id: String, label_text
 	station.look_at(parent.to_global(Vector3(3.4, 0.0, 6.5)), Vector3.UP)
 	var label := Label3D.new()
 	label.name = "StatusLabel"
-	label.text = label_text + "  [E]"
+	label.text = label_text
 	label.set_meta("station_title", label_text)
-	label.font_size = 28
-	label.pixel_size = 0.008
-	label.outline_size = 4
-	label.modulate = Color("f1f3fa")
-	label.position = Vector3(0.0, 2.3, 0.0)
+	label.font = tag_font()
+	label.font_size = 38
+	label.pixel_size = 0.004
+	label.outline_size = 8
+	label.outline_modulate = Color(0.02, 0.03, 0.05, 0.85)
+	label.line_spacing = -4
+	label.modulate = Color("e8eef6")
+	label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	label.position = Vector3(0.0, 2.15, 0.0)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	station.add_child(label)
+	var marker := Label3D.new()
+	marker.name = "UpdateMarker"
+	marker.text = "!"
+	marker.font = tag_font(800)
+	marker.font_size = 96
+	marker.pixel_size = 0.004
+	marker.outline_size = 12
+	marker.outline_modulate = Color(0.02, 0.03, 0.05, 0.85)
+	marker.modulate = Color("ffb84d")
+	marker.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	marker.position = Vector3(0.0, 0.5, 0.0) # Clears three tag lines; hides with the tag.
+	marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	marker.visible = false
+	label.add_child(marker)
 	var area := Area3D.new()
 	area.name = "InteractionArea"
 	area.set_meta("interaction_id", interaction_id)
@@ -483,11 +500,20 @@ func _add_interaction_station(parent: Node3D, interaction_id: String, label_text
 func _on_interaction_area_entered(body: Node3D, area: Area3D) -> void:
 	if body.get_script() == LunarAstronautScript:
 		body.call("set_nearby_interactable", area)
+		_set_station_hint(area.get_parent(), true)
 
 
 func _on_interaction_area_exited(body: Node3D, area: Area3D) -> void:
 	if body.get_script() == LunarAstronautScript:
 		body.call("clear_nearby_interactable", area)
+		_set_station_hint(area.get_parent(), false)
+
+
+static func tag_font(weight := 600) -> FontVariation:
+	var font := FontVariation.new()
+	font.base_font = TAG_FONT
+	font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): weight}
+	return font
 
 
 func _on_player_interaction(interaction_id: String) -> void:

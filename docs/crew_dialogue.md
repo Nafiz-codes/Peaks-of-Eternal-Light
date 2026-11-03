@@ -21,7 +21,8 @@ all pending decisions. Review decision opens the existing confirmation interface
 which applies choices through the simulator. Conversations themselves spend no
 resources and advance no time.
 
-NEW UPDATE appears above a specialist when their displayed report differs from
+Overhead tags show only name and duty (Public Sans, `Assets/fonts`, SIL OFL), plus
+"Press E" when in range. An amber "!" appears above a specialist when their displayed report differs from
 the last read version. Opening the conversation acknowledges it. New sols and
 changed conditions can create another update. Read markers survive save/load and
 dashboard visits, and reset when changing sites or restarting the mission. Older

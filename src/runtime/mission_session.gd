@@ -176,6 +176,7 @@ func start_selected_mission() -> Error:
 		return ERR_INVALID_PARAMETER
 	dashboard_simulator = simulator
 	dashboard_state = simulator.begin_mission(selected_site_id)
+	dashboard_state.placed_panel_kwh_per_sol = float(solar_placement.get("kwh_per_sol", 0.0))
 	for site in simulator.sites:
 		if str(site.site_id) == selected_site_id:
 			orbital_clock.elapsed_seconds = preload("res://src/simulation/polar_solar.gd").bright_start(site)
@@ -222,6 +223,16 @@ func queue_structure(structure_id: String) -> Dictionary:
 	if action_busy or dashboard_state == null:
 		return {"ok": false, "error": "mission_not_ready"}
 	var result: Dictionary = dashboard_simulator.queue_construction(dashboard_state, structure_id)
+	if result.get("ok", false):
+		capture_sol_checkpoint()
+		state_changed.emit()
+	return result
+
+
+func demolish_structure(structure_id: String) -> Dictionary:
+	if action_busy or dashboard_state == null:
+		return {"ok": false, "error": "mission_not_ready"}
+	var result: Dictionary = dashboard_simulator.demolish_structure(dashboard_state, structure_id)
 	if result.get("ok", false):
 		capture_sol_checkpoint()
 		state_changed.emit()

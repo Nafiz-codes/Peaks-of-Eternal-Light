@@ -140,10 +140,6 @@ func _apply_mouse_look(relative: Vector2) -> void:
 func _physics_process(delta: float) -> void:
 	if seated:
 		return
-	if placing_solar:
-		rotation.y = camera_yaw
-		_sync_camera_rig()
-		return
 	var controls_active := not ui_blocked and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 	var input_vector := Vector2.ZERO
 	if controls_active:
@@ -152,7 +148,8 @@ func _physics_process(delta: float) -> void:
 			float(Input.is_key_pressed(KEY_S)) - float(Input.is_key_pressed(KEY_W))
 		)
 	var wants_sprint := controls_active and Input.is_key_pressed(KEY_SHIFT) and input_vector.y < 0.0
-	_step_locomotion(delta, input_vector, controls_active and jump_requested, wants_sprint)
+	# Build and destroy modes walk exactly like normal play, without jumping.
+	_step_locomotion(delta, input_vector, controls_active and jump_requested and not placing_solar, wants_sprint)
 	jump_requested = false
 
 
