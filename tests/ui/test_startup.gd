@@ -48,7 +48,14 @@ func run() -> void:
 	var original_transform: Transform3D = moon.transform
 	var original_material = moon.material_override
 	click(boot.buttons[0])
+	check(boot.state == boot.State.PLAYING_OPENING, "Start plays existing cutscene")
+	boot.opening_skip_requested = true
+	await create_timer(3.6).timeout
 	check(boot.state == boot.State.SELECTING_COMMANDER, "Start opens Commander selection before the Moon")
+	var welcome = boot.commander_menu.get_children().filter(func(child): return child.get_script() == preload("res://src/ui/opening_dialogue.gd"))[0]
+	check(paused and welcome.sequence == "welcome", "Maya welcomes Commander before selection")
+	for i in 3: welcome.advance()
+	await process_frame
 	boot.commander_menu.select_appearance("commander-02", false)
 	boot.commander_menu.name_input.text = "Arham"
 	boot.commander_menu._validate()

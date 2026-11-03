@@ -27,6 +27,7 @@ var zoom_reset_button: Button
 var landing_in_progress := false
 var menu_layer: CanvasLayer
 var navigation_controller: Node
+var opening_dialogue_shown := false
 
 func enable_cinematic_navigation() -> Node:
 	if navigation_controller == null:
@@ -50,6 +51,10 @@ func _ready() -> void:
 	_add_menu()
 	add_child(preload("res://src/ui/outpost_hover.gd").new())
 	_update_site_callouts()
+	call_deferred("_opening_if_current")
+
+func _opening_if_current() -> void:
+	if get_tree().current_scene == self: show_opening_dialogue()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if navigation_controller != null:
@@ -465,3 +470,10 @@ func _update_zoom_controls() -> void:
 	zoom_out_button.disabled = camera.size >= (4.0 if polar_view else 36.0) - 0.00001
 	var default_size := 0.95 if polar_view else 24.0
 	zoom_reset_button.text = "Reset %.0f%%" % (default_size / camera.size * 100.0)
+
+func show_opening_dialogue() -> void:
+	if opening_dialogue_shown: return
+	opening_dialogue_shown = true
+	var dialogue := preload("res://src/ui/opening_dialogue.gd").new()
+	dialogue.sequence = "landing_site"
+	add_child(dialogue)

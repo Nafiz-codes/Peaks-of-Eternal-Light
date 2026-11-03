@@ -895,7 +895,7 @@ func command(id: String, action: String, argument := "") -> bool:
 func _approach_commander(delta: float) -> void:
 	var actor: Node3D = actors.crew_briefing
 	var player: Node3D = world.get_node("Outpost/Astronaut")
-	if world.maya_dialogue_active or player.ui_blocked or player.seated: return
+	if world.maya_dialogue_active or world.opening_touchdown_active or player.ui_blocked or player.seated: return
 	var target: Vector3 = actor.get_parent().to_local(player.global_position)
 	target.y = actor.position.y
 	var gap := actor.position.distance_to(target)
@@ -908,4 +908,4 @@ func _approach_commander(delta: float) -> void:
 			moving = true
 	if gap > 0.1: actor.look_at(actor.get_parent().to_global(target), Vector3.UP)
 	_update_visual("crew_briefing", moving)
-	labels.crew_briefing.text = "Press E to talk" if gap <= 1.8 else ""
+	labels.crew_briefing.text = "Press E to talk to Dr. Maya." if gap <= 2.5 and world.opening_invitation_complete else ""

@@ -293,6 +293,8 @@ func _finish_opening() -> void:
 	await fade.finished
 	opening_video.stop()
 	_show_commander_selection()
+	commander_menu.busy = true
+	commander_menu._validate()
 	canvas.move_child(opening_cover, -1)
 	fade = create_tween().set_parallel(true)
 	fade.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
@@ -300,6 +302,11 @@ func _finish_opening() -> void:
 	fade.tween_property(get_node("/root/MenuMusic").player, "volume_linear", 1.0, 1.2)
 	await fade.finished
 	opening_cover.queue_free()
+	commander_menu.busy = false
+	commander_menu._validate()
+	var welcome := preload("res://src/ui/opening_dialogue.gd").new()
+	welcome.preview_appearance = commander_menu.selected_id if not commander_menu.selected_id.is_empty() else str(commander_menu.cards[0].name)
+	commander_menu.add_child(welcome)
 
 func _show_commander_selection() -> void:
 	state = State.SELECTING_COMMANDER
@@ -343,6 +350,7 @@ func _handoff() -> void:
 	state = State.GAMEPLAY
 	world.reparent(get_tree().root)
 	get_tree().current_scene = world
+	world.show_opening_dialogue()
 	world.process_mode = Node.PROCESS_MODE_INHERIT
 	get_node("/root/GameMenu").set_process_input(true)
 	queue_free()
