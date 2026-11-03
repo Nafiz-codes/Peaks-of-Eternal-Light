@@ -103,13 +103,20 @@ func run() -> void:
 			video_done_at = Time.get_ticks_msec() / 1000.0
 			check(audio.rover_player.playing and not driver.takeover.audio_done, "Startup sound continues after trimmed video")
 			check(driver.camera.current and not driver.takeover.screen.visible, "Actual rover camera replaces recorded driving shot")
-			check(driver.power_state == driver.Power.STARTING and driver.position == before, "Live rover remains stationary until full audio ends")
+			check(driver.power_state == driver.Power.READY, "Live rover is controllable before startup audio ends")
+			var control_position: Vector3 = driver.position
+			for i in range(15):
+				await physics_frame
+				driver.step_drive(1.0 / 60.0, 1.0, 0.0, false)
+			check(driver.position.distance_to(control_position) > 0.001, "Rover moves while startup sound is still playing")
+			driver.speed = 0.0
+			driver.velocity = Vector3.ZERO
 			await capture("rover-live-startup")
 		if driver.takeover.audio_done and audio_done_at < 0: audio_done_at = Time.get_ticks_msec() / 1000.0
-	check(driver.power_state == driver.Power.READY and driver.camera.current, "Both media finish before rover control")
+	check(driver.power_state == driver.Power.READY and driver.camera.current, "Audio completion preserves live rover control")
 	check(video_done_at >= 0 and audio_done_at - video_done_at > 3.9 and audio_done_at - video_done_at < 4.4, "Live rover replaces final four seconds while sound finishes")
 	print("Live rover startup remainder: ", audio_done_at - video_done_at)
-	check(driver.position == before and is_zero_approx(driver.speed), "Released throttle never causes movement")
+	check(is_zero_approx(driver.speed), "Released throttle settles rover")
 	await capture("rover-cutscene-handoff")
 	await create_timer(0.9).timeout
 	check(is_equal_approx(music.duck, 1.0), "Mission mix recovers")

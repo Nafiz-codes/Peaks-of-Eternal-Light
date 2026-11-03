@@ -1,5 +1,5 @@
 extends CanvasLayer
-## Owns the visual/audio gate; the existing driver retains all movement logic.
+## Hands control over with the live view while startup audio finishes independently.
 signal completed
 signal interrupted
 const VIDEO := preload("res://Assets/video/rover_takeover_intro.ogv")
@@ -71,9 +71,9 @@ func _process(delta: float) -> void:
 		var audio_position := DURATION if audio_done else audio.get_playback_position() + AudioServer.get_time_since_last_mix()
 		video.speed_scale = 1.0 + clampf((audio_position - position) * 1.5, -0.08, 0.08)
 	# Reveal the actual parked rover and its current heading, while startup audio
-	# continues independently to ten seconds. The driver remains STARTING.
+	# continues independently to ten seconds. Unlock control at the visual handoff.
 	if not video_done:
-		if position >= VIDEO_DURATION - 0.45: _show_live_rover()
+		if position >= VIDEO_DURATION - 0.35: _show_live_rover()
 		screen.modulate.a = smoothstep(0.0, 0.35, position) * (1.0 - smoothstep(VIDEO_DURATION - 0.35, VIDEO_DURATION, position))
 	if elapsed > DURATION + 2.0:
 		push_warning("Rover startup did not complete; returning safely to cockpit.")
@@ -92,6 +92,7 @@ func _show_live_rover() -> void:
 	camera_handed_off = true
 	driver._update_camera()
 	driver.camera.make_current()
+	completed.emit()
 
 func _audio_finished(owner_id: int) -> void:
 	if not running or owner_id != driver.get_instance_id(): return
@@ -103,7 +104,6 @@ func _finish_if_ready() -> void:
 	running = false
 	screen.hide()
 	get_node("/root/MenuMusic").set_rover_duck(false)
-	completed.emit()
 	_prepare_replay()
 
 func _prepare_replay() -> void:

@@ -9,6 +9,10 @@ const STEP_HEIGHT := 0.3
 const MOUSE_SENSITIVITY := 0.003
 const WHEELBASE := 2.2
 const MAX_STEER := 0.55
+const CAMERA_FOV := 65.0
+const BOOST_FOV := 80.0
+const BRAKE_FOV := 60.0
+var camera_lag := 0.0
 var active := false
 var speed := 0.0
 var steering := 0.0
@@ -41,7 +45,7 @@ func _ready() -> void:
 	floor_max_angle = deg_to_rad(32)
 	camera = Camera3D.new()
 	camera.name = "RemoteCamera"
-	camera.fov = 65
+	camera.fov = CAMERA_FOV
 	add_child(camera)
 	overlay = CanvasLayer.new()
 	overlay.layer = 85
@@ -177,6 +181,7 @@ func stop_control() -> void:
 		return
 	active = false
 	boost_held = false
+	_reset_camera_motion()
 	takeover.cancel()
 	get_node("/root/GameAudio").cancel_rover_startup(self)
 	power_state = Power.INACTIVE
@@ -266,11 +271,13 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 		return
 	impact_cooldown = maxf(0, impact_cooldown - delta)
 	if observed_state.rover_health <= 0.0:
+		_reset_camera_motion()
 		speed = 0.0
 		velocity = Vector3.ZERO
 		status.text = "ROVER DISABLED\nR: return to lander\nExit the lander, approach the rover and press E to repair."
 		return
 	if power_state != Power.READY:
+		_reset_camera_motion()
 		speed = 0.0
 		velocity = Vector3.ZERO
 		status.text = "ROVER SYSTEMS STARTING…"
@@ -290,6 +297,7 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 			speed = 0.0
 			brake = true
 	var deceleration := brake or is_zero_approx(throttle) or speed * throttle < 0
+	var previous_speed := speed
 	if is_on_floor():
 		speed = move_toward(speed, 0.0 if brake else target, (BRAKING * 2.0 if deceleration or absf(speed) > absf(target) else ACCELERATION * boost) * delta)
 	steering = move_toward(steering, clampf(turn, -1, 1) * MAX_STEER, 0.7 * delta)
@@ -315,6 +323,8 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 			velocity = Vector3.ZERO
 			status.text = "ROVER STOPPED / " + str(result.get("error", "unavailable")).replace("_", " ") + "\nR: return to lander"
 			_sync_visual(delta)
+			_reset_camera_motion()
+			_update_camera()
 			return
 	_apply_collision_damage(incoming)
 	if is_on_wall() and metres < absf(speed) * delta * 0.1:
@@ -324,6 +334,7 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 	var travel := (global_position - before).dot(forward)
 	rover.get_node("Wheels").update_motion(travel, steering, WHEELBASE)
 	_sync_visual(delta)
+	_update_camera_motion(delta, previous_speed, boost_held and throttle > 0.0, brake)
 	_update_camera()
 	status.text = "LANDER / ROVER REMOTE CAMERA\nW/S: drive · A/D: steer · Left Shift: 2× speed · Space: brake\nMouse: look around · R: return · Esc: pause\nSpeed %.2f m/s · Travel %.1f m" % [absf(speed), observed_state.rover_total_distance_km * 1000.0]
 	publish_elapsed += delta
@@ -405,11 +416,29 @@ func _try_step(motion: Vector3) -> void:
 	global_position.y = raised.origin.y + hit.get_travel().y
 	velocity.y = 0.0
 
+func _reset_camera_motion() -> void:
+	camera_lag = 0.0
+	camera.fov = CAMERA_FOV
+
+func _update_camera_motion(delta: float, previous_speed: float, boosting: bool, brake: bool) -> void:
+	# Acceleration leaves the camera behind; deceleration carries it forward.
+	# The offset decays at steady speed so the camera catches up naturally.
+	if boosting or brake:
+		camera_lag += (speed - previous_speed) * 0.7
+	camera_lag = clampf(camera_lag * exp(-3.0 * delta), -0.8, 1.0)
+	var target_fov := CAMERA_FOV
+	if brake and absf(speed) > 0.05:
+		target_fov = BRAKE_FOV
+	elif boosting and speed > 0.05:
+		target_fov = BOOST_FOV
+	camera.fov = lerpf(camera.fov, target_fov, 1.0 - exp(-4.0 * delta))
+
 func _update_camera() -> void:
 	var view_heading := heading + camera_yaw
 	var forward := Vector3(sin(view_heading), 0, cos(view_heading))
 	var focus := global_position + Vector3(0, 0.6, 0)
 	var desired := focus - forward * (6.5 * cos(camera_elevation)) + Vector3.UP * (6.5 * sin(camera_elevation))
+	desired -= Vector3(sin(heading), 0, cos(heading)) * camera_lag
 	var query := PhysicsRayQueryParameters3D.create(focus, desired)
 	query.exclude = [get_rid()]
 	var obstruction := get_world_3d().direct_space_state.intersect_ray(query)

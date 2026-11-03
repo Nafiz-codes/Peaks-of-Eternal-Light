@@ -9,6 +9,8 @@ Current behavior, October 17, 2026. This supersedes the earlier automatic dispat
 
 Exterior and dashboard rover panels are inspection-only. There is no rover-side control interaction and no 3 km dispatch button. The session rejects movement requests unless the active world controller has an astronaut seated in the lander.
 
+Hold **Left Shift + W** for the boosted camera effect: the field of view eases from 65° toward 80°, and the camera briefly trails behind acceleration before catching up. **Space** takes priority, narrowing the view toward 60° while braking and carrying the camera forward slightly. At rest or after releasing boost, the view settles back to normal. Camera obstruction checks and mouse orbit remain active.
+
 ## Movement and mission integration
 
 `src/world/rover_drive.gd` uses a colliding CharacterBody3D, gradual acceleration/braking, slower reverse, speed-dependent bicycle steering, gravity, floor snapping and terrain-normal chassis alignment. Steering does not rotate a stationary rover. Default forward/reverse limits are 1.2/0.5 m/s with 0.35 m/s² acceleration and 0.9 m/s² braking. These are gameplay tuning values, not measured Curiosity performance. The six original tires roll by accepted travel divided by their radius, reverse with travel, and steer along the bicycle turning circle with different inner/outer angles and speeds. Wheel animation stops when parked or movement is rejected. Suspension is not independently simulated.

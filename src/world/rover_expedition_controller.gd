@@ -488,6 +488,7 @@ func _check_circle(delta: float) -> void:
 		_transition(false)
 
 func _place_rover(p: Vector3) -> void:
+	driver._reset_camera_motion()
 	driver.position = p + Vector3.UP*0.7
 	driver.speed = 0
 	driver.velocity = Vector3.ZERO

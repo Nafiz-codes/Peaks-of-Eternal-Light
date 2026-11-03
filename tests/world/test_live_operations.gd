@@ -85,6 +85,15 @@ func run() -> void:
 	await drive(driver, 60, -1, 0)
 	check(driver.speed < 0 and absf(driver.speed) <= driver.REVERSE_SPEED, "Slower reverse travel.")
 	await drive(driver, 90, 0, 0, true)
+	driver.boost_held = true
+	await drive(driver, 45, 1, 0)
+	check(driver.camera.fov > driver.CAMERA_FOV + 5.0, "Shift plus forward widens the rover view.")
+	check(driver.camera_lag > 0.0, "Boost acceleration leaves the camera behind.")
+	await drive(driver, 10, 1, 0, true)
+	check(driver.camera_lag < 0.0, "Brake overrides boost and carries the camera forward.")
+	await drive(driver, 150, 0, 0, true)
+	check(absf(driver.camera.fov - driver.CAMERA_FOV) < 0.1 and absf(driver.camera_lag) < 0.01, "Camera settles to normal when stopped.")
+	driver.boost_held = false
 	var paused_position: Vector3 = driver.position
 	paused = true
 	driver.step_drive(1.0, 1, 1, false)
