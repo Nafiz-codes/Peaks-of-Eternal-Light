@@ -52,10 +52,12 @@ func _ready() -> void:
 	landscape = preload("res://scenes/rover_expedition.tscn").instantiate()
 	add_child(landscape)
 	departure = Circle.new()
+	departure.hide()
 	add_child(departure)
 	departure.position = Vector3(32,0,12)
 	_label_circle(departure,"EXPEDITION DEPARTURE\nStop in the circle")
 	extraction = Circle.new()
+	extraction.hide()
 	add_child(extraction)
 	extraction.position = Terrain.ORIGIN
 	_label_circle(extraction,"RETURN TO OUTPOST\nStop in the circle")
@@ -187,7 +189,7 @@ func _sync() -> void:
 	cinematic_motion = false
 	for bar in cinematic_bars: bar.hide()
 	fade.color.a = 0
-	departure.show()
+	departure.hide()
 	if is_instance_valid(cinematic_camera):
 		cinematic_camera.queue_free()
 		if driver.active: driver.camera.make_current()
@@ -255,6 +257,12 @@ func _stand() -> void:
 		seat_pose.restore(crew_visual)
 		seated = false
 	crew_player.play("idle")
+
+func _update_circle_visibility() -> void:
+	var controlled: bool = driver.active and driver.power_state == driver.Power.READY and not transitioning
+	var available := not data.is_empty() and bound_state != null
+	departure.visible = controlled and available and data.location == "outpost" and Rules.assigned(data, bound_state.sol) >= 0
+	extraction.visible = controlled and available and data.location == "expedition"
 
 func remote_ready() -> bool:
 	return driver.active and driver.power_state == driver.Power.READY and not transitioning and not get_tree().paused and session.can_advance()
@@ -330,6 +338,7 @@ func _nearest(ice: bool) -> String:
 
 func _physics_process(delta: float) -> void:
 	_sync()
+	_update_circle_visibility()
 	if data.is_empty(): return
 	var audible: bool = cinematic_motion or (driver.active and absf(driver.speed)>0.05) or busy_id != ""
 	driver.repair_label.visible = not driver.active and not cinematic_motion
@@ -582,7 +591,7 @@ func _arrival() -> void:
 	cinematic_motion = false
 	for bar in cinematic_bars: bar.hide()
 	driver.overlay.show()
-	departure.show()
+	_update_circle_visibility()
 
 func _frame_arrival(progress: float) -> void:
 	var forward := Vector3(-14,0,-8).normalized()

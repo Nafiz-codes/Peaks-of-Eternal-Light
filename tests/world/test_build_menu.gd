@@ -29,6 +29,9 @@ func run() -> void:
 			placement = child
 	var lander: Vector3 = world.get_node("Outpost/Habitat").global_position
 	var circle: Vector3 = world.get_node("RoverTraining").departure.global_position
+	check(placement.overlaps_rover_circle(circle), "Hidden departure area rejects construction.")
+	check(placement.overlaps_rover_circle(circle + Vector3(5, 0, 0)), "A footprint overlapping the circle is rejected even with its center outside.")
+	check(not placement.overlaps_rover_circle(circle + Vector3(8, 0, 0)), "Clear ground outside the reserved disk remains available.")
 	check(is_equal_approx(placement.build_radius(), Vector2(circle.x - lander.x, circle.z - lander.z).length()), "Build radius reaches the purple departure circle.")
 	check(placement.in_build_area(lander + Vector3(3, 0, 0)) and not placement.in_build_area(lander + Vector3(placement.build_radius() + 1.0, 0, 0)), "Placement is limited to the build area.")
 	check(is_equal_approx(placement.PANEL_RATED_KWH_PER_SOL, 1361.0 * 4.62 * 0.30 * 24.0 / 1000.0), "Panel rating comes from NASA irradiance and cell efficiency.")

@@ -69,6 +69,8 @@ func run():
 	await create_timer(10.5).timeout
 	check(controller.remote_ready(),"Actual startup completes")
 	check(Rules.assigned(controller.data,1) == -1,"Sol 1 locked")
+	controller._update_circle_visibility()
+	check(not controller.departure.visible, "No departure circle on a Sol without a mission")
 	check(controller.arm.triangle_count > 0,"Existing instrument geometry articulated")
 	check(controller.droplets.size() == 3,"Exactly three supplied droplet instances")
 	check(world.find_children("StationAstronaut","Node3D",true,false).size() == 3,"Exactly three NPCs plus player")
@@ -84,8 +86,13 @@ func run():
 	for mission in range(3):
 		await advance_to(Rules.SOLS[mission])
 		check(Rules.assigned(controller.data,session.dashboard_state.sol) == mission,"Correct assignment")
+		driver.active = false
+		controller._update_circle_visibility()
+		check(not controller.departure.visible, "Mission circle hidden outside rover control")
 		driver.active = true
 		driver.power_state = driver.Power.READY
+		controller._update_circle_visibility()
+		check(controller.departure.visible, "Mission circle visible during ready rover control")
 		driver.position = controller.departure.position+Vector3.UP*0.7
 		controller.armed = true
 		controller._check_circle(1)

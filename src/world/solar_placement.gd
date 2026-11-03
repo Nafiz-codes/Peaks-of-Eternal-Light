@@ -253,6 +253,15 @@ func in_build_area(point: Vector3) -> bool:
 	var lander: Vector3 = get_parent().get_node("Outpost/Habitat").global_position
 	return Vector2(point.x - lander.x, point.z - lander.z).length() <= build_radius()
 
+## Reserve the marker disk plus the 3 m square placement footprint, even when hidden.
+func overlaps_rover_circle(point: Vector3) -> bool:
+	var controller := get_parent().get_node("RoverTraining")
+	for circle in [controller.departure, controller.extraction]:
+		var center: Vector3 = circle.global_position
+		if Vector2(point.x - center.x, point.z - center.z).length() <= 4.5 + sqrt(4.5):
+			return true
+	return false
+
 func _show_area(visible_: bool) -> void:
 	if area_ring == null and visible_:
 		area_ring = _make_area_ring()
@@ -447,7 +456,7 @@ func _physics_process(_delta: float) -> void:
 	valid = not hit.is_empty() and hit.collider.name == "LunarSurfaceCollision"
 	panel.visible = valid
 	if valid:
-		valid = hit.normal.y > 0.94 and hit.position.distance_to(player.global_position) > 2.0 and hit.position.distance_to(player.global_position) < 15.0 and in_build_area(hit.position)
+		valid = hit.normal.y > 0.94 and hit.position.distance_to(player.global_position) > 2.0 and hit.position.distance_to(player.global_position) < 15.0 and in_build_area(hit.position) and not overlaps_rover_circle(hit.position)
 		var ground_basis := Basis(Quaternion(Vector3.UP, hit.normal)) * Basis(Vector3.UP, yaw)
 		panel.global_transform = Transform3D(ground_basis, hit.position - hit.normal * 0.01)
 		# All corners must rest on the same level surface; reject rocks and edges.
@@ -468,7 +477,7 @@ func _physics_process(_delta: float) -> void:
 	if panel.visible: _update_output_card()
 	else: output_card.hide()
 	material.albedo_color = Color(0.05, 0.75, 1.0, 0.4) if valid else Color(1.0, 0.15, 0.1, 0.4)
-	label.text = "PLACE SOLAR PANEL  ·  Move mouse to aim  ·  Q / R rotate  ·  Left click confirm  ·  B build menu  ·  C destroy\n" + ("Ready to place" if valid else ("Outside the build area: stay inside the blue ring" if not hit.is_empty() and not in_build_area(hit.position) else "Aim at nearby level ground"))
+	label.text = "PLACE SOLAR PANEL  ·  Move mouse to aim  ·  Q / R rotate  ·  Left click confirm  ·  B build menu  ·  C destroy\n" + ("Ready to place" if valid else ("Outside the build area: stay inside the blue ring" if not hit.is_empty() and not in_build_area(hit.position) else ("Reserved rover mission area" if not hit.is_empty() and overlaps_rover_circle(hit.position) else "Aim at nearby level ground")))
 
 ## Built outpost structures and the placed panel can be destroyed; previews cannot.
 func _structure_at(collider: Object) -> Node3D:
@@ -570,7 +579,7 @@ func _input(event: InputEvent) -> void:
 		if valid: confirm()
 
 func confirm() -> void:
-	if not active or not valid: return
+	if not active or not valid or overlaps_rover_circle(panel.global_position): return
 	active = false
 	_show_area(false)
 	output_card.hide()
