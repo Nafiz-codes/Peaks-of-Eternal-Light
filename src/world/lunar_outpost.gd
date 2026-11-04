@@ -19,8 +19,6 @@ const TAG_FONT := preload("res://Assets/fonts/PublicSans-Variable.ttf")
 # Requested visual adjustment: 25% closer, then another 30% closer (0.75 * 0.70).
 const EARTH_DISTANCE_SCALE := 0.525
 var maya_dialogue_active := false
-var opening_touchdown_active := false
-var opening_invitation_complete := true
 var site_record: Dictionary = {}
 var feedback: Dictionary = {}
 var solar_indicator: OmniLight3D
@@ -81,28 +79,6 @@ func _ready() -> void:
 	add_child(solar)
 	add_child(preload("res://src/ui/mission_tracker.gd").new())
 
-
-func begin_opening_touchdown() -> void:
-	var session := get_node("/root/MissionSession")
-	if session.maya_intro_complete or opening_touchdown_active: return
-	opening_touchdown_active = true
-	opening_invitation_complete = false
-	var player := get_node("Outpost/Astronaut")
-	player.ui_blocked = true
-	await get_tree().create_timer(0.8).timeout
-	var dialogue := preload("res://src/ui/opening_dialogue.gd").new()
-	dialogue.sequence = "touchdown"
-	add_child(dialogue)
-	await dialogue.finished
-	opening_touchdown_active = false
-	player.ui_blocked = false
-	# Let Maya begin her existing approach before delivering the invitation.
-	await get_tree().create_timer(0.8).timeout
-	var invitation := preload("res://src/ui/opening_dialogue.gd").new()
-	invitation.sequence = "invitation"
-	add_child(invitation)
-	await invitation.finished
-	opening_invitation_complete = true
 
 func _add_prop_collisions() -> void:
 	# Simple hulls keep walking/camera collision predictable around imported art.
@@ -546,18 +522,16 @@ func _on_player_interaction(interaction_id: String) -> void:
 	var session := get_node("/root/MissionSession")
 	if interaction_id == "crew_briefing" and not session.maya_intro_complete:
 		if get_node("Outpost/Astronaut").global_position.distance_to(get_node("Outpost/crew_briefing").global_position) <= 2.5:
-			if maya_dialogue_active or not opening_invitation_complete: return
+			if maya_dialogue_active: return
 			maya_dialogue_active = true
 			var fieldwork := get_node("CrewFieldwork")
 			fieldwork._update_visual("crew_briefing", false)
-			var dialogue := preload("res://src/ui/opening_dialogue.gd").new()
-			dialogue.sequence = "solar"
+			var dialogue := preload("res://src/ui/maya_introduction.gd").new()
 			dialogue.finished.connect(func():
 				session.maya_intro_complete = true
 				maya_dialogue_active = false
 				fieldwork.data.crew.crew_briefing.auto_attempted = true
-				session.state_changed.emit()
-				if not get_node("SolarPlacement").placed: get_node("SolarPlacement")._start())
+				session.state_changed.emit())
 			add_child(dialogue)
 		return
 	if interaction_id == "rover_repair":

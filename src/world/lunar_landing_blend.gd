@@ -64,7 +64,6 @@ func begin(selector: Node) -> void:
 	if get_node("/root/MissionSession").reduce_motion:
 		player.ui_blocked = false
 		player.set_physics_process(true)
-		outpost.begin_opening_touchdown()
 		queue_free()
 		return
 	# Saved cockpit/first-person views use a dissolve, never a flight into the body.
@@ -74,7 +73,6 @@ func begin(selector: Node) -> void:
 		await dissolve.finished
 		player.ui_blocked = false
 		player.set_physics_process(true)
-		outpost.begin_opening_touchdown()
 		queue_free()
 		return
 	var arrival := Camera3D.new()
@@ -90,5 +88,4 @@ func begin(selector: Node) -> void:
 	arrival.queue_free()
 	player.ui_blocked = false
 	player.set_physics_process(true)
-	outpost.begin_opening_touchdown()
 	queue_free()

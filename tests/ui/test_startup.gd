@@ -29,7 +29,13 @@ func run() -> void:
 	root.size = Vector2i(1360, 820)
 	await create_timer(7.3).timeout
 	check(boot.state == boot.State.MENU_IDLE, "Automatic menu entrance completes")
+	var deadline := Time.get_ticks_msec() + 60000
+	while not boot.ready_for_mission and not boot.load_failed and Time.get_ticks_msec() < deadline:
+		await process_frame
 	check(boot.ready_for_mission, "Existing Moon loaded")
+	if not boot.ready_for_mission:
+		quit(1)
+		return
 	await capture("menu")
 	click(boot.buttons[1])
 	check(boot.dialog.visible and boot.buttons[0].disabled, "Briefing gates mission input")
@@ -52,10 +58,7 @@ func run() -> void:
 	boot.opening_skip_requested = true
 	await create_timer(3.6).timeout
 	check(boot.state == boot.State.SELECTING_COMMANDER, "Start opens Commander selection before the Moon")
-	var welcome = boot.commander_menu.get_children().filter(func(child): return child.get_script() == preload("res://src/ui/opening_dialogue.gd"))[0]
-	check(paused and welcome.sequence == "welcome", "Maya welcomes Commander before selection")
-	for i in 3: welcome.advance()
-	await process_frame
+	check(not paused, "Registration opens without dialogue cards")
 	boot.commander_menu.select_appearance("commander-02", false)
 	boot.commander_menu.name_input.text = "Arham"
 	boot.commander_menu._validate()

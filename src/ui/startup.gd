@@ -304,9 +304,6 @@ func _finish_opening() -> void:
 	opening_cover.queue_free()
 	commander_menu.busy = false
 	commander_menu._validate()
-	var welcome := preload("res://src/ui/opening_dialogue.gd").new()
-	welcome.preview_appearance = commander_menu.selected_id if not commander_menu.selected_id.is_empty() else str(commander_menu.cards[0].name)
-	commander_menu.add_child(welcome)
 
 func _show_commander_selection() -> void:
 	state = State.SELECTING_COMMANDER
@@ -350,7 +347,6 @@ func _handoff() -> void:
 	state = State.GAMEPLAY
 	world.reparent(get_tree().root)
 	get_tree().current_scene = world
-	world.show_opening_dialogue()
 	world.process_mode = Node.PROCESS_MODE_INHERIT
 	get_node("/root/GameMenu").set_process_input(true)
 	queue_free()
