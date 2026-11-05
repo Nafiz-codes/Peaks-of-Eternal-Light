@@ -56,15 +56,15 @@ func run() -> void:
 	check(placement.output_card.visible and ("%.1f" % placement.preview_kwh) in placement.output_lines.energy.text, "The hover card shows the exact kWh that will be applied.")
 	placement._refresh_menu()
 	await process_frame
-	check(placement.grid.get_child_count() == 6, "Every catalog structure has a grid card.")
-	check(enabled_ids(placement) == ["Solar Array"], "Only the solar panel is available at first.")
+	check(placement.grid.get_child_count() == 9, "Every catalog structure has a grid card.")
+	check(enabled_ids(placement) == ["Solar Array", "Maya · Operations", "Alex · Science", "Sam · Engineering"], "The solar panel and three crew stations are available at first.")
 	check(placement.grid.get_child(0).get_child(0).get_child(0).get_child_count() == 1, "The solar panel card shows its model preview.")
-	check(placement.grid.get_child(1).get_child(0).get_child(0).get_child_count() == 0, "Structures without a model keep a blank picture.")
+	check(placement.grid.get_child(4).get_child(0).get_child(0).get_child_count() == 0, "Structures without a model keep a blank picture.")
 	check(session.start_selected_mission() == OK, "Mission starts.")
 	placement.placed = true
 	placement._refresh_menu()
 	await process_frame
-	check(enabled_ids(placement).size() == 5 and not "Solar Array" in enabled_ids(placement), "Placing the panel unlocks the other structures.")
+	check(enabled_ids(placement).size() == 8 and not "Solar Array" in enabled_ids(placement), "Placing the panel unlocks the other structures.")
 	var Save = preload("res://src/runtime/mission_save.gd")
 	session.dashboard_state.placed_panel_kwh_per_sol = 12.3
 	session.solar_placement = {"transform": Transform3D.IDENTITY, "kwh_per_sol": 12.3}
@@ -82,8 +82,8 @@ func run() -> void:
 	session.dashboard_state.materials = 60.0
 	placement._refresh_menu()
 	await process_frame
-	check(enabled_ids(placement) == ["Radiation Shielding Wall", "Comms Relay"], "Structures costing more materials than available are grayed out.")
-	check(placement.grid.get_child(2).modulate.a < 1.0, "Unaffordable cards are visibly grayed.")
+	check(enabled_ids(placement) == ["Maya · Operations", "Alex · Science", "Sam · Engineering", "Radiation Shielding Wall", "Comms Relay"], "Structures costing more materials than available are grayed out.")
+	check(placement.grid.get_child(5).modulate.a < 1.0, "Unaffordable cards are visibly grayed.")
 	session.dashboard_state.built_structures["comms_relay"] = 0
 	world.refresh_feedback()
 	var relay: Node3D = world.find_child("Completed_comms_relay", true, false)
@@ -95,6 +95,7 @@ func run() -> void:
 	check(not session.dashboard_state.built_structures.has("comms_relay") and is_equal_approx(session.dashboard_state.materials, 85.0), "Destroying refunds its materials.")
 	placement._stop_destroy()
 	world.queue_free()
+	await physics_frame
 	await process_frame
 	print("BUILD MENU TEST: %d failures" % failures)
 	quit(failures)

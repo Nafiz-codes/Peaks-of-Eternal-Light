@@ -20,6 +20,9 @@ var state: Variant = null
 var data: Dictionary = {}
 var actors: Dictionary = {}
 var homes: Dictionary = {}
+var station_homes: Dictionary = {}
+var station_facings: Dictionary = {}
+var station_retry: Dictionary = {}
 var props: Dictionary = {}
 var labels: Dictionary = {}
 var route_service: RefCounted
@@ -294,7 +297,7 @@ func _prepare(id: String) -> bool:
 		if state.materials < config.repair_materials:
 			_block(id, "Insufficient mission materials for this repair.")
 			return false
-	if c.task in ["inspect", "repair"] and world.get_node("RoverHull").active:
+	if c.phase != "Returning" and c.task in ["inspect", "repair"] and world.get_node("RoverHull").active:
 		_block(id, "Park the rover before approaching its equipment.")
 		return false
 	c.path = route_service.route(actors[id].position, c.target)
@@ -312,6 +315,7 @@ func _prepare(id: String) -> bool:
 	if state.oxygen_kg < config.oxygen_reserve_kg + distance * config.oxygen_per_metre_kg:
 		_block(id, "The planned outing would use the reserved return oxygen. Shorten the excursion.")
 		return false
+	c.erase("station_relocation")
 	_report(id, "Preparing", "Checking tools, container and local return route.")
 	return true
 
@@ -334,9 +338,29 @@ func _player_near(id: String, distance: float = 3.2) -> bool:
 	var player := world.get_node("Outpost/Astronaut")
 	return not player.seated and player.global_position.distance_to(actors[id].global_position) <= distance
 
+func request_station_arrival(id: String, restoring := false) -> void:
+	if data.is_empty(): return
+	var c: Dictionary = data.crew[id]
+	# Preserve deliberately active jobs on reload, but recover old stranded saves.
+	if restoring and not c.phase in ["Blocked", "Waiting for assistance"]: return
+	c["station_relocation"] = true
+	c.auto_attempted = true # Do not immediately walk away on the old autonomy timer.
+	station_retry[id] = 0.0
+
 func _tick(id: String, delta: float) -> void:
 	var c: Dictionary = data.crew[id]
+	if station_homes.has(id):
+		station_retry[id] = maxf(0.0, float(station_retry.get(id, 0.0)) - delta)
+		var relocate: bool = c.get("station_relocation", false) and c.phase != "Returning"
+		var retry_return: bool = c.phase == "Blocked" and c.checkpoint == "Returning"
+		if (relocate or retry_return) and station_retry[id] <= 0.0:
+			station_retry[id] = 1.0
+			return_to_base(id)
+			return
 	if c.phase == "Available":
+		if station_homes.has(id) and actors[id].position.distance_to(homes[id]) > 0.6:
+			return_to_base(id)
+			return
 		if id == "water_recycler" and data.has("pending_deployment"):
 			var site: String = data.pending_deployment
 			assign(id, "deploy", site)
@@ -363,7 +387,7 @@ func _tick(id: String, delta: float) -> void:
 		c.checkpoint = c.phase
 		_wait(id, "Companion out of range. Rejoin me and resume; the sample remains with me.")
 		return
-	if c.task in ["inspect", "repair"] and world.get_node("RoverHull").active:
+	if c.phase != "Returning" and c.task in ["inspect", "repair"] and world.get_node("RoverHull").active:
 		c.checkpoint = c.phase
 		_block(id, "Rover is moving. Park it and resume the inspection.")
 		return
@@ -513,12 +537,28 @@ func _record(id: String) -> void:
 		assess_route(c.site)
 	return_to_base(id)
 
+func station_route(id: String, destination: Vector3, obstacle: Variant = null) -> PackedVector3Array:
+	# The moving crew member is excluded; idle colleagues remain route obstacles.
+	route_service.routing_crew.clear()
+	for other in IDS:
+		if other != id: route_service.routing_crew.append(actors[other].position)
+	route_service.preview_obstacle = obstacle
+	var station_id: String = {"food_storage": "sam_station", "water_recycler": "alex_station", "crew_briefing": "maya_station"}[id]
+	route_service.preview_half = preload("res://src/world/crew_station.gd").footprint(station_id)
+	var previous_radius: float = route_service.radius
+	route_service.radius = maxf(previous_radius, Vector2(destination.x, destination.z).length() + 7.0)
+	var path: PackedVector3Array = route_service.route(actors[id].position, destination)
+	route_service.radius = previous_radius
+	route_service.preview_obstacle = null
+	route_service.routing_crew.clear()
+	return path
+
 func return_to_base(id: String) -> bool:
 	if data.is_empty() or not IDS.has(id):
 		return false
 	var c: Dictionary = data.crew[id]
 	c.target = LOCKER + Vector3(-1.0, 0, 0) if not str(c.cargo).is_empty() else homes[id]
-	c.path = route_service.route(actors[id].position, c.target)
+	c.path = station_route(id, c.target) if station_homes.has(id) else route_service.route(actors[id].position, c.target)
 	_release(id)
 	if c.path.is_empty():
 		c.checkpoint = "Returning"
@@ -557,10 +597,13 @@ func _finish(id: String) -> void:
 		data.stock.repair_kit += 1
 		c.kit = false
 	_release(id)
+	c.erase("station_relocation")
 	c.last_sol = state.sol
 	c.task = ""
 	c.progress = 0.0
 	_report(id, "Available", "Back at base. Work and carried materials are recorded.")
+	if station_facings.has(id): actors[id].rotation.y = station_facings[id]
+	_update_visual(id, false)
 
 func pause_work(id: String) -> void:
 	if data.is_empty() or data.crew[id].phase in ["Available", "Paused"]:

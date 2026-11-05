@@ -18,7 +18,7 @@ static func state_data(state: RefCounted) -> Dictionary:
 static func capture(session: Node) -> Dictionary:
 	var tick: Dictionary = session.dashboard_last_tick.duplicate(true)
 	tick.erase("state")
-	return {"version": VERSION, "saved_at": Time.get_datetime_string_from_system(), "maya_intro_complete":session.maya_intro_complete, "solar_placement":session.solar_placement.duplicate(true), "planning_draft":session.planning_draft.duplicate(true), "approved_plan":session.approved_plan.duplicate(true),
+	return {"version": VERSION, "saved_at": Time.get_datetime_string_from_system(), "maya_intro_complete":session.maya_intro_complete, "solar_placement":session.solar_placement.duplicate(true), "station_placements":session.station_placements.duplicate(true), "planning_draft":session.planning_draft.duplicate(true), "approved_plan":session.approved_plan.duplicate(true),
 		"site_id": session.selected_site_id, "state": state_data(session.dashboard_state),
 		"last_tick": tick, "pose": session.outpost_pose.duplicate(true), "crew_read_reports": session.crew_read_reports.duplicate(true),
 		"orbital_clock": session.orbital_clock.duplicate(true), "player_character": session.player_character.duplicate(true)}
@@ -36,6 +36,12 @@ static func decode(data: Variant) -> Dictionary:
 	var placement: Variant = data.get("solar_placement", {})
 	if not placement is Dictionary: return {}
 	if not placement.is_empty() and (not placement.get("transform") is Transform3D or not placement.transform.is_finite()): return {}
+	var stations: Variant = data.get("station_placements", {})
+	if not stations is Dictionary: return {}
+	for id in stations:
+		if id not in ["maya_station", "alex_station", "sam_station"]: return {}
+		if not stations[id] is Transform3D or not stations[id].is_finite(): return {}
+		if not stations[id].basis.is_equal_approx(stations[id].basis.orthonormalized()) or stations[id].basis.determinant() < 0.99: return {}
 	var panel_output: Variant = placement.get("kwh_per_sol", 0.0)
 	if not (panel_output is float or panel_output is int) or not is_finite(float(panel_output)) or float(panel_output) < 0.0 or float(panel_output) > 100.0: return {}
 	var draft: Variant = data.get("planning_draft", {})
@@ -128,7 +134,7 @@ static func decode(data: Variant) -> Dictionary:
 			return {}
 		if not pose.transform.is_finite() or not is_finite(pose.yaw) or not is_finite(pose.pitch):
 			return {}
-	return {"simulator": simulator, "state": state, "site_id": data.site_id, "maya_intro_complete":introduction, "solar_placement":placement.duplicate(true), "planning_draft":draft.duplicate(true), "approved_plan":approved.duplicate(true),
+	return {"simulator": simulator, "state": state, "site_id": data.site_id, "maya_intro_complete":introduction, "solar_placement":placement.duplicate(true), "station_placements":stations.duplicate(true), "planning_draft":draft.duplicate(true), "approved_plan":approved.duplicate(true),
 		"pose": pose.duplicate(true), "last_tick": data.last_tick.duplicate(true), "crew_read_reports": read_reports.duplicate(true), "orbital_clock": orbital_clock.duplicate(true), "player_character": identity.duplicate(true)}
 
 static func restore(session: Node, data: Dictionary) -> Error:
@@ -138,6 +144,7 @@ static func restore(session: Node, data: Dictionary) -> Error:
 	session.selected_site_id = restored.site_id
 	session.maya_intro_complete = restored.maya_intro_complete
 	session.solar_placement = restored.solar_placement
+	session.station_placements = restored.station_placements
 	session.planning_draft = restored.planning_draft
 	session.approved_plan = restored.approved_plan
 	session.player_character = restored.player_character

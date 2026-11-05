@@ -3,6 +3,10 @@ extends RefCounted
 var world: Node3D
 var excluded: Array[RID] = []
 var radius := 14.0
+# Temporary preview obstacle: validate access before a new station becomes solid.
+var preview_obstacle: Variant = null
+var routing_crew: Array[Vector3] = []
+var preview_half := Vector2(1.9, 1.9)
 
 func _init(scene: Node3D, survey_radius: float) -> void:
 	world = scene
@@ -25,6 +29,13 @@ func ground(point: Vector3) -> Dictionary:
 	return hit
 
 func clear_segment(from: Vector3, to: Vector3) -> bool:
+	for crew_position in routing_crew:
+		if Geometry3D.get_closest_point_to_segment(crew_position, from, to).distance_to(crew_position) < 0.9: return false
+	if preview_obstacle is Transform3D:
+		var inverse: Transform3D = preview_obstacle.affine_inverse()
+		var half := preview_half + Vector2(0.45, 0.45)
+		var footprint := AABB(Vector3(-half.x, -1, -half.y), Vector3(half.x * 2.0, 8, half.y * 2.0))
+		if footprint.intersects_segment(inverse * from, inverse * to) != null: return false
 	if absf(to.y - from.y) > maxf(0.25, Vector2(to.x - from.x, to.z - from.z).length() * 0.45):
 		return false
 	var query := PhysicsShapeQueryParameters3D.new()
@@ -53,8 +64,8 @@ func route(from: Vector3, to: Vector3) -> PackedVector3Array:
 	var graph := AStar3D.new()
 	graph.add_point(0, from)
 	graph.add_point(1, to)
-	for z in range(-10, 13, 2):
-		for x in range(-10, 13, 2):
+	for z in range(floori(minf(from.z, to.z) - 7.0), ceili(maxf(from.z, to.z) + 7.0), 2):
+		for x in range(floori(minf(from.x, to.x) - 7.0), ceili(maxf(from.x, to.x) + 7.0), 2):
 			var hit := ground(Vector3(x, 0, z))
 			if not hit.is_empty() and clear_segment(hit.position, hit.position):
 				graph.add_point(graph.get_available_point_id(), hit.position)

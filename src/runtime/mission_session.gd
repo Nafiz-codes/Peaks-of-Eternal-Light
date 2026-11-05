@@ -8,6 +8,7 @@ var player_character: Dictionary = {}
 var commander_draft: Dictionary = {}
 var maya_intro_complete := false
 var solar_placement: Dictionary = {}
+var station_placements: Dictionary = {}
 var planning_draft: Dictionary = {}
 var approved_plan: Dictionary = {}
 signal mission_plan_approved(record: Dictionary)
@@ -51,6 +52,7 @@ func confirm_new_commander(appearance: String, player_name: String) -> bool:
 	selected_site_id = ""
 	maya_intro_complete = false
 	solar_placement = {}
+	station_placements = {}
 	planning_draft = {}
 	approved_plan = {}
 	dashboard_simulator = null
@@ -256,6 +258,7 @@ func select_landing_site(site_id: String) -> void:
 	if selected_site_id != site_id:
 		maya_intro_complete = false
 		solar_placement = {}
+		station_placements = {}
 		planning_draft = {}
 		approved_plan = {}
 		crew_read_reports = {}

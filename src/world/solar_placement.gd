@@ -1,6 +1,14 @@
 extends Node3D
-## One camera-aimed panel; confirmation retains the preview's exact transform.
+## Shared camera-aimed placement for the solar panel and three crew stations.
 var panel: Node3D
+var solar_panel: Node3D
+var selected_id := "solar_array"
+var stations: Dictionary = {}
+var default_homes: Dictionary = {}
+var route_checked_at := 0
+var route_transform := Transform3D.IDENTITY
+var route_ok := false
+const Station = preload("res://src/world/crew_station.gd")
 var player: Node3D
 var session: Node
 var build_menu: PanelContainer
@@ -22,7 +30,12 @@ var area_ring: MeshInstance3D
 var pose_hold: SkeletonModifier3D
 const UI = preload("res://src/ui/ui_style.gd")
 const DESTROY_HINT := "DESTROY  ·  Aim at a structure  ·  Left click destroy  ·  B build menu  ·  C exit"
-const MODELS := {"solar_array": preload("res://Assets/expedition/solar_panel.glb")}
+const MODELS := {
+ "solar_array": preload("res://Assets/expedition/solar_panel.glb"),
+ "maya_station": preload("res://Assets/stations/maya_station.tscn"),
+ "alex_station": preload("res://Assets/stations/alex_station.tscn"),
+ "sam_station": preload("res://Assets/stations/sam_station.tscn")
+}
 const PolarSolar = preload("res://src/simulation/polar_solar.gd")
 const Rating = preload("res://src/ui/outpost_hover.gd")
 ## Panel rating from NASA values; sources in Resources/data_sources.json.
@@ -46,6 +59,7 @@ func _ready() -> void:
 	player = get_parent().get_node("Outpost/Astronaut")
 	panel = Node3D.new()
 	panel.name = "PlacedSolarPanel"
+	solar_panel = panel
 	add_child(panel)
 	var model := (MODELS.solar_array as PackedScene).instantiate() as Node3D
 	panel.add_child(model)
@@ -77,7 +91,12 @@ func _ready() -> void:
 	hud.layer = 60
 	add_child(hud)
 	label = Label.new()
-	label.position = Vector2(32, 100)
+	label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	label.offset_left = 32
+	label.offset_right = -32
+	label.offset_top = -82
+	label.offset_bottom = -22
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.add_theme_font_size_override("font_size", 20)
 	hud.add_child(label)
 	label.text = "B · Build"
@@ -93,13 +112,66 @@ func _ready() -> void:
 	grid.add_theme_constant_override("v_separation", 12)
 	var menu_body := UI.box()
 	build_menu.add_child(menu_body)
-	menu_body.add_child(grid)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(665, 450)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	menu_body.add_child(scroll)
+	scroll.add_child(grid)
 	menu_body.add_child(UI.label("Press C to delete structures", 15, UI.AMBER))
 	build_menu.hide()
 	highlight = StandardMaterial3D.new()
 	highlight.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	highlight.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	highlight.albedo_color = Color(1.0, 0.12, 0.08, 0.45)
+	default_homes = get_parent().get_node("CrewFieldwork").homes.duplicate()
+	for id in session.station_placements:
+		var station := _new_station(id)
+		station.transform = session.station_placements[id]
+		for mesh in station.find_children("*", "MeshInstance3D", true, false):
+			mesh.create_trimesh_collision()
+		_apply_station_home(id, station.global_transform, true)
+
+func _new_station(id: String) -> Node3D:
+	var station := (MODELS[id] as PackedScene).instantiate() as Node3D
+	station.set_meta("crew_station_id", id)
+	add_child(station)
+	stations[id] = station
+	return station
+
+func _select(id: String) -> void:
+	if active: _cancel()
+	if id == "solar_array" and placed or session.station_placements.has(id): return
+	selected_id = id
+	panel = solar_panel if id == "solar_array" else _new_station(id)
+	meshes.clear()
+	for mesh in panel.find_children("*", "MeshInstance3D", true, false):
+		meshes.append(mesh)
+		mesh.material_override = material
+		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	panel.hide()
+	yaw = 0.0
+	valid = false
+	route_checked_at = 0
+	_start()
+
+func _half_extent() -> float:
+	return 1.5 if selected_id == "solar_array" else Station.footprint(selected_id).length() / sqrt(2.0)
+
+func _display_name() -> String:
+	return "Solar panel" if selected_id == "solar_array" else str(Station.DEFINITIONS[selected_id].name)
+
+func _apply_station_home(id: String, xform: Transform3D, restoring := false) -> void:
+	var crew := get_parent().get_node("CrewFieldwork")
+	var npc: String = Station.DEFINITIONS[id].npc
+	var dock := xform * Station.dock(id)
+	crew.route_service.radius = maxf(crew.route_service.radius, Vector2(dock.x, dock.z).length() + 7.0)
+	var hit: Dictionary = crew.route_service.ground(dock)
+	if not hit.is_empty(): dock = hit.position
+	crew.homes[npc] = crew.actors[npc].get_parent().to_local(dock)
+	crew.station_homes[npc] = true
+	crew.station_facings[npc] = atan2(xform.basis.z.x, xform.basis.z.z)
+	crew.request_station_arrival(npc, restoring)
+
 
 func _open_menu() -> void:
 	_refresh_menu()
@@ -120,6 +192,11 @@ func _refresh_menu() -> void:
 		child.queue_free()
 	var state: Variant = session.dashboard_state
 	var catalog: Array = session.dashboard_simulator.construction.get("structures", []) if session.dashboard_simulator != null else (JSON.parse_string(FileAccess.get_file_as_string("res://Resources/construction.json")) as Dictionary).get("structures", [])
+	catalog = catalog.duplicate()
+	var station_index := 1
+	for id in Station.DEFINITIONS:
+		catalog.insert(station_index, {"structure_id": id, "name": Station.DEFINITIONS[id].name, "effect": "Place a work base for this crew member. Their existing duties remain available."})
+		station_index += 1
 	for structure in catalog:
 		var id := str(structure.get("structure_id", ""))
 		var cost: Dictionary = structure.get("build_cost", {})
@@ -133,6 +210,10 @@ func _refresh_menu() -> void:
 			available = not placed
 			cost_text = "Free · first panel"
 			status = "Placed" if placed else "Click to place"
+		elif Station.DEFINITIONS.has(id):
+			available = not session.station_placements.has(id)
+			cost_text = "Free · one per NPC"
+			status = "Placed" if not available else "Click to place"
 		elif state != null and state.built_structures.has(id):
 			status = "Built"
 		elif state != null and state.construction_queue.any(func(job): return str(job.get("structure_id", "")) == id):
@@ -168,8 +249,8 @@ func _refresh_menu() -> void:
 			var text := UI.label(line[0], line[1], line[2])
 			text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			body.add_child(text)
-		if id == "solar_array":
-			card.pressed.connect(_close_menu_and.bind(_start))
+		if MODELS.has(id):
+			card.pressed.connect(_close_menu_and.bind(_select.bind(id)))
 		else:
 			card.pressed.connect(func():
 				var result: Dictionary = session.queue_structure(id)
@@ -258,7 +339,7 @@ func overlaps_rover_circle(point: Vector3) -> bool:
 	var controller := get_parent().get_node("RoverTraining")
 	for circle in [controller.departure, controller.extraction]:
 		var center: Vector3 = circle.global_position
-		if Vector2(point.x - center.x, point.z - center.z).length() <= 4.5 + sqrt(4.5):
+		if Vector2(point.x - center.x, point.z - center.z).length() <= 4.5 + sqrt(2.0) * _half_extent():
 			return true
 	return false
 
@@ -460,8 +541,10 @@ func _physics_process(_delta: float) -> void:
 		var ground_basis := Basis(Quaternion(Vector3.UP, hit.normal)) * Basis(Vector3.UP, yaw)
 		panel.global_transform = Transform3D(ground_basis, hit.position - hit.normal * 0.01)
 		# All corners must rest on the same level surface; reject rocks and edges.
-		for corner in [Vector3(-1.5, 0, -1.5), Vector3(1.5, 0, -1.5), Vector3(-1.5, 0, 1.5), Vector3(1.5, 0, 1.5)]:
+		var half := Vector2(1.5, 1.5) if selected_id == "solar_array" else Station.footprint(selected_id)
+		for corner in [Vector3(-half.x, 0, -half.y), Vector3(half.x, 0, -half.y), Vector3(-half.x, 0, half.y), Vector3(half.x, 0, half.y)]:
 			var point: Vector3 = panel.global_transform * corner
+			if not in_build_area(point): valid = false
 			var support_query := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 2.0, point - Vector3.UP * 0.3)
 			support_query.exclude = [player.get_rid()]
 			var support := get_world_3d().direct_space_state.intersect_ray(support_query)
@@ -469,21 +552,33 @@ func _physics_process(_delta: float) -> void:
 				valid = false
 		var space := PhysicsShapeQueryParameters3D.new()
 		var box := BoxShape3D.new()
-		box.size = Vector3(3.0, 1.5, 3.0)
+		box.size = Vector3(half.x * 2.0, 1.5 if selected_id == "solar_array" else Station.clearance_height(selected_id), half.y * 2.0)
 		space.shape = box
-		space.transform = Transform3D(panel.global_basis, hit.position + Vector3.UP * 0.9)
-		space.exclude = [player.get_rid()]
+		space.transform = Transform3D(panel.global_basis, hit.position + hit.normal * (box.size.y * 0.5 + 0.12))
+		if selected_id == "solar_array": space.exclude = [player.get_rid()]
 		if not get_world_3d().direct_space_state.intersect_shape(space, 1).is_empty(): valid = false
-	if panel.visible: _update_output_card()
+	if valid and selected_id != "solar_array":
+		var crew := get_parent().get_node("CrewFieldwork")
+		var npc: String = Station.DEFINITIONS[selected_id].npc
+		var dock: Vector3 = panel.global_transform * Station.dock(selected_id)
+		# Route searches are throttled while aiming at an unchanged spot.
+		if route_checked_at == 0 or Time.get_ticks_msec() - route_checked_at > 200:
+			route_transform = panel.global_transform
+			route_checked_at = Time.get_ticks_msec()
+			route_ok = not crew.station_route(npc, dock, panel.global_transform).is_empty()
+		valid = route_ok and route_transform.origin.distance_to(panel.global_position) < 0.3 and route_transform.basis.is_equal_approx(panel.global_basis)
+	if panel.visible and selected_id == "solar_array": _update_output_card()
 	else: output_card.hide()
 	material.albedo_color = Color(0.05, 0.75, 1.0, 0.4) if valid else Color(1.0, 0.15, 0.1, 0.4)
-	label.text = "PLACE SOLAR PANEL  ·  Move mouse to aim  ·  Q / R rotate  ·  Left click confirm  ·  B build menu  ·  C destroy\n" + ("Ready to place" if valid else ("Outside the build area: stay inside the blue ring" if not hit.is_empty() and not in_build_area(hit.position) else ("Reserved rover mission area" if not hit.is_empty() and overlaps_rover_circle(hit.position) else "Aim at nearby level ground")))
+	label.text = "PLACE " + _display_name().to_upper() + "  ·  Move mouse to aim  ·  Q / R rotate  ·  Left click confirm  ·  B build menu  ·  C destroy\n" + ("Ready to place" if valid else ("Outside the build area: stay inside the blue ring" if not hit.is_empty() and not in_build_area(hit.position) else ("Reserved rover mission area" if not hit.is_empty() and overlaps_rover_circle(hit.position) else "Aim at clear, level ground with a reachable crew access point")))
 
 ## Built outpost structures and the placed panel can be destroyed; previews cannot.
 func _structure_at(collider: Object) -> Node3D:
 	var node := collider as Node
 	while node != null and node != get_parent():
-		if node == panel: return panel if placed and not settling else null
+		if node == solar_panel: return solar_panel if placed and not settling else null
+		if node.has_meta("crew_station_id") and session.station_placements.has(str(node.get_meta("crew_station_id"))):
+			return node if not settling else null
 		if node.has_meta("structure_id") and str(node.name).begins_with("Completed_"): return node
 		node = node.get_parent()
 	return null
@@ -498,7 +593,8 @@ func _set_target(next: Node3D) -> void:
 	label.text = DESTROY_HINT + ("\nLeft click to destroy " + _target_name() if target != null else "\nAim at a built structure")
 
 func _target_name() -> String:
-	return "the solar panel (free)" if target == panel else str(target.get_meta("structure_id")).replace("_", " ") + " (cost refunded)"
+	if target.has_meta("crew_station_id"): return str(Station.DEFINITIONS[str(target.get_meta("crew_station_id"))].name)
+	return "the solar panel (free)" if target == solar_panel else str(target.get_meta("structure_id")).replace("_", " ") + " (cost refunded)"
 
 func _start_destroy() -> void:
 	destroying = true
@@ -521,7 +617,24 @@ func _destroy_target() -> void:
 	var doomed := target
 	if doomed == null: return
 	_set_target(null)
-	if doomed == panel:
+	if doomed.has_meta("crew_station_id"):
+		var id := str(doomed.get_meta("crew_station_id"))
+		var npc: String = Station.DEFINITIONS[id].npc
+		var crew := get_parent().get_node("CrewFieldwork")
+		crew.homes[npc] = default_homes[npc]
+		crew.station_homes.erase(npc)
+		crew.station_facings.erase(npc)
+		if not crew.data.is_empty(): crew.data.crew[npc].erase("station_relocation")
+		if not crew.data.is_empty() and crew.data.crew[npc].phase == "Returning":
+			crew.return_to_base(npc)
+		session.station_placements.erase(id)
+		stations.erase(id)
+		doomed.queue_free()
+		label.text = DESTROY_HINT + "\nStation removed · available in B menu"
+		_reset_selection()
+		return
+	if doomed == solar_panel:
+		_reset_selection()
 		session.solar_placement = {}
 		_set_panel_output(0.0)
 		placed = false
@@ -580,12 +693,22 @@ func _input(event: InputEvent) -> void:
 
 func confirm() -> void:
 	if not active or not valid or overlaps_rover_circle(panel.global_position): return
+	if selected_id != "solar_array":
+		var crew := get_parent().get_node("CrewFieldwork")
+		var npc: String = Station.DEFINITIONS[selected_id].npc
+		if crew.station_route(npc, panel.global_transform * Station.dock(selected_id), panel.global_transform).is_empty():
+			valid = false
+			label.text = "Crew access is blocked. Choose another spot or rotation."
+			return
 	active = false
 	_show_area(false)
 	output_card.hide()
 	# preview_kwh was measured at this exact transform on the last physics frame.
-	session.solar_placement = {"transform": panel.transform, "kwh_per_sol": preview_kwh}
-	_set_panel_output(preview_kwh)
+	if selected_id == "solar_array":
+		session.solar_placement = {"transform": panel.transform, "kwh_per_sol": preview_kwh}
+		_set_panel_output(preview_kwh)
+	else:
+		session.station_placements[selected_id] = panel.transform
 	for mesh in meshes:
 		mesh.material_override = null
 		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
@@ -593,9 +716,9 @@ func confirm() -> void:
 	_release_build_pose()
 	pose.restore(player.get_node("AnimatedAstronaut"))
 	if player.animation_player != null: player.animation_player.play("idle")
-	placed = true
+	if selected_id == "solar_array": placed = true
 	settling = true
-	label.text = "Deploying solar panel..."
+	label.text = "Deploying " + _display_name() + "..."
 	# Preserve the approved ground transform; only the presentation falls.
 	var landing := panel.transform
 	panel.position = landing.origin + landing.basis.y.normalized() * 0.12
@@ -606,7 +729,9 @@ func confirm() -> void:
 	_add_collision()
 	_dust_ring()
 	settling = false
-	label.text = "Solar panel placed"
+	label.text = _display_name() + " placed"
+	if selected_id != "solar_array": _apply_station_home(selected_id, panel.global_transform)
+	_reset_selection()
 
 func _dust_ring() -> void:
 	var dust := Node3D.new()
@@ -639,9 +764,10 @@ func _dust_ring() -> void:
 		puff.material_override = dust_material
 		puff.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		dust.add_child(puff)
-		puff.position = outward * 1.0 + Vector3.UP * 0.08
+		var radius := 1.0 if selected_id == "solar_array" else 1.0 / maxf(absf(outward.x) / Station.footprint(selected_id).x, absf(outward.z) / Station.footprint(selected_id).y)
+		puff.position = outward * radius + Vector3.UP * 0.08
 		puff.scale = Vector3.ONE * 0.6
-		animation.tween_property(puff, "position", outward * 1.7 + Vector3.UP * 0.14, 0.85).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		animation.tween_property(puff, "position", outward * (radius + 0.7) + Vector3.UP * 0.14, 0.85).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		animation.tween_property(puff, "scale", Vector3(1.3, 1.0, 1.0), 0.85)
 		animation.tween_property(puff, "transparency", 1.0, 0.65).set_delay(0.2)
 	animation.chain().tween_callback(dust.queue_free)
@@ -656,8 +782,18 @@ func _cancel() -> void:
 	output_card.hide()
 	valid = false
 	panel.hide()
+	if selected_id != "solar_array":
+		stations.erase(selected_id)
+		panel.queue_free()
+		_reset_selection()
 	player.placing_solar = false
 	_release_build_pose()
 	pose.restore(player.get_node("AnimatedAstronaut"))
 	if player.animation_player != null: player.animation_player.play("idle")
 	label.text = "B · Build"
+
+func _reset_selection() -> void:
+	selected_id = "solar_array"
+	panel = solar_panel
+	meshes.clear()
+	for mesh in panel.find_children("*", "MeshInstance3D", true, false): meshes.append(mesh)
