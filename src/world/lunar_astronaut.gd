@@ -217,10 +217,11 @@ func set_animation_player(player: AnimationPlayer) -> void:
 
 
 func _update_animation(should_move: bool) -> void:
-	if animation_player == null or moving == should_move:
-		return
+	if animation_player == null: return
+	var animation_name := "moon_walk" if should_move else "idle"
+	# Build/seating poses may interrupt playback without changing movement intent.
+	if moving == should_move and animation_player.current_animation == animation_name and animation_player.is_playing(): return
 	moving = should_move
-	var animation_name := "moon_walk" if moving else "idle"
 	var animation := animation_player.get_animation(animation_name)
 	if animation == null:
 		return

@@ -157,6 +157,19 @@ func _select(id: String) -> void:
 func _half_extent() -> float:
 	return 1.5 if selected_id == "solar_array" else Station.footprint(selected_id).length() / sqrt(2.0)
 
+func _station_access_is_clear(id: String, xform: Transform3D) -> bool:
+	var dock := xform * Station.dock(id)
+	var half := Station.footprint(id) + Vector2(0.6, 0.6)
+	for other_id in session.station_placements:
+		if other_id == id: continue
+		var other: Node3D = stations[other_id]
+		var other_dock: Vector3 = other.global_transform * Station.dock(other_id)
+		if dock.distance_to(other_dock) < 1.5: return false
+		# Reserve each owner's standing space even while that NPC is away working.
+		var local := xform.affine_inverse() * other_dock
+		if absf(local.x) < half.x and absf(local.z) < half.y: return false
+	return true
+
 func _display_name() -> String:
 	return "Solar panel" if selected_id == "solar_array" else str(Station.DEFINITIONS[selected_id].name)
 
@@ -558,6 +571,8 @@ func _physics_process(_delta: float) -> void:
 		if selected_id == "solar_array": space.exclude = [player.get_rid()]
 		if not get_world_3d().direct_space_state.intersect_shape(space, 1).is_empty(): valid = false
 	if valid and selected_id != "solar_array":
+		valid = _station_access_is_clear(selected_id, panel.global_transform)
+	if valid and selected_id != "solar_array":
 		var crew := get_parent().get_node("CrewFieldwork")
 		var npc: String = Station.DEFINITIONS[selected_id].npc
 		var dock: Vector3 = panel.global_transform * Station.dock(selected_id)
@@ -694,6 +709,10 @@ func _input(event: InputEvent) -> void:
 func confirm() -> void:
 	if not active or not valid or overlaps_rover_circle(panel.global_position): return
 	if selected_id != "solar_array":
+		if not _station_access_is_clear(selected_id, panel.global_transform):
+			valid = false
+			label.text = "Keep the other outposts' entrances and crew standing spaces clear."
+			return
 		var crew := get_parent().get_node("CrewFieldwork")
 		var npc: String = Station.DEFINITIONS[selected_id].npc
 		if crew.station_route(npc, panel.global_transform * Station.dock(selected_id), panel.global_transform).is_empty():
@@ -712,13 +731,13 @@ func confirm() -> void:
 	for mesh in meshes:
 		mesh.material_override = null
 		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	player.placing_solar = false
-	_release_build_pose()
-	pose.restore(player.get_node("AnimatedAstronaut"))
-	if player.animation_player != null: player.animation_player.play("idle")
+	_finish_build_pose()
 	if selected_id == "solar_array": placed = true
 	settling = true
 	label.text = "Deploying " + _display_name() + "..."
+	# Reserve solid ground space immediately so walking during the drop cannot
+	# put the astronaut inside a collider that appears on landing.
+	_add_collision()
 	# Preserve the approved ground transform; only the presentation falls.
 	var landing := panel.transform
 	panel.position = landing.origin + landing.basis.y.normalized() * 0.12
@@ -726,7 +745,6 @@ func confirm() -> void:
 	drop.tween_property(panel, "position", landing.origin, 0.385).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await drop.finished
 	panel.transform = landing
-	_add_collision()
 	_dust_ring()
 	settling = false
 	label.text = _display_name() + " placed"
@@ -775,6 +793,10 @@ func _dust_ring() -> void:
 func _add_collision() -> void:
 	for mesh in meshes:
 		mesh.create_trimesh_collision()
+		for child in mesh.get_children():
+			if child is StaticBody3D:
+				# Collision stays on the accepted ground transform while art drops.
+				child.set_as_top_level(true)
 
 func _cancel() -> void:
 	active = false
@@ -786,11 +808,17 @@ func _cancel() -> void:
 		stations.erase(selected_id)
 		panel.queue_free()
 		_reset_selection()
+	_finish_build_pose()
+	label.text = "B · Build"
+
+func _finish_build_pose() -> void:
 	player.placing_solar = false
 	_release_build_pose()
-	pose.restore(player.get_node("AnimatedAstronaut"))
-	if player.animation_player != null: player.animation_player.play("idle")
-	label.text = "B · Build"
+	if pose != null:
+		pose.restore(player.get_node("AnimatedAstronaut"))
+		pose = null
+	# Resume the current walk/idle intent, retaining velocity and camera direction.
+	player._update_animation(player.moving)
 
 func _reset_selection() -> void:
 	selected_id = "solar_array"

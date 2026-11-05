@@ -27,9 +27,15 @@ func run() -> void:
  placement._open_menu()
  check(placement.grid.get_child_count() == 9, "B menu includes three stations.")
  placement._close_menu_and()
+ player.moving = true
+ player.animation_player.play("moon_walk")
  placement._select("maya_station")
+ player._update_animation(true)
+ check(player.animation_player.current_animation == "moon_walk" and player.animation_player.is_playing(), "Entering placement while walking keeps locomotion animation running.")
  check(player.placing_solar and placement.pose_hold != null, "Station placement uses the raised-arm pose.")
  placement._cancel()
+ check(player.animation_player.current_animation == "moon_walk" and player.animation_player.is_playing(), "Cancelling placement restores walking without needing to release movement keys.")
+ check(not player.placing_solar and not player.ui_blocked and placement.pose_hold == null, "Cancel releases pose and movement locks.")
  await process_frame
  check(placement.stations.is_empty() and session.station_placements.is_empty(), "Cancelling discards only the preview.")
  for id in ["maya_station", "alex_station", "sam_station"]:
@@ -53,15 +59,14 @@ func run() -> void:
    placement._cancel()
    continue
   var preview: Node3D = placement.panel
-  if id == "sam_station":
-   var shell_bounds := AABB()
-   var first_mesh := true
-   for mesh in preview.get_node("HabitatShell").find_children("*", "MeshInstance3D", true, false):
-    var box: AABB = (preview.global_transform.affine_inverse() * mesh.global_transform) * mesh.get_aabb()
-    shell_bounds = box if first_mesh else shell_bounds.merge(box)
-    first_mesh = false
-   check(shell_bounds.size.y > 5.4 and shell_bounds.size.y < 5.6, "Workshop shell is full astronaut scale, approximately 5.5 m high.")
-   check(is_equal_approx(shell_bounds.size.x, 9.6), "Workshop shell keeps its original proportions at 9.6 m width.")
+  var shell_bounds := AABB()
+  var first_mesh := true
+  for mesh in preview.get_node("HabitatShell").find_children("*", "MeshInstance3D", true, false):
+   var box: AABB = (preview.global_transform.affine_inverse() * mesh.global_transform) * mesh.get_aabb()
+   shell_bounds = box if first_mesh else shell_bounds.merge(box)
+   first_mesh = false
+  check(shell_bounds.size.y > 5.4 and shell_bounds.size.y < 5.6, "Workshop shell is full astronaut scale, approximately 5.5 m high.")
+  check(is_equal_approx(shell_bounds.size.x, 9.6), "Workshop shell keeps its original proportions at 9.6 m width.")
   var landing: Transform3D = preview.transform
   var assigned: String = placement.Station.DEFINITIONS[id].npc
   if id == "alex_station":
@@ -70,9 +75,19 @@ func run() -> void:
   if id == "sam_station":
    crew.data.crew[assigned].phase = "Working"
    crew.data.crew[assigned].task = "inspect"
+  player.moving = true
+  player.animation_player.play("moon_walk")
+  var player_velocity: Vector3 = Vector3(0.7, 0, -1.1)
+  player.velocity = player_velocity
   placement.confirm()
+  check(player.animation_player.current_animation == "moon_walk" and player.animation_player.is_playing(), "Confirm preserves walk animation while movement remains held.")
+  check(player.velocity == player_velocity and not player.placing_solar and placement.pose_hold == null and not player.ui_blocked, "Confirm preserves movement and releases the raised-arm pose.")
+  var collision_bodies := preview.find_children("*", "StaticBody3D", true, false)
+  check(not collision_bodies.is_empty(), "Collision reserves the building space as soon as placement is confirmed.")
+  var collision_origin: Vector3 = collision_bodies[0].global_position
   check(placement.settling and preview.position.y > landing.origin.y, "Station drops from above its landing.")
   await create_timer(0.5).timeout
+  check(collision_bodies[0].global_position.is_equal_approx(collision_origin), "Grounded collision stays fixed during the visual drop.")
   check(preview.transform.is_equal_approx(landing), "Station lands at the exact rotated preview transform.")
   check(preview.find_children("*", "StaticBody3D", true, false).size() > 0, "Placed station has collision.")
   check(session.station_placements.has(id), "Station placement persisted.")
@@ -93,12 +108,50 @@ func run() -> void:
   print("ARRIVAL ", npc, " ", crew.data.crew[npc].phase, " ", crew.data.crew[npc].message, " pos=", crew.actors[npc].position, " home=", crew.homes[npc])
   check(crew.data.crew[npc].phase == "Available" and crew.actors[npc].position.distance_to(crew.homes[npc]) < 0.65, "NPC reaches its workstation without teleporting.")
   world.get_node("RoverHull").active = false
-  if id == "sam_station":
-   check(not crew.route_service.route(crew.actors[npc].position, Vector3(0,0,6)).is_empty(), "Sam can leave the larger workshop and return to base duties.")
+  check(not crew.route_service.route(crew.actors[npc].position, Vector3(0,0,6)).is_empty(), "Crew can leave the full-size outpost and return to base duties.")
   crew.elapsed = 100.0
   crew._tick(npc, 1.0)
   check(crew.data.crew[npc].phase == "Available", "Arrival is not immediately undone by autonomous work.")
   print("PLACED ", id, " at ", landing.origin)
+ # The main astronaut must physically walk, stop and jump after building.
+ player.position = Vector3(22, 0.05, 0)
+ player.velocity = Vector3.ZERO
+ player.camera_yaw = 0.0
+ for step in range(20):
+  await physics_frame
+  player._step_locomotion(1.0 / 60.0, Vector2.ZERO, false)
+ var walk_start: Vector3 = player.position
+ for step in range(120):
+  await physics_frame
+  player._step_locomotion(1.0 / 60.0, Vector2(0,-1), false)
+ check(player.position.distance_to(walk_start) > 1.0 and player.animation_player.current_animation == "moon_walk", "Player walks normally after placing all buildings.")
+ for step in range(80):
+  await physics_frame
+  player._step_locomotion(1.0 / 60.0, Vector2.ZERO, false)
+ check(player.animation_player.current_animation == "idle" and Vector2(player.velocity.x,player.velocity.z).length() < 0.01, "Player stops and idles normally after placement.")
+ player._step_locomotion(1.0 / 60.0, Vector2.ZERO, true)
+ check(player.velocity.y > 0.5 and not player.placing_solar, "Jump is restored after placement.")
+ var shared_dock: Transform3D = placement.stations.maya_station.global_transform * Transform3D(Basis(Vector3.UP, PI), Vector3(0,0,8.8))
+ check(not placement._station_access_is_clear("alex_station", shared_dock), "Face-to-face outposts cannot share the same NPC standing point.")
+ # Exercise all three together: they must finish at their own unique dock.
+ var starting_positions := {"crew_briefing": Vector3(3.4,0,3.8), "water_recycler": Vector3(0.8,0,3), "food_storage": Vector3(0,0,-4)}
+ for npc in crew.IDS:
+  crew.actors[npc].position = starting_positions[npc]
+  crew.data.crew[npc].position = starting_positions[npc]
+  crew.request_station_arrival(npc)
+ await physics_frame
+ for step in range(600):
+  for npc in crew.IDS: crew._tick(npc, 0.25)
+  await physics_frame
+  if crew.IDS.all(func(npc): return crew.data.crew[npc].phase == "Available" and crew.actors[npc].position.distance_to(crew.homes[npc]) < 0.65): break
+ for station_id in placement.Station.DEFINITIONS:
+  var npc: String = placement.Station.DEFINITIONS[station_id].npc
+  var expected: Vector3 = placement.stations[station_id].global_transform * placement.Station.dock(station_id)
+  check(crew.actors[npc].global_position.distance_to(expected) < 0.65, "Simultaneous return reaches assigned outpost: " + station_id)
+  for other in crew.IDS:
+   if other != npc:
+    check(crew.actors[other].global_position.distance_to(expected) > 1.5, "No second NPC occupies " + station_id)
+  print("ASSIGNMENT ", npc, " -> ", station_id, " at ", crew.actors[npc].position)
  var Save = preload("res://src/runtime/mission_save.gd")
  var saved: Dictionary = Save.capture(session)
  check(Save.decode(saved).get("station_placements", {}).size() == 3, "All three station transforms round-trip through save validation.")

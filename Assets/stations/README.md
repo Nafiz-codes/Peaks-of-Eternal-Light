@@ -9,11 +9,12 @@ hdu_1.glb is the NASA model decoded from KHR_draco_mesh_compression using
 @gltf-transform/cli copy, retaining its mesh and embedded textures. Original Git
 blob SHA: 3a16e21105438b4fc7be2717698d570fc9100b9f.
 
-Sam's engineering workshop uses a 9.6 m wide shell (approximately 5.5 m tall),
+All three crew outposts use a 9.6 m wide shell (approximately 5.5 m tall),
 on a 10 x 7.4 m platform. Its workbench stays 1.05 m high; the NPC access point
 and placement/collision footprint use the enlarged dimensions. This is
 astronaut-scale gameplay sizing, not a certified dimensional HDU reconstruction.
-Maya and Alex retain their compact 3 m shell models.
+Maya, Alex and Sam share the same full-size shell and footprint; their consoles,
+sample instruments and engineering tools remain distinct and human-sized.
 Platforms, consoles, sample containers, tools, accent lights and crew labels are
 game-authored additions in src/world/crew_station.gd. These are fictional outdoor
 workstations, not a reconstruction or simulation of the HDU's interior. No NASA

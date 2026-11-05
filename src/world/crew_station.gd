@@ -6,25 +6,24 @@ const DEFINITIONS := {
  "alex_station": {"name": "Alex · Science", "npc": "water_recycler", "color": Color("7fbdff")},
  "sam_station": {"name": "Sam · Engineering", "npc": "food_storage", "color": Color("ffb653")}
 }
-const DOCK := Vector3(0, 0, 2.65)
-# Metres: full-height engineering shell, with human-sized outdoor equipment.
-static func footprint(id: String) -> Vector2:
- return Vector2(5.1, 3.8) if id == "sam_station" else Vector2(1.9, 1.9)
-static func dock(id: String) -> Vector3:
- return Vector3(0, 0, 4.4) if id == "sam_station" else DOCK
-static func clearance_height(id: String) -> float:
- return 5.7 if id == "sam_station" else 3.0
+const DOCK := Vector3(0, 0, 4.4)
+# Metres: full-height crew outpost shells, with human-sized outdoor equipment.
+static func footprint(_id: String) -> Vector2:
+ return Vector2(5.1, 3.8)
+static func dock(_id: String) -> Vector3:
+ return DOCK
+static func clearance_height(_id: String) -> float:
+ return 5.7
 func _ready() -> void:
  var accent: Color = DEFINITIONS[station_id].color
- var workshop := station_id == "sam_station"
  var shell := preload("res://Assets/stations/hdu_1.glb").instantiate() as Node3D
  add_child(shell)
- preload("res://src/world/imported_asset_fit.gd").fit(shell, 9.6 if workshop else 3.0)
+ preload("res://src/world/imported_asset_fit.gd").fit(shell, 9.6)
  shell.name = "HabitatShell"
- shell.position.z -= 0.7 if workshop else 0.45
- _box(Vector3(10.0,0.08,7.4) if workshop else Vector3(3.6,0.08,3.7),Vector3(0,0.04,0),Color("4b5260"))
- for x in ([-4.9,4.9] if workshop else [-1.7,1.7]):
-  _box(Vector3(0.04,0.025,7.2 if workshop else 3.5),Vector3(x,0.095,0),accent,true)
+ shell.position.z -= 0.7
+ _box(Vector3(10.0,0.08,7.4),Vector3(0,0.04,0),Color("4b5260"))
+ for x in [-4.9,4.9]:
+  _box(Vector3(0.04,0.025,7.2),Vector3(x,0.095,0),accent,true)
  var equipment_start := get_child_count()
  # Shared walk-up desk on the front edge; the crew stand on regolith in front.
  _box(Vector3(1.8,0.12,0.65),Vector3(0,1.05,1.35),Color("bec8d2"))
@@ -50,17 +49,16 @@ func _ready() -> void:
    _box(Vector3(0.38,0.045,0.06),Vector3(-0.3,1.55,1.35),Color("263443"))
    for i in range(3):
     _box(Vector3(0.06,0.04,0.32),Vector3(0.33+i*0.16,1.14,1.4),Color("b9c8d5"))
- if workshop:
-  # Move the workbench forward; do not enlarge the desk or handheld tools.
-  for index in range(equipment_start, get_child_count()):
-   (get_child(index) as Node3D).position.z += 1.65
+ # Move the equipment forward; keep consoles and tools human-sized.
+ for index in range(equipment_start, get_child_count()):
+  (get_child(index) as Node3D).position.z += 1.65
  var sign := Label3D.new()
  sign.name = "StationSign"
  sign.text = DEFINITIONS[station_id].name.to_upper()
  sign.font = preload("res://Assets/fonts/PublicSans-Variable.ttf")
  sign.font_size = 40
  sign.pixel_size = 0.003
- sign.position = Vector3(0,2.85,3.0 if workshop else 0.0)
+ sign.position = Vector3(0,2.85,3.0)
  sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
  sign.modulate = accent
  add_child(sign)
