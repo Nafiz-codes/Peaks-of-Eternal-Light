@@ -30,9 +30,12 @@ func run() -> void:
 	paused = false
 	while not boot.ready_for_mission: await process_frame
 	boot._start_mission()
+	boot.opening_skip_requested = true
+	await create_timer(3.6).timeout
 	boot.commander_menu.select_appearance("commander-01", false)
 	boot.commander_menu.name_input.text = "Music test"
 	boot.commander_menu._validate()
+	boot.commander_menu._open_name()
 	boot.commander_menu._confirm()
 	await create_timer(0.6).timeout
 	await create_timer(3.0).timeout
@@ -88,9 +91,12 @@ func run() -> void:
 		root.get_texture().get_image().save_png("res://.tools/ambient-settings.png")
 	current_scene._close_dialog()
 	current_scene._start_mission()
+	current_scene.opening_skip_requested = true
+	await create_timer(3.6).timeout
 	current_scene.commander_menu.select_appearance("commander-01", false)
 	current_scene.commander_menu.name_input.text = "Music test"
 	current_scene.commander_menu._validate()
+	current_scene.commander_menu._open_name()
 	current_scene.commander_menu._confirm()
 	await create_timer(0.6).timeout
 	await create_timer(3.0).timeout

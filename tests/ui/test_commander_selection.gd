@@ -20,17 +20,18 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	check(screen.cards.size() == 4, "Exactly four Commander options")
-	check(screen.selected_id.is_empty() and screen.confirm_button.disabled, "Explicit selection and name required")
+	check(screen.selected_id == "commander-01" and not screen.modal.visible and screen.confirm_button.disabled, "First character showcased with name popup hidden")
 	check(Identity.create("default", "Maya").is_empty(), "NPC appearance cannot be selected")
 	check(not Identity.name_error("   ").is_empty(), "Whitespace name rejected")
 	check(not Identity.name_error("A".repeat(33)).is_empty(), "Name length validated independently of UI")
 	check(not Identity.name_error("A\nB").is_empty(), "Control characters rejected")
 	screen.name_input.text = "  আরহাম Chen  "
 	screen.name_input.text_changed.emit(screen.name_input.text)
-	check(screen.confirm_button.disabled, "Name alone does not enable confirmation")
+	check(not screen.modal.visible, "Typing a draft does not open popup")
 	for option in Identity.options():
 		screen.select_appearance(option.variant_id)
 		check(screen.name_input.text == "  আরহাম Chen  ", "Switching keeps Unicode name")
+		check(screen.preview.texture == screen.textures[option.variant_id], "Switching displays the matching commander image")
 		check(not screen.confirm_button.disabled, "Valid identity enables confirmation")
 		var portrait := Identity.portrait(Identity.create(option.variant_id, "Name"), "surprised")
 		check(portrait.variant_id == option.variant_id and portrait.frame_index == 8, "Supported expression matches chosen appearance")
@@ -38,7 +39,35 @@ func run() -> void:
 		check(Identity.frame(option.variant_id, "serious").frame_index == 0, "Ambiguous emotions use baseline until reviewed")
 	check(Identity.frame("invalid", "smiling").is_empty(), "Invalid appearance never substitutes another face")
 	await create_timer(0.4).timeout
-	check(screen.preview.texture == screen.textures["commander-04"] and screen.preview.modulate.a == 1, "Rapid switching settles on latest artwork")
+	check(screen.selected_id == "commander-04", "Rapid switching settles on latest character")
+	check(screen.preview.position == screen.preview_origin and is_equal_approx(screen.preview.modulate.a, 1.0) and not screen.outgoing_preview.visible, "Rapid switching settles centered without a leftover character")
+	screen.reduced = false
+	screen._cycle(1)
+	check(screen.selected_id == "commander-01", "Right arrow wraps to first character")
+	check(screen.preview.position.x > screen.preview_origin.x and screen.outgoing_preview.visible, "Next character slides in from the right, including wraparound")
+	screen._cycle(-1)
+	check(screen.selected_id == "commander-04", "Left arrow wraps to last character")
+	check(screen.preview.position.x < screen.preview_origin.x, "Previous character slides in from the left")
+	screen.cards[1].pressed.emit()
+	check(screen.selected_id == "commander-02" and screen.preview.position.x < screen.preview_origin.x, "Overview click slides toward the selected portrait")
+	screen.cards[3].pressed.emit()
+	var slide_elapsed := 0.0
+	var saw_incoming := false
+	while slide_elapsed < 0.65:
+		await process_frame
+		slide_elapsed += screen.get_process_delta_time()
+		check(not (screen.preview.visible and screen.outgoing_preview.visible), "Only one character is visible per animation frame")
+		if screen.preview.visible: saw_incoming = true
+		if slide_elapsed > 0.05 and slide_elapsed < 0.12:
+			screen._cycle(1)
+			screen._cycle(-1)
+	check(saw_incoming, "Incoming character appears after outgoing character exits")
+	check(screen.preview.texture == screen.textures["commander-04"] and screen.preview.position == screen.preview_origin and not screen.outgoing_preview.visible, "Interrupted slides finish on the latest overview choice")
+	screen.reduced = true
+	screen._cycle(1)
+	check(screen.preview.position == screen.preview_origin and not screen.outgoing_preview.visible, "Reduced motion switches instantly")
+	screen._cycle(-1)
+	screen.reduced = false
 	await capture("1360")
 	for dimensions in [Vector2i(1920, 1080), Vector2i(960, 720), Vector2i(800, 600)]:
 		root.size = dimensions
@@ -46,7 +75,15 @@ func run() -> void:
 		await process_frame
 		var bounds := root.get_visible_rect()
 		check(bounds.encloses(screen.confirm_button.get_global_rect()) and bounds.encloses(screen.name_input.get_global_rect()), "Input and confirmation fit " + str(dimensions))
-		check(screen.cards[3].get_global_rect().end.y <= screen.name_input.get_global_rect().position.y, "Cards do not overlap name entry")
+		check(screen.cards[0].position.y == screen.cards[3].position.y, "Portraits form one bottom row")
+		screen._open_name()
+		check(screen.modal.visible and screen.blur.visible and screen.left_button.disabled, "Popup blurs screen and blocks carousel")
+		var previous_id: String = screen.selected_id
+		screen._cycle(1)
+		check(screen.selected_id == previous_id, "Modal blocks appearance changes")
+		await capture("modal-" + str(dimensions.x))
+		screen._back()
+		check(not screen.modal.visible and not screen.left_button.disabled, "Escape returns to selection")
 		await capture(str(dimensions.x))
 	var old_identity := Identity.create("commander-01", "Previous")
 	session.player_character = old_identity.duplicate(true)
@@ -57,6 +94,7 @@ func run() -> void:
 	check(session.player_character == old_identity and session.dashboard_state == previous_state, "Back does not change active playthrough")
 	check(session.commander_draft.appearance_id == "commander-04", "Back retains only draft")
 	check(session.save_slot("user://commander-test.save") == OK, "Existing playthrough saved")
+	screen._open_name()
 	screen._confirm()
 	check(session.player_character.name == "আরহাম Chen" and session.player_character.crew_id == "CREW_01", "Confirm trims name and assigns CREW_01")
 	check(session.dashboard_state == null and session.selected_site_id.is_empty(), "Confirmed new game resets old in-memory mission")

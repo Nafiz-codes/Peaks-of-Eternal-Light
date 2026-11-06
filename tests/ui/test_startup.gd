@@ -62,6 +62,7 @@ func run() -> void:
 	boot.commander_menu.select_appearance("commander-02", false)
 	boot.commander_menu.name_input.text = "Arham"
 	boot.commander_menu._validate()
+	boot.commander_menu._open_name()
 	boot.commander_menu._confirm()
 	await create_timer(0.6).timeout
 	var first_tween = boot.sequence
