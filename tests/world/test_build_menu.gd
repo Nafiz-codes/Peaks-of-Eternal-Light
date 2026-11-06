@@ -27,6 +27,15 @@ func run() -> void:
 	for child in world.get_children():
 		if child.get_script() != null and child.get_script().resource_path.ends_with("solar_placement.gd"):
 			placement = child
+	var terminal := world.get_node("Outpost/power_console")
+	check(not terminal.is_visible_in_tree() and not terminal.get_node("InteractionArea").monitoring, "Temporary energy console and its E prompt are removed.")
+	var placeholders := world.get_node("CrewFieldwork/FieldworkPlaceholders")
+	check(not placeholders.is_visible_in_tree(), "Temporary supply blocks, sample props and survey stakes are hidden.")
+	placement._open_menu()
+	check(placement.area_ring != null and placement.area_ring.visible and placement.area_ring.mesh.get_surface_count() == 1, "B shows the ground hologram immediately, before selecting a building.")
+	check(placement.area_ring.material_override is ShaderMaterial, "Ground marking uses the faint blue grid shader.")
+	placement._close_menu_and()
+	check(not placement.area_ring.visible, "Closing B hides the ground hologram.")
 	var lander: Vector3 = world.get_node("Outpost/Habitat").global_position
 	var circle: Vector3 = world.get_node("RoverTraining").departure.global_position
 	check(placement.overlaps_rover_circle(circle), "Hidden departure area rejects construction.")

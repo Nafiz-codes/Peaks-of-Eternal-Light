@@ -63,13 +63,18 @@ func _ready() -> void:
 		prop.hide()
 		props[id] = prop
 	route_service = preload("res://src/world/crew_routes.gd").new(world, config.survey_radius_m)
-	_box(self, Vector3(0.7, 0.45, 0.5), LOCKER + Vector3(0, 0.225, 0), Color("c5c7bd"))
-	storage_visual = _box(self, Vector3(0.25, 0.2, 0.25), LOCKER + Vector3(0, 0.55, 0), Color("e8ae61"))
+	# Temporary survey props are hidden; crew tasks and saved scientific data remain.
+	var placeholders := Node3D.new()
+	placeholders.name = "FieldworkPlaceholders"
+	add_child(placeholders)
+	placeholders.hide()
+	_box(placeholders, Vector3(0.7, 0.45, 0.5), LOCKER + Vector3(0, 0.225, 0), Color("c5c7bd"))
+	storage_visual = _box(placeholders, Vector3(0.25, 0.2, 0.25), LOCKER + Vector3(0, 0.55, 0), Color("e8ae61"))
 	storage_visual.hide()
-	_add_label("FIELD SUPPLIES / SAMPLE STORAGE\nCollect supplies through crew conversation nearby", LOCKER + Vector3(0, 0.9, 0))
+	_add_label("FIELD SUPPLIES / SAMPLE STORAGE\nCollect supplies through crew conversation nearby", LOCKER + Vector3(0, 0.9, 0)).reparent(placeholders)
 	for key in SITES:
-		_box(self, Vector3(0.08, 0.5, 0.08), SITES[key] + Vector3(0, 0.25, 0), Color("e8ae61"))
-		_add_label(key.replace("_", " ").to_upper(), SITES[key] + Vector3(0, 0.65, 0))
+		_box(placeholders, Vector3(0.08, 0.5, 0.08), SITES[key] + Vector3(0, 0.25, 0), Color("e8ae61"))
+		_add_label(key.replace("_", " ").to_upper(), SITES[key] + Vector3(0, 0.65, 0)).reparent(placeholders)
 		if key.begins_with("sample"):
 			var rock := MeshInstance3D.new()
 			var mesh := SphereMesh.new()
@@ -80,7 +85,7 @@ func _ready() -> void:
 			material.albedo_color = Color("72716b")
 			material.roughness = 1.0
 			rock.material_override = material
-			add_child(rock)
+			placeholders.add_child(rock)
 			rock.position = SITES[key] + Vector3(0.45, 0.1, 0)
 			sample_visuals[key] = rock
 	instrument = _box(self, Vector3(0.55, 0.35, 0.55), Vector3.ZERO, Color("d3bd85"))
@@ -156,6 +161,9 @@ func _physics_process(delta: float) -> void:
 		return
 	elapsed += delta
 	for id in IDS:
+		if world.dialogue_speaker == id:
+			_update_visual(id, false)
+			continue
 		if id == "crew_briefing" and not session.maya_intro_complete:
 			_approach_commander(delta)
 			continue

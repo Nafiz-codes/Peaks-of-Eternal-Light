@@ -1,9 +1,18 @@
 extends CanvasLayer
 signal finished
-const LINE := "Hi I am Dr. Maya, I will be your guide throughout this journey"
+const LINE := "Welcome, Commander! I'm Dr. Maya Chen, your flight engineer and instructor. I'll guide you through the equipment, scientific data, and mission procedures."
+const INTRODUCTIONS := {
+ "crew_briefing": {"speaker": "Dr. Maya Chen", "text": LINE},
+ "water_recycler": {"speaker": "Dr. Alex Rivera", "text": "Dr. Alex Rivera, planetary geologist. I'm here to help us understand the Moon's terrain, history, and potential resources."},
+ "food_storage": {"speaker": "Sam Okafor", "text": "And I'm Sam Okafor, robotics and habitat engineer. Give me the equipment, and I'll help turn it into a functioning base."},
+ "maya_closing": {"speaker": "Dr. Maya Chen", "text": "We all have our specialties, Commander. But you'll be making the final decisions."}
+}
+var dialogue_id := "crew_briefing"
 var player: Node
 var content: VBoxContainer
 var previous_blocked := false
+var build_hud: CanvasLayer
+var previous_build_visible := false
 
 func _ready() -> void:
 	name = "MayaIntroduction"
@@ -11,6 +20,11 @@ func _ready() -> void:
 	player = get_parent().get_node("Outpost/Astronaut")
 	previous_blocked = player.ui_blocked
 	player.ui_blocked = true
+	var placement := get_parent().get_node_or_null("SolarPlacement")
+	if placement != null:
+		build_hud = placement.hud
+		previous_build_visible = build_hud.visible
+		build_hud.hide()
 	var root := Control.new()
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
@@ -20,19 +34,20 @@ func _ready() -> void:
 	content.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	content.anchor_left = 0.12
 	content.anchor_right = 0.88
-	content.offset_top = -135
+	content.offset_top = -165
 	content.offset_bottom = -35
 	content.add_theme_constant_override("separation", 8)
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var font := SystemFont.new()
 	font.font_names = PackedStringArray(["Segoe UI", "Noto Sans", "Arial"])
-	for entry in [["Dr. Maya", Color("ffd36a"), 22], [LINE, Color.WHITE, 20]]:
+	var speech: Dictionary = INTRODUCTIONS[dialogue_id]
+	for entry in [[speech.speaker, Color("ffd36a"), 22], [speech.text, Color.WHITE, 20]]:
 		var label := Label.new()
 		label.text = entry[0]
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		if entry[0] == "Dr. Maya":
+		if entry[0] == speech.speaker:
 			var name_font := font.duplicate() as SystemFont
 			name_font.font_weight = 600
 			label.add_theme_font_override("font", name_font)
@@ -43,7 +58,7 @@ func _ready() -> void:
 		label.add_theme_color_override("font_outline_color", Color("141820"))
 		label.add_theme_constant_override("outline_size", 4)
 		content.add_child(label)
-		if entry[0] == "Dr. Maya":
+		if entry[0] == speech.speaker:
 			var divider := TextureRect.new()
 			divider.name = "GoldDivider"
 			divider.custom_minimum_size.y = 9
@@ -79,3 +94,4 @@ func _input(event: InputEvent) -> void:
 
 func _exit_tree() -> void:
 	if is_instance_valid(player): player.ui_blocked = previous_blocked
+	if is_instance_valid(build_hud): build_hud.visible = previous_build_visible

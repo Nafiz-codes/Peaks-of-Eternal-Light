@@ -17,7 +17,7 @@ func run() -> void:
 	current_scene._on_player_interaction("crew_briefing")
 	assert(not session.maya_intro_complete)
 	assert(current_scene.maya_dialogue_active)
-	assert(current_scene.get_node("MayaIntroduction").LINE == "Hi I am Dr. Maya, I will be your guide throughout this journey")
+	assert(current_scene.get_node("MayaIntroduction").LINE == "Welcome, Commander! I'm Dr. Maya Chen, your flight engineer and instructor. I'll guide you through the equipment, scientific data, and mission procedures.")
 	var stop: Vector3 = maya.position
 	await create_timer(4.8).timeout
 	assert(current_scene.maya_dialogue_active)

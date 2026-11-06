@@ -187,6 +187,12 @@ func _apply_station_home(id: String, xform: Transform3D, restoring := false) -> 
 
 
 func _open_menu() -> void:
+	# Rebuild when opening so newly placed structures leave the marked ground.
+	if is_instance_valid(area_ring):
+		remove_child(area_ring)
+		area_ring.queue_free()
+		area_ring = null
+	_show_area(true)
 	_refresh_menu()
 	build_menu.show()
 	player.ui_blocked = true
@@ -194,6 +200,7 @@ func _open_menu() -> void:
 
 func _close_menu_and(action := Callable()) -> void:
 	build_menu.hide()
+	_show_area(false)
 	player.ui_blocked = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if action.is_valid(): action.call()
@@ -361,32 +368,57 @@ func _show_area(visible_: bool) -> void:
 		area_ring = _make_area_ring()
 	if area_ring != null: area_ring.visible = visible_
 
-## A thin band laid on the sampled ground so it follows the terrain.
+## A faint terrain-conforming grid over clear, level construction ground.
+## The selected building preview still checks its complete footprint and crew route.
 func _make_area_ring() -> MeshInstance3D:
 	var lander: Vector3 = get_parent().get_node("Outpost/Habitat").global_position
 	var radius := build_radius()
-	var band := SurfaceTool.new()
-	band.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var space := get_world_3d().direct_space_state
-	var ground := func(x: float, z: float) -> Vector3:
-		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(x, lander.y + 60.0, z), Vector3(x, lander.y - 60.0, z)))
-		return Vector3(x, (hit.position.y if not hit.is_empty() else lander.y) + 0.08, z)
-	for i in range(160):
-		var points: Array[Vector3] = []
-		for pair in [[i, radius - 0.15], [i + 1, radius - 0.15], [i, radius], [i + 1, radius]]:
-			var angle := TAU * float(pair[0]) / 160.0
-			points.append(ground.call(lander.x + cos(angle) * pair[1], lander.z + sin(angle) * pair[1]))
-		for j in [0, 1, 2, 1, 3, 2]: band.add_vertex(points[j])
+	var samples: Dictionary = {}
+	var step := 2.0
+	var count := ceili(radius / step)
+	var rover := get_parent().get_node("RoverTraining")
+	for z in range(-count, count + 1):
+		for x in range(-count, count + 1):
+			var point := Vector3(lander.x + x * step, lander.y, lander.z + z * step)
+			if not in_build_area(point): continue
+			var reserved := false
+			for circle in [rover.departure, rover.extraction]:
+				if Vector2(point.x - circle.global_position.x, point.z - circle.global_position.z).length() < 6.0: reserved = true
+			if reserved: continue
+			var query := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 60, point - Vector3.UP * 60)
+			query.exclude = [player.get_rid()]
+			var hit := space.intersect_ray(query)
+			if not hit.is_empty() and hit.collider.name == "LunarSurfaceCollision" and hit.normal.y > 0.94:
+				samples[Vector2i(x,z)] = hit.position + Vector3.UP * 0.025
+	for z in range(-count, count):
+		for x in range(-count, count):
+			var keys := [Vector2i(x,z), Vector2i(x+1,z), Vector2i(x,z+1), Vector2i(x+1,z+1)]
+			if not keys.all(func(key): return samples.has(key)): continue
+			for index in [0, 1, 2, 1, 3, 2]:
+				var point: Vector3 = samples[keys[index]]
+				surface.set_uv(Vector2(point.x, point.z))
+				surface.add_vertex(point)
 	var ring := MeshInstance3D.new()
 	ring.name = "BuildAreaRing"
-	ring.mesh = band.commit()
+	ring.mesh = surface.commit()
 	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var ring_material := StandardMaterial3D.new()
-	ring_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	ring_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	ring_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	ring_material.albedo_color = Color(0.05, 0.75, 1.0, 0.7)
-	ring.material_override = ring_material
+	var shader := Shader.new()
+	shader.code = """shader_type spatial;
+render_mode unshaded, cull_disabled, depth_draw_never;
+void fragment() {
+ vec2 cell = abs(fract(UV / 2.0 + 0.5) - 0.5) * 2.0;
+ vec2 width = max(fwidth(UV), vec2(0.015));
+ float line = 1.0 - smoothstep(0.025, 0.025 + max(width.x, width.y), min(cell.x, cell.y));
+ ALBEDO = vec3(0.08, 0.60, 1.0);
+ ALPHA = 0.015 + 0.07 * line;
+}
+"""
+	var hologram := ShaderMaterial.new()
+	hologram.shader = shader
+	ring.material_override = hologram
 	add_child(ring)
 	ring.global_transform = Transform3D.IDENTITY
 	return ring
@@ -585,7 +617,7 @@ func _physics_process(_delta: float) -> void:
 	if panel.visible and selected_id == "solar_array": _update_output_card()
 	else: output_card.hide()
 	material.albedo_color = Color(0.05, 0.75, 1.0, 0.4) if valid else Color(1.0, 0.15, 0.1, 0.4)
-	label.text = "PLACE " + _display_name().to_upper() + "  ·  Move mouse to aim  ·  Q / R rotate  ·  Left click confirm  ·  B build menu  ·  C destroy\n" + ("Ready to place" if valid else ("Outside the build area: stay inside the blue ring" if not hit.is_empty() and not in_build_area(hit.position) else ("Reserved rover mission area" if not hit.is_empty() and overlaps_rover_circle(hit.position) else "Aim at clear, level ground with a reachable crew access point")))
+	label.text = "PLACE " + _display_name().to_upper() + "  ·  Move mouse to aim  ·  Q / R rotate  ·  Left click confirm  ·  B build menu  ·  C destroy\n" + ("Ready to place" if valid else ("Outside the build area: stay inside the blue markings" if not hit.is_empty() and not in_build_area(hit.position) else ("Reserved rover mission area" if not hit.is_empty() and overlaps_rover_circle(hit.position) else "Aim at clear, level ground with a reachable crew access point")))
 
 ## Built outpost structures and the placed panel can be destroyed; previews cannot.
 func _structure_at(collider: Object) -> Node3D:

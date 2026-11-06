@@ -19,6 +19,7 @@ const TAG_FONT := preload("res://Assets/fonts/PublicSans-Variable.ttf")
 # Requested visual adjustment: 25% closer, then another 30% closer (0.75 * 0.70).
 const EARTH_DISTANCE_SCALE := 0.525
 var maya_dialogue_active := false
+var dialogue_speaker := ""
 var site_record: Dictionary = {}
 var feedback: Dictionary = {}
 var solar_indicator: OmniLight3D
@@ -495,6 +496,14 @@ func _add_interaction_station(parent: Node3D, interaction_id: String, label_text
 	shape.position.y = 0.9
 	area.add_child(shape)
 	station.add_child(area)
+	if interaction_id == "power_console":
+		# Retain the reporting endpoint, but remove the temporary world prop/prompt.
+		station.hide()
+		area.monitoring = false
+		area.monitorable = false
+		area.collision_layer = 0
+		area.collision_mask = 0
+		return
 	area.body_entered.connect(_on_interaction_area_entered.bind(area))
 	area.body_exited.connect(_on_interaction_area_exited.bind(area))
 
@@ -520,19 +529,34 @@ static func tag_font(weight := 600) -> FontVariation:
 
 func _on_player_interaction(interaction_id: String) -> void:
 	var session := get_node("/root/MissionSession")
-	if interaction_id == "crew_briefing" and not session.maya_intro_complete:
-		if get_node("Outpost/Astronaut").global_position.distance_to(get_node("Outpost/crew_briefing").global_position) <= 2.5:
-			if maya_dialogue_active: return
-			maya_dialogue_active = true
-			var fieldwork := get_node("CrewFieldwork")
-			fieldwork._update_visual("crew_briefing", false)
-			var dialogue := preload("res://src/ui/maya_introduction.gd").new()
-			dialogue.finished.connect(func():
+	if maya_dialogue_active: return
+	var introduction := ""
+	if interaction_id == "crew_briefing":
+		if not session.maya_intro_complete:
+			introduction = "crew_briefing"
+		elif session.crew_introductions.get("water_recycler", false) and session.crew_introductions.get("food_storage", false) and not session.crew_introductions.get("maya_closing", false):
+			introduction = "maya_closing"
+	elif interaction_id in ["water_recycler", "food_storage"] and not session.crew_introductions.get(interaction_id, false):
+		introduction = interaction_id
+	if not introduction.is_empty():
+		var actor := get_node("Outpost/" + interaction_id) as Node3D
+		if get_node("Outpost/Astronaut").global_position.distance_to(actor.global_position) > 2.5: return
+		maya_dialogue_active = true
+		dialogue_speaker = interaction_id
+		var fieldwork := get_node("CrewFieldwork")
+		fieldwork._update_visual(interaction_id, false)
+		var dialogue := preload("res://src/ui/maya_introduction.gd").new()
+		dialogue.dialogue_id = introduction
+		dialogue.finished.connect(func():
+			if introduction == "crew_briefing":
 				session.maya_intro_complete = true
-				maya_dialogue_active = false
-				fieldwork.data.crew.crew_briefing.auto_attempted = true
-				session.state_changed.emit())
-			add_child(dialogue)
+				if not fieldwork.data.is_empty(): fieldwork.data.crew.crew_briefing.auto_attempted = true
+			else:
+				session.crew_introductions[introduction] = true
+			maya_dialogue_active = false
+			dialogue_speaker = ""
+			session.state_changed.emit())
+		add_child(dialogue)
 		return
 	if interaction_id == "rover_repair":
 		get_node("RoverHull").repair()

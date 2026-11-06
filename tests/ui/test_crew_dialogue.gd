@@ -15,6 +15,8 @@ func run() -> void:
 	root.size = Vector2i(1360, 820)
 	var session := root.get_node("MissionSession")
 	session.select_landing_site("ridge_a")
+	session.maya_intro_complete = true
+	session.crew_introductions = {"water_recycler": true, "food_storage": true, "maya_closing": true}
 	var world := preload("res://scenes/lunar_outpost_3d.tscn").instantiate()
 	root.add_child(world)
 	current_scene = world
