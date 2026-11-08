@@ -46,7 +46,8 @@ func apply_sky() -> void:
 	var direction: Vector3 = observation.sun_direction
 	light.look_at(light.global_position - direction, Vector3.FORWARD if absf(direction.y) > 0.999 else Vector3.UP)
 	# No direct sunlight from below the lunar horizon; keep artistic ambient fill.
-	var visibility := Solar.visibility(world.site_record, observation)
+	# DustStorm sets storm_light_factor while airborne dust blocks part of the sunlight.
+	var visibility := Solar.visibility(world.site_record, observation) * float(world.get_meta("storm_light_factor", 1.0))
 	light.light_energy = 1.1 * visibility * pow(Model.AU_KM / float(observation.sun_distance_km), 2.0)
 	material.set_shader_parameter("sun_visibility", visibility)
 	world.set_meta("sun_visibility", visibility)

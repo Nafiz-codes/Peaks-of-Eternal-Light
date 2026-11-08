@@ -5,6 +5,25 @@ const MUTED := Color("b6c1d8")
 const BLUE := Color("91cfff")
 const AMBER := Color("ffd18a")
 const PURPLE := Color("b7a2ff")
+## On-screen objective text: gold with a dark outline, no panel behind it.
+const OBJECTIVE := Color("f2d58c")
+const OBJECTIVE_OUTLINE := Color("101522")
+
+static func objective_font() -> SystemFont:
+	var font := SystemFont.new()
+	font.font_names = PackedStringArray(["Segoe UI", "Noto Sans", "Arial"])
+	font.font_weight = 500
+	return font
+
+static func objective_label(font: Font, font_size: int) -> Label:
+	var result := Label.new()
+	result.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	result.add_theme_font_override("font", font)
+	result.add_theme_font_size_override("font_size", font_size)
+	result.add_theme_color_override("font_color", OBJECTIVE)
+	result.add_theme_color_override("font_outline_color", OBJECTIVE_OUTLINE)
+	result.add_theme_constant_override("outline_size", 3)
+	return result
 
 static func label(value: String, font_size: int = 16, color: Color = TEXT) -> Label:
 	var result := Label.new()

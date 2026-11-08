@@ -37,6 +37,8 @@ const TERRAIN_DEPTH_WEIGHT := 0.12
 const TERRAIN_SLOPE_WEIGHT := 0.08
 const BASE_SOLAR_GENERATION_KWH_PER_SOL := 65.0
 const SOLAR_ARRAY_GENERATION_KWH_PER_SOL := 18.0
+## Gameplay value: share of sunlight left during the dust storm (visuals use the same value).
+const DUST_STORM_LIGHT_MULTIPLIER := 0.5
 
 var sites: Array[Dictionary] = []
 var bvad_constants: Dictionary = {}
@@ -198,6 +200,24 @@ func queue_construction(state: Variant, structure_id: String) -> Dictionary:
 	state.construction_queue.append({"structure_id": structure_id, "remaining_work": float(structure.get("build_time_sols", 1)), "started_sol": state.sol})
 	_publish_action_state(state)
 	return {"ok": true, "structure_id": structure_id, "materials_cost": materials_cost, "power_cost": power_cost}
+
+
+## The storm interlude cuts sunlight for the current sol; the next Run Sol pays for it once.
+func apply_dust_storm(state: Variant) -> bool:
+	if state == null:
+		return false
+	for active in state.active_events:
+		if active.get("event_id") == "dust_storm" and int(active.get("started_sol", -1)) == state.sol:
+			return false # Already applied, e.g. a save loaded mid-storm.
+	state.active_events.append({
+		"event_id": "dust_storm",
+		"effects": {"solar_light_multiplier": DUST_STORM_LIGHT_MULTIPLIER, "duration_sols": 1},
+		"remaining_sols": 1,
+		"started_sol": state.sol,
+		"text": "Dust storm: sunlight reaching solar power collectors is cut to %d%% for this sol." % roundi(DUST_STORM_LIGHT_MULTIPLIER * 100.0)
+	})
+	_publish_action_state(state)
+	return true
 
 
 func demolish_structure(state: Variant, structure_id: String) -> Dictionary:
@@ -518,10 +538,12 @@ func _calculate_power(state: Variant, site: Dictionary) -> Dictionary:
 	var solar_yield := PolarSolar.daily_fraction(site, maxi(0, state.sol - 1), true)
 	var active_effect_multiplier := _active_power_generation_multiplier(state.active_events)
 	var solar_array_output := SOLAR_ARRAY_GENERATION_KWH_PER_SOL if state.built_structures.has("solar_array") and not state.damaged_structures.has("solar_array") else 0.0
-	var generated_kwh := (BASE_SOLAR_GENERATION_KWH_PER_SOL + solar_array_output) * solar_yield * active_effect_multiplier * _active_effect_multiplier_for(state.active_events, "output_multiplier")
-	# The placed panel's rating already includes its site and spot, so it is added unscaled:
-	# the amount shown when placing is exactly what arrives every sol.
-	generated_kwh += state.placed_panel_kwh_per_sol
+	# Sunlight lost to a dust storm reaches every solar collector alike.
+	var light_multiplier := _active_effect_multiplier_for(state.active_events, "solar_light_multiplier")
+	var generated_kwh := (BASE_SOLAR_GENERATION_KWH_PER_SOL + solar_array_output) * solar_yield * active_effect_multiplier * _active_effect_multiplier_for(state.active_events, "output_multiplier") * light_multiplier
+	# The placed panel's rating already includes its site and spot, so only lost light scales it:
+	# outside a storm the amount shown when placing is exactly what arrives every sol.
+	generated_kwh += state.placed_panel_kwh_per_sol * light_multiplier
 	var baseline_kw_per_person := _field_value(bvad_constants, "power_baseline_kw_per_person")
 	var consumed_kwh := baseline_kw_per_person * float(state.crew_size) * 24.0 * _active_effect_multiplier_for(state.active_events, "power_consumption_multiplier")
 	return {
@@ -529,7 +551,8 @@ func _calculate_power(state: Variant, site: Dictionary) -> Dictionary:
 		"consumed_kwh": consumed_kwh,
 		"balance_kwh": generated_kwh - consumed_kwh,
 		"illumination_fraction": illumination_fraction,
-		"generation_multiplier": active_effect_multiplier
+		"generation_multiplier": active_effect_multiplier,
+		"light_multiplier": light_multiplier
 	}
 
 

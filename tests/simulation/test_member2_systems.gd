@@ -31,6 +31,17 @@ func _run() -> void:
 	check(is_equal_approx(state.materials, materials_before + 35.0), "Deleting refunds the materials used to build it.")
 	check(simulator.demolish_structure(state, "solar_array").error == "structure_not_built", "Only built structures can be deleted.")
 	check(simulator.queue_construction(state, "solar_array").ok, "A deleted structure can be rebuilt.")
+	var clear_sky: Object = simulator.begin_mission("ridge_a", 20)
+	var storm_sky: Object = simulator.begin_mission("ridge_a", 20)
+	clear_sky.placed_panel_kwh_per_sol = 10.0
+	storm_sky.placed_panel_kwh_per_sol = 10.0
+	check(simulator.apply_dust_storm(storm_sky) and not simulator.apply_dust_storm(storm_sky), "A dust storm is charged once per sol.")
+	simulator.advance_sol(clear_sky)
+	simulator.advance_sol(storm_sky)
+	check(is_equal_approx(storm_sky.power_generated_kwh, clear_sky.power_generated_kwh * simulator.DUST_STORM_LIGHT_MULTIPLIER), "A dust storm cuts all solar generation, including the placed panel, for that sol.")
+	simulator.advance_sol(clear_sky)
+	simulator.advance_sol(storm_sky)
+	check(is_equal_approx(storm_sky.power_generated_kwh, clear_sky.power_generated_kwh), "Sunlight returns the sol after the storm.")
 	var without_panel: Object = simulator.begin_mission("ridge_a", 20)
 	var with_panel: Object = simulator.begin_mission("ridge_a", 20)
 	with_panel.placed_panel_kwh_per_sol = 4.3

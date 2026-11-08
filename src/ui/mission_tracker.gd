@@ -16,9 +16,7 @@ func _ready() -> void:
 	session = get_node("/root/MissionSession")
 	expeditions = world.get_node("RoverTraining")
 	expeditions.hud_changed.connect(func(view: Dictionary): expedition_view = view)
-	mission_font = SystemFont.new()
-	mission_font.font_names = PackedStringArray(["Segoe UI", "Noto Sans", "Arial"])
-	mission_font.font_weight = 500
+	mission_font = preload("res://src/ui/ui_style.gd").objective_font()
 	title = _label(20)
 	title.position = Vector2(22, 20)
 	title.size = Vector2(410, 36)
@@ -34,13 +32,7 @@ func _ready() -> void:
 	marker.hide()
 
 func _label(font_size: int) -> Label:
-	var result := Label.new()
-	result.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	result.add_theme_font_override("font", mission_font)
-	result.add_theme_font_size_override("font_size", font_size)
-	result.add_theme_color_override("font_color", Color("f2d58c"))
-	result.add_theme_color_override("font_outline_color", Color("101522"))
-	result.add_theme_constant_override("outline_size", 3)
+	var result := preload("res://src/ui/ui_style.gd").objective_label(mission_font, font_size)
 	add_child(result)
 	return result
 
@@ -62,7 +54,7 @@ func _process(_delta: float) -> void:
 		instruction = str(state.mission_outcome.get("status", "")).capitalize()
 	elif preload("res://src/world/dust_storm.gd").pending(expeditions.data):
 		objective = "Dust storm"
-		instruction = "Visibility severely reduced. Wait for the dust to clear."
+		instruction = "Visibility reduced and solar power halved this sol. Wait for the dust to clear."
 	elif not session.maya_intro_complete:
 		objective = "Talk with Maya"
 		instruction = "Press E when Maya is nearby."

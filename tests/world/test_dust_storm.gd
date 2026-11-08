@@ -22,17 +22,27 @@ func run():
  assert(expedition.available_assignment() == -1)
  storm._process(3.0)
  assert(storm.active and storm.intensity > 0.99)
- assert(env.fog_enabled and is_equal_approx(env.fog_density, 0.85))
+ assert(env.fog_enabled and is_equal_approx(env.fog_density, storm.FOG_DENSITY))
+ assert(storm.FOG_DENSITY <= 0.25) # Dense, but not the old near-zero-visibility wall.
+ assert(is_equal_approx(float(world.get_meta("storm_light_factor")), storm.VISUAL_LIGHT_FACTOR))
+ assert(world.get_node("LowPolarSun").light_color.is_equal_approx(storm.DUSTY_SUN))
+ assert(storm.sign_layer.visible)
+ var storm_effects = session.dashboard_state.active_events.filter(func(e): return e.event_id == "dust_storm")
+ assert(storm_effects.size() == 1)
+ storm._process(0.5)
+ assert(session.dashboard_state.active_events.filter(func(e): return e.event_id == "dust_storm").size() == 1) # Charged once
  assert(not Save.decode(Save.capture(session)).is_empty())
  if "--capture" in OS.get_cmdline_user_args():
   await create_timer(1.0).timeout
   await RenderingServer.frame_post_draw
   root.get_texture().get_image().save_png("res://.tools/dust-storm-preview.png")
- storm._process(11.0)
+ storm._process(10.5)
  assert(storm.active)
  storm._process(1.0)
  assert(not storm.active and storm.elapsed == 15.0)
  assert(env.fog_density == before)
+ assert(not world.has_meta("storm_light_factor") and not storm.sign_layer.visible)
+ assert(world.get_node("LowPolarSun").light_color.is_equal_approx(Color("ffe5bd")))
  assert(expedition.available_assignment() == 2)
  storm._process(1.0)
  assert(not storm.active)

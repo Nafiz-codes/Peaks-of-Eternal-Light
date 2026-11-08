@@ -247,6 +247,11 @@ func queue_structure(structure_id: String) -> Dictionary:
 	return result
 
 
+func apply_dust_storm() -> void:
+	if dashboard_state != null and dashboard_simulator.apply_dust_storm(dashboard_state):
+		state_changed.emit()
+
+
 func demolish_structure(structure_id: String) -> Dictionary:
 	if action_busy or dashboard_state == null:
 		return {"ok": false, "error": "mission_not_ready"}
