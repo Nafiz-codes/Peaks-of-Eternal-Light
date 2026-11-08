@@ -32,8 +32,6 @@ func _ready() -> void:
 	layer = 40
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	panel = PanelContainer.new()
-	panel.theme = Theme.new()
-	panel.theme.default_font = preload("res://Assets/fonts/corpta-demo.regular.otf")
 	panel.name = "OutpostHoverCard"
 	panel.add_theme_stylebox_override("panel", UI.style(Color("101a29"), UI.BLUE))
 	add_child(panel)
@@ -124,7 +122,9 @@ func populate(site: Dictionary, width: float) -> void:
 		child.queue_free()
 	panel.custom_minimum_size.x = width
 	var coords: Dictionary = site.get("coordinates", {})
-	add_line(str(site.get("name", "Outpost")), 20, UI.BLUE)
+	var title := UI.label(str(site.get("name", "Outpost")), 20, UI.BLUE)
+	title.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
+	content.add_child(title)
 	add_line("%.2f°%s  ·  %.2f°E" % [absf(float(coords.get("latitude_deg", 0))), "S" if float(coords.get("latitude_deg", 0)) < 0 else "N", float(coords.get("longitude_deg", 0))], 15)
 	var sunlight: Variant = site.get("illumination_pct", {}).get("value")
 	var slope: Variant = site.get("slope_deg", {}).get("value")
