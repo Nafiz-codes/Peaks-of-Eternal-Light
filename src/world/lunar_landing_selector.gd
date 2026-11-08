@@ -302,27 +302,27 @@ func _add_menu() -> void:
 	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 	var title := Label.new()
-	title.add_theme_font_override("font", preload("res://Assets/fonts/Request.otf"))
+	title.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	title.text = "LUNAR LANDING SELECTOR"
 	title.add_theme_font_size_override("font_size", 24)
 	column.add_child(title)
 	caption = Label.new()
-	caption.add_theme_font_override("font", preload("res://Assets/fonts/Request.otf"))
-	caption.add_theme_font_override("font", preload("res://Assets/fonts/Request.otf"))
+	caption.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
+	caption.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	caption.text = "GLOBAL MOON · LROC / LOLA\nRight-drag to orbit · Scroll to zoom\nClick a label on the Moon to land"
 	column.add_child(caption)
 	var dashboard_button := Button.new()
-	dashboard_button.add_theme_font_override("font", preload("res://Assets/fonts/Request.otf"))
+	dashboard_button.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	dashboard_button.text = "MISSION DASHBOARD  [I]"
 	dashboard_button.pressed.connect(_open_dashboard)
 	column.add_child(dashboard_button)
 	view_button = Button.new()
-	view_button.add_theme_font_override("font", preload("res://Assets/fonts/Request.otf"))
+	view_button.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	view_button.text = "INSPECT SOUTH POLE"
 	view_button.pressed.connect(_toggle_polar_view)
 	column.add_child(view_button)
 	map_button = Button.new()
-	map_button.add_theme_font_override("font", preload("res://Assets/fonts/Request.otf"))
+	map_button.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	map_button.text = "SURFACE: LROC 2025"
 	map_button.pressed.connect(_toggle_surface_map)
 	column.add_child(map_button)
@@ -330,17 +330,17 @@ func _add_menu() -> void:
 	zoom_row.add_theme_constant_override("separation", 8)
 	column.add_child(zoom_row)
 	zoom_out_button = Button.new()
-	zoom_out_button.add_theme_font_override("font", preload("res://Assets/fonts/Request.otf"))
+	zoom_out_button.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	zoom_out_button.text = "- Zoom out"
 	zoom_out_button.pressed.connect(_zoom_by.bind(1.25))
 	zoom_row.add_child(zoom_out_button)
 	zoom_in_button = Button.new()
-	zoom_in_button.add_theme_font_override("font", preload("res://Assets/fonts/Request.otf"))
+	zoom_in_button.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	zoom_in_button.text = "+ Zoom in"
 	zoom_in_button.pressed.connect(_zoom_by.bind(0.8))
 	zoom_row.add_child(zoom_in_button)
 	zoom_reset_button = Button.new()
-	zoom_reset_button.add_theme_font_override("font", preload("res://Assets/fonts/Request.otf"))
+	zoom_reset_button.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	zoom_reset_button.tooltip_text = "Reset zoom for this view"
 	zoom_reset_button.pressed.connect(_reset_zoom)
 	zoom_row.add_child(zoom_reset_button)
@@ -348,7 +348,7 @@ func _add_menu() -> void:
 	# Landing controls follow geographic anchors on the globe, not the side menu.
 	for site in site_records:
 		var button := Button.new()
-		button.add_theme_font_override("font", preload("res://Assets/fonts/Request.otf"))
+		button.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 		button.name = str(site.site_id) + "_SurfaceLabel"
 		var coordinates: Dictionary = site.coordinates
 		button.text = str(site.name)

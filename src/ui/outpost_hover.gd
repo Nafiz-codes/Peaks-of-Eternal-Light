@@ -123,7 +123,7 @@ func populate(site: Dictionary, width: float) -> void:
 	panel.custom_minimum_size.x = width
 	var coords: Dictionary = site.get("coordinates", {})
 	var title := UI.label(str(site.get("name", "Outpost")), 20, UI.BLUE)
-	title.add_theme_font_override("font", preload("res://Assets/fonts/Request.otf"))
+	title.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	content.add_child(title)
 	add_line("%.2f°%s  ·  %.2f°E" % [absf(float(coords.get("latitude_deg", 0))), "S" if float(coords.get("latitude_deg", 0)) < 0 else "N", float(coords.get("longitude_deg", 0))], 15)
 	var sunlight: Variant = site.get("illumination_pct", {}).get("value")

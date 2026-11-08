@@ -58,7 +58,7 @@ func _ready() -> void:
 	content.add_child(outgoing_preview)
 	outgoing_preview.hide()
 	headline = UI.label("Your Mission.\nYour Commander.", 36)
-	headline.add_theme_font_override("font", preload("res://Assets/fonts/Request.otf"))
+	headline.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	content.add_child(headline)
 	headline.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	left_button = UI.button("‹", _cycle.bind(-1))
@@ -69,7 +69,7 @@ func _ready() -> void:
 	left_button.tooltip_text = "Previous character"
 	right_button.tooltip_text = "Next character"
 	select_button = UI.button("Select", _open_name, true)
-	select_button.add_theme_font_override("font", preload("res://Assets/fonts/Request.otf"))
+	select_button.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	content.add_child(select_button)
 	for option in Identity.options():
 		var id: String = option.variant_id
@@ -165,7 +165,7 @@ func _build_modal() -> void:
 	blur.material = material
 	dialog = Panel.new()
 	dialog.theme = Theme.new()
-	dialog.theme.default_font = preload("res://Assets/fonts/Request.otf")
+	dialog.theme.default_font = preload("res://Assets/fonts/corpta-demo.regular.otf")
 	dialog.add_theme_stylebox_override("panel", UI.style(Color("101a29"), Color("607b96")))
 	modal.add_child(dialog)
 	var title := UI.label("Enter Name", 30)
