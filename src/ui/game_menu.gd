@@ -27,45 +27,73 @@ func _ready() -> void:
 	overlay = Control.new()
 	add_child(overlay)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var dim := ColorRect.new()
-	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dim.color = Color(0.01, 0.02, 0.04, 0.78)
-	overlay.add_child(dim)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", UI.style(Color("101a29"), Color("587e99")))
-	overlay.add_child(panel)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	panel.anchor_left = 0.045
-	panel.anchor_right = 0.955
-	panel.anchor_top = 0.06
-	panel.anchor_bottom = 0.94
+	var backdrop := ColorRect.new()
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var space_material := ShaderMaterial.new()
+	space_material.shader = preload("res://src/ui/menu_space.gdshader")
+	space_material.set_shader_parameter("earth_texture", preload("res://Assets/earth/Earth_Diffuse_6K.jpg"))
+	backdrop.material = space_material
+	overlay.add_child(backdrop)
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var frame := MarginContainer.new()
+	overlay.add_child(frame)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side in ["left", "right"]:
+		frame.add_theme_constant_override("margin_" + side, 42)
+	for side in ["top", "bottom"]:
+		frame.add_theme_constant_override("margin_" + side, 28)
 	var layout := UI.box()
-	panel.add_child(layout)
-	layout.add_child(UI.label("TRIARCHY  /  PEAKS OF ETERNAL LIGHT", 16, UI.BLUE))
-	heading = UI.label("MISSION PAUSED", 30)
-	layout.add_child(heading)
+	frame.add_child(layout)
+	var title := UI.label("PEAKS OF ETERNAL LIGHT", 34)
+	title.add_theme_color_override("font_shadow_color", Color("28607d"))
+	title.add_theme_constant_override("shadow_offset_y", 3)
+	layout.add_child(title)
+	layout.add_child(UI.label("T R I A R C H Y   /   L U N A R   E X P E D I T I O N", 12, UI.BLUE))
 	var columns := HBoxContainer.new()
-	columns.add_theme_constant_override("separation", 24)
+	columns.add_theme_constant_override("separation", 46)
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	layout.add_child(columns)
 	var nav_scroll := ScrollContainer.new()
 	nav_scroll.follow_focus = true
-	nav_scroll.custom_minimum_size.x = 215
+	nav_scroll.custom_minimum_size.x = 250
 	nav_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	columns.add_child(nav_scroll)
 	var nav := UI.box()
+	nav.add_theme_constant_override("separation", 4)
 	nav_scroll.add_child(nav)
+	var spacer := Control.new()
+	spacer.custom_minimum_size.y = 36
+	nav.add_child(spacer)
 	resume_button = UI.button("Resume mission", close_menu)
 	nav.add_child(resume_button)
+	_style_navigation(resume_button)
 	for entry in [["Mission status", "home"], ["Outposts", "outposts"], ["Objectives", "objectives"], ["Save & load", "saves"], ["Settings", "settings"], ["Controls", "controls"], ["Mission help", "help"], ["Science & sources", "science"]]:
 		var destination: String = entry[1]
-		nav.add_child(UI.button(entry[0], func(): show_page(destination)))
+		var button := UI.button(entry[0], func(): show_page(destination))
+		button.set_meta("menu_page", destination)
+		nav.add_child(button)
+		_style_navigation(button)
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override("panel", _space_style(Color(0.015, 0.045, 0.075, 0.76), Color(0.16, 0.48, 0.65, 0.55)))
+	columns.add_child(panel)
+	var content := UI.box()
+	panel.add_child(content)
+	heading = UI.label("MISSION PAUSED", 28)
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(heading)
+	var line := HSeparator.new()
+	var separator_style := StyleBoxLine.new()
+	separator_style.color = Color(0.12, 0.36, 0.48, 0.6)
+	separator_style.thickness = 1
+	line.add_theme_stylebox_override("separator", separator_style)
+	content.add_child(line)
 	var scroll := ScrollContainer.new()
 	scroll.follow_focus = true
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	columns.add_child(scroll)
+	content.add_child(scroll)
 	body = UI.box()
 	scroll.add_child(body)
 	notice = UI.label("", 14, UI.AMBER)
@@ -161,6 +189,8 @@ func show_page(destination: String) -> void:
 	_focus_first()
 
 func _focus_first() -> void:
+	_refresh_space_style()
+
 	for control in overlay.find_children("*", "Control", true, false):
 		if control is BaseButton or control is Slider:
 			control.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -422,3 +452,39 @@ func _go_to(path: String) -> void:
 		open_menu()
 		notice.text = "Could not open the destination: " + error_string(error)
 
+
+# Menu-local styles leave the dashboard and all gameplay UI untouched.
+func _space_style(fill: Color, edge: Color) -> StyleBoxFlat:
+	var result := UI.style(fill, edge)
+	result.set_corner_radius_all(0)
+	return result
+
+func _style_navigation(button: Button) -> void:
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.add_theme_font_size_override("font_size", 20)
+	button.add_theme_stylebox_override("normal", _space_style(Color(0, 0, 0, 0), Color(0, 0, 0, 0)))
+	button.add_theme_stylebox_override("hover", _space_style(Color(0.02, 0.38, 0.58, 0.55), Color("40cfff")))
+	button.add_theme_stylebox_override("pressed", _space_style(Color(0.02, 0.45, 0.65, 0.65), Color("83eaff")))
+	button.add_theme_stylebox_override("focus", _space_style(Color(0.04, 0.35, 0.52, 0.25), Color("59dfff")))
+
+func _refresh_space_style() -> void:
+	for button in overlay.find_children("*", "Button", true, false):
+		if button.has_meta("menu_page"):
+			var selected: bool = button.get_meta("menu_page") == page
+			button.add_theme_stylebox_override("normal", _space_style(Color(0.02, 0.35, 0.55, 0.6) if selected else Color(0, 0, 0, 0), Color("43cfff") if selected else Color(0, 0, 0, 0)))
+	for control in body.find_children("*", "Control", true, false):
+		if control is Button:
+			control.add_theme_stylebox_override("normal", _space_style(Color(0.02, 0.08, 0.13, 0.8), Color(0.18, 0.45, 0.58, 0.65)))
+			control.add_theme_stylebox_override("hover", _space_style(Color(0.02, 0.28, 0.4, 0.85), Color("55dfff")))
+			control.add_theme_stylebox_override("focus", _space_style(Color(0, 0, 0, 0), Color("83eaff")))
+		elif control is PanelContainer:
+			control.add_theme_stylebox_override("panel", _space_style(Color(0.02, 0.06, 0.1, 0.68), Color(0.18, 0.4, 0.53, 0.45)))
+		elif control is HSlider:
+			var track := _space_style(Color(0.04, 0.12, 0.18, 0.95), Color(0.16, 0.38, 0.48, 0.6))
+			track.content_margin_top = 3
+			track.content_margin_bottom = 3
+			control.add_theme_stylebox_override("slider", track)
+			var fill := track.duplicate() as StyleBoxFlat
+			fill.bg_color = Color("258bb0")
+			control.add_theme_stylebox_override("grabber_area", fill)
+			control.add_theme_stylebox_override("grabber_area_highlight", fill)
