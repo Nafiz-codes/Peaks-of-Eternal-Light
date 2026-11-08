@@ -235,6 +235,9 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_ALT and active and OS.is_debug_build():
+			world.get_node("MissionHUD")._input(event)
+			return
 		if event.keycode == KEY_R and (active or available()):
 			var expedition := world.get_node_or_null("RoverTraining")
 			if expedition != null and expedition.get("transitioning") == true:
@@ -262,6 +265,9 @@ func _physics_process(delta: float) -> void:
 		return
 	if not available() or not session.can_advance():
 		stop_control()
+		return
+	if world.get_node("MissionHUD").panel.visible:
+		step_drive(delta, 0.0, 0.0, true)
 		return
 	step_drive(delta, float(Input.is_key_pressed(KEY_W)) - float(Input.is_key_pressed(KEY_S)),
 		float(Input.is_key_pressed(KEY_D)) - float(Input.is_key_pressed(KEY_A)), Input.is_key_pressed(KEY_SPACE))

@@ -61,37 +61,16 @@ func _ready() -> void:
 	content.add_child(actions)
 	run_button = UI.button("Start mission", advance_turn)
 	actions.add_child(run_button)
-	if session.DEV_SOL_SKIP_ENABLED and OS.is_debug_build():
-		var skip_count := SpinBox.new()
-		skip_count.name = "DeveloperSolCount"
-		skip_count.min_value = 1
-		skip_count.max_value = 6
-		skip_count.value = 1
-		skip_count.prefix = "Earth days: "
-		skip_count.tooltip_text = "Temporary developer calendar jump. Supplies and mission objectives are preserved."
-		actions.add_child(skip_count)
-		var skip_button := UI.button("DEV: Skip Earth days", func(): session.transition_sol(func():
-			if _modal_visible(): return
-			if session.developer_skip_sols(int(skip_count.value)):
-				notice.text = "DEV: jumped to Earth day %d. No supplies consumed or objectives completed. Pending decisions remain." % session.dashboard_state.sol
-			else:
-				notice.text = "DEV skip unavailable: return rover to outpost and stop control. Mission must be active; final Earth day uses Rest / maintain base (24h)."))
-		skip_button.name = "DeveloperSkipSols"
-		actions.add_child(skip_button)
-		var mission_choice := OptionButton.new()
-		mission_choice.name = "DeveloperRoverMission"
-		for title in preload("res://src/simulation/rover_expedition.gd").TITLES:
-			mission_choice.add_item(title)
-		actions.add_child(mission_choice)
-		var select_mission := UI.button("DEV: Select rover mission", func(): session.transition_sol(func():
-			if _modal_visible(): return
-			if world.get_node("RoverTraining").developer_select_mission(mission_choice.selected):
-				notice.text = "DEV: mission selected with fresh objectives. Use the departure circle."
-			else:
-				notice.text = "Return to outpost and stop rover control first. Reset the campaign if it has ended."))
-		select_mission.name = "DeveloperSelectRoverMission"
-		select_mission.tooltip_text = "Testing override: replaces rover mission progress and advances to its unlock Earth day."
-		actions.add_child(select_mission)
+	if OS.is_debug_build():
+		var event_choice := OptionButton.new()
+		event_choice.name = "DeveloperEventChoice"
+		for label in ["Sample collection", "Water ice", "Dust storm (15 seconds)", "Lifeline"]:
+			event_choice.add_item(label)
+		actions.add_child(event_choice)
+		var jump := UI.button("DEV: Go to event", func(): _developer_jump(event_choice.selected))
+		jump.name = "DeveloperGoToEvent"
+		jump.tooltip_text = "Resets expedition objectives and pending decisions for testing. Replaces current progress and checkpoint."
+		actions.add_child(jump)
 	event_button = UI.button("Review decision", open_pending_event)
 	actions.add_child(event_button)
 	report_button = UI.button("Dashboard / report", open_dashboard)
@@ -306,3 +285,12 @@ func _run_operation(kind: String, operation_id: String, distance_km: float) -> v
 		operations.show_operation_error(str(result.get("error", "unknown")))
 	refresh()
 
+
+func _developer_jump(index: int) -> void:
+	if not OS.is_debug_build() or _modal_visible(): return
+	if world.get_node("RoverTraining").developer_jump_event(index):
+		panel.hide()
+		notice.text = "DEV: event loaded with fresh objectives."
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	else:
+		notice.text = "Wait for transitions to finish. Restart the mission if it has ended."

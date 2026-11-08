@@ -60,6 +60,9 @@ func _process(_delta: float) -> void:
 	var running: bool = state.mission_outcome.get("status", "") == "in_progress"
 	if not running:
 		instruction = str(state.mission_outcome.get("status", "")).capitalize()
+	elif preload("res://src/world/dust_storm.gd").pending(expeditions.data):
+		objective = "Dust storm"
+		instruction = "Visibility severely reduced. Wait for the dust to clear."
 	elif not session.maya_intro_complete:
 		objective = "Talk with Maya"
 		instruction = "Press E when Maya is nearby."

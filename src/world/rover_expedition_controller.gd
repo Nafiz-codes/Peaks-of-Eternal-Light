@@ -220,7 +220,7 @@ func _sync() -> void:
 func _restore_crew() -> void:
 	if data.is_empty(): return
 	var was_away := follower.collision_layer == 1
-	data.missing = Rules.assigned(data) == 2
+	data.missing = available_assignment() == 2
 	if data.missing:
 		if data.crew_position == Vector3.ZERO: data.crew_position = Terrain.point(Vector2(65,255))
 		crew.global_position = data.crew_position
@@ -286,6 +286,55 @@ func developer_select_mission(index: int) -> bool:
 	return true
 func locks_drive() -> bool:
 	return transitioning or busy_id != "" or dialogue > 0
+
+func developer_jump_event(index: int) -> bool:
+	if not OS.is_debug_build() or index < 0 or index > 3: return false
+	if get_tree().paused or transitioning or session.action_busy or driver.power_state == driver.Power.STARTING: return false
+	var access := get_parent().get_node("LanderAccess")
+	if access.busy or get_parent().maya_dialogue_active: return false
+	if session.start_selected_mission() != OK: return false
+	if session.dashboard_state.mission_outcome.status != "in_progress": return false
+	get_parent().get_node("DustStorm")._restore()
+	driver.stop_control()
+	var fresh: Dictionary = Rules.fresh()
+	var mission_index := 2 if index == 3 else index
+	for previous in range(mini(mission_index, 2)): fresh.completed.append(previous)
+	if index == 2:
+		fresh["dust_storm_elapsed"] = 0.0
+	else:
+		fresh.mission = mission_index
+		fresh.location = "expedition"
+		fresh.phase = "active"
+		fresh["dust_storm_complete"] = index == 3
+	session.dashboard_state.pending_events.clear()
+	session.dashboard_state.rover_expedition = fresh
+	session.maya_intro_complete = true
+	session.crew_introductions = {"water_recycler": true, "food_storage": true, "maya_closing": true}
+	bound_state = null
+	_sync()
+	if index == 2:
+		_place_rover(Vector3(32, ground_y(Vector3(32,0,20)),20))
+		access.inside = false
+		access.player.set_seated(false)
+		access.player.global_position = access.landing
+		access.player.set_first_person(false)
+		access.player._sync_camera_rig()
+	else:
+		_place_rover(Terrain.ORIGIN + Vector3(0,0,10))
+		access.inside = true
+		access.player.global_position = access.seat_eye - Vector3(0,1.1,0)
+		access.player.set_seated(true, access.seat_eye)
+		driver.sync_state()
+		driver.active = true
+		driver.power_state = driver.Power.STARTING
+		get_parent().get_node("Outpost/Astronaut").ui_blocked = true
+		get_parent().get_node("MissionHUD").set_process_input(false)
+		driver._takeover_finished()
+	_refresh_targets()
+	feedback = "DEV: " + ("Dust storm" if index == 2 else Rules.TITLES[mission_index])
+	session.state_changed.emit()
+	session.capture_sol_checkpoint()
+	return true
 func speed_limit(throttle: float = 0.0) -> float:
 	if data.is_empty() or data.location != "expedition" or data.mission != 2 or not data.stabilized or not escort_link: return driver.MAX_SPEED
 	var distance := driver.global_position.distance_to(crew.global_position)
@@ -688,5 +737,6 @@ func _tone(frequency: float) -> void:
 
 func available_assignment() -> int:
 	if data.is_empty(): return -1
+	if preload("res://src/world/dust_storm.gd").pending(data): return -1
 	if data.mission < 0 and data.completed.is_empty() and not session.construction_ready(): return -1
 	return Rules.assigned(data)

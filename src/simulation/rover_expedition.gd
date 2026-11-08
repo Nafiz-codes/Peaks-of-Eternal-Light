@@ -35,6 +35,9 @@ static func ready_to_return(d: Dictionary) -> bool:
 static func valid_save(d: Variant) -> bool:
 	if not d is Dictionary: return false
 	if d.is_empty(): return true
+	if d.has("dust_storm_complete") and not d.dust_storm_complete is bool: return false
+	if d.has("dust_storm_elapsed"):
+		if not d.dust_storm_elapsed is float or not is_finite(d.dust_storm_elapsed) or d.dust_storm_elapsed < 0.0 or d.dust_storm_elapsed > 15.0: return false
 	var defaults := fresh()
 	for key in defaults:
 		if not d.has(key) or typeof(d[key]) != typeof(defaults[key]): return false
