@@ -43,6 +43,7 @@ func _ready() -> void:
 		var label: Button = callout.button
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		label.focus_mode = Control.FOCUS_NONE
+		label.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 		label.add_theme_color_override("font_color", Color("e7f4ff"))
 		label.add_theme_color_override("font_outline_color", Color("030810"))
 		label.add_theme_constant_override("outline_size", 5)
@@ -105,10 +106,11 @@ func _build_ui() -> void:
 	layer.layer = 25
 	add_child(layer)
 	canvas = Control.new()
-	var font := ThemeDB.fallback_font.duplicate() as FontFile
+	var font := preload("res://Assets/fonts/corpta-demo.regular.otf")
 	if font != null:
-		font.multichannel_signed_distance_field = true
-		canvas.add_theme_font_override("font", font)
+		pass # Keep the imported font resource unchanged.
+		canvas.theme = Theme.new()
+		canvas.theme.default_font = font
 	canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(canvas)
 	canvas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

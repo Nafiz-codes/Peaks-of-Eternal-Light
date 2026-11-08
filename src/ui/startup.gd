@@ -84,6 +84,8 @@ func _build() -> void:
 	canvas.add_child(astronaut)
 	astronaut.modulate.a = 0.0
 	navigation = Control.new()
+	navigation.theme = Theme.new()
+	navigation.theme.default_font = preload("res://Assets/fonts/corpta-demo.regular.otf")
 	canvas.add_child(navigation)
 	navigation.modulate.a = 0.0
 	var title := _label("PEAKS OF\nETERNAL LIGHTS", 44, Color("edf5fa"))
@@ -121,6 +123,8 @@ func _build() -> void:
 		canvas.add_child(credit)
 		for index in range(3):
 			var text := _label(entry[index], 36 if index == 1 else 14, Color("e2edf6") if index == 1 else Color("839fb5"))
+			if index == 1:
+				text.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 			text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			credit.add_child(text)
 		credit.modulate.a = 0.0
@@ -131,6 +135,8 @@ func _build() -> void:
 	canvas.add_child(skip)
 	skip.pressed.connect(_enter_menu)
 	dialog = PanelContainer.new()
+	dialog.theme = Theme.new()
+	dialog.theme.default_font = preload("res://Assets/fonts/corpta-demo.regular.otf")
 	dialog.add_theme_stylebox_override("panel", UI.style(Color("0d1724"), Color("59788e")))
 	canvas.add_child(dialog)
 	dialog_body = VBoxContainer.new()

@@ -32,6 +32,8 @@ func _ready() -> void:
 	layer = 40
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	panel = PanelContainer.new()
+	panel.theme = Theme.new()
+	panel.theme.default_font = preload("res://Assets/fonts/corpta-demo.regular.otf")
 	panel.name = "OutpostHoverCard"
 	panel.add_theme_stylebox_override("panel", UI.style(Color("101a29"), UI.BLUE))
 	add_child(panel)

@@ -51,7 +51,6 @@ func _ready() -> void:
 	title.add_theme_color_override("font_shadow_color", Color("28607d"))
 	title.add_theme_constant_override("shadow_offset_y", 3)
 	layout.add_child(title)
-	layout.add_child(UI.label("T R I A R C H Y   /   L U N A R   E X P E D I T I O N", 12, UI.BLUE))
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 46)
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -101,7 +100,6 @@ func _ready() -> void:
 	scroll.add_child(body)
 	notice = UI.label("", 14, UI.AMBER)
 	layout.add_child(notice)
-	layout.add_child(UI.label("Mouse: click options / drag sliders · Wheel: scroll · Esc: back / resume", 13, UI.MUTED))
 	overlay.hide()
 	get_tree().scene_changed.connect(_scene_changed)
 

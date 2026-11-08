@@ -58,6 +58,7 @@ func _ready() -> void:
 	content.add_child(outgoing_preview)
 	outgoing_preview.hide()
 	headline = UI.label("Your Mission.\nYour Commander.", 36)
+	headline.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	content.add_child(headline)
 	headline.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	left_button = UI.button("‹", _cycle.bind(-1))
@@ -68,6 +69,7 @@ func _ready() -> void:
 	left_button.tooltip_text = "Previous character"
 	right_button.tooltip_text = "Next character"
 	select_button = UI.button("Select", _open_name, true)
+	select_button.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	content.add_child(select_button)
 	for option in Identity.options():
 		var id: String = option.variant_id
