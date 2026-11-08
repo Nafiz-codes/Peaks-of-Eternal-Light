@@ -26,7 +26,7 @@ func _ready() -> void:
 	settings = get_node("/root/GameSettings")
 	overlay = Control.new()
 	var menu_theme := Theme.new()
-	menu_theme.default_font = preload("res://Assets/fonts/Request.otf")
+	menu_theme.default_font = preload("res://Assets/fonts/corpta-demo.regular.otf")
 	overlay.theme = menu_theme
 	add_child(overlay)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -469,6 +469,14 @@ func _style_navigation(button: Button) -> void:
 	button.add_theme_stylebox_override("focus", _space_style(Color(0.04, 0.35, 0.52, 0.25), Color("59dfff")))
 
 func _refresh_space_style() -> void:
+	for control in overlay.find_children("*", "Control", true, false):
+		if control is Label:
+			control.uppercase = true
+		elif control is OptionButton:
+			for index in range(control.item_count):
+				control.set_item_text(index, control.get_item_text(index).to_upper())
+		elif control is Button:
+			control.text = control.text.to_upper()
 	for button in overlay.find_children("*", "Button", true, false):
 		if button.has_meta("menu_page"):
 			var selected: bool = button.get_meta("menu_page") == page
