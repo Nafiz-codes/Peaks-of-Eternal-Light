@@ -25,6 +25,9 @@ func _ready() -> void:
 	session = get_node("/root/MissionSession")
 	settings = get_node("/root/GameSettings")
 	overlay = Control.new()
+	var menu_theme := Theme.new()
+	menu_theme.default_font = preload("res://Assets/fonts/corpta-demo.regular.otf")
+	overlay.theme = menu_theme
 	add_child(overlay)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var backdrop := ColorRect.new()
