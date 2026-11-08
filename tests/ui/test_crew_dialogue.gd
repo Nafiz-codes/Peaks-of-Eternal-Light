@@ -14,6 +14,7 @@ func check(ok: bool, message: String) -> void:
 func run() -> void:
 	root.size = Vector2i(1360, 820)
 	var session := root.get_node("MissionSession")
+	check(session.confirm_new_commander("commander-01", "Rivera"), "Select a named commander.")
 	session.select_landing_site("ridge_a")
 	session.maya_intro_complete = true
 	session.crew_introductions = {"water_recycler": true, "food_storage": true, "maya_closing": true}
@@ -30,6 +31,12 @@ func run() -> void:
 		check(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Dialogue releases the cursor.")
 		check(not world.get_node("Outpost/" + id + "/StatusLabel/UpdateMarker").visible, "Reading clears the update marker.")
 		check(session.dashboard_state == null, "Talking does not start a mission implicitly.")
+		var displayed_text := ""
+		for label in dialogue.content.find_children("*", "Label", true, false):
+			displayed_text += label.text + "\n"
+		check("Ready when you are, Commander Rivera." in displayed_text, "Radio greeting addresses the selected commander.")
+		if id == "crew_briefing":
+			check("Commander Rivera, the final decisions are yours." in displayed_text, "Maya's report uses the commander's name.")
 		dialogue.hide()
 		check(not player.ui_blocked, "Closing restores player input.")
 	check(session.start_selected_mission() == OK, "Mission starts.")

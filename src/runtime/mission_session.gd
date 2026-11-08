@@ -72,6 +72,10 @@ func confirm_new_commander(appearance: String, player_name: String) -> bool:
 func commander_name() -> String:
 	return str(player_character.get("name", "Commander"))
 
+func commander_address() -> String:
+	var player_name := str(player_character.get("name", "")).strip_edges()
+	return "Commander" if player_name.is_empty() else "Commander " + player_name
+
 func commander_portrait(expression := "neutral") -> Dictionary:
 	return Commander.portrait(player_character, expression)
 var skip_next_startup_intro := false

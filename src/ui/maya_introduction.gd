@@ -41,7 +41,8 @@ func _ready() -> void:
 	var font := SystemFont.new()
 	font.font_names = PackedStringArray(["Segoe UI", "Noto Sans", "Arial"])
 	var speech: Dictionary = INTRODUCTIONS[dialogue_id]
-	for entry in [[speech.speaker, Color("ffd36a"), 22], [speech.text, Color.WHITE, 20]]:
+	var spoken_text: String = speech.text.replace("Commander", get_node("/root/MissionSession").commander_address())
+	for entry in [[speech.speaker, Color("ffd36a"), 22], [spoken_text, Color.WHITE, 20]]:
 		var label := Label.new()
 		label.text = entry[0]
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

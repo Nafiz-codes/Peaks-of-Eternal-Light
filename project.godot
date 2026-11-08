@@ -19,7 +19,6 @@ boot_splash/show_image=false
 [autoload]
 
 UppercaseText="*res://src/ui/uppercase_text.gd"
-
 MissionSession="*res://src/runtime/mission_session.gd"
 GameSettings="*res://src/runtime/game_settings.gd"
 GameMenu="*res://src/ui/game_menu.gd"

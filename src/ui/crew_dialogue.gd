@@ -84,8 +84,8 @@ func refresh_report() -> void:
 	if fieldwork != null and specialist_id in fieldwork.IDS:
 		_add_fieldwork()
 	content.add_child(UI.label(report.status, 16, UI.AMBER))
-	content.add_child(UI.label(report.task, 17, UI.MUTED))
-	content.add_child(UI.label(report.update, 20))
+	content.add_child(UI.label(report.task.replace("Commander", session.commander_address()), 17, UI.MUTED))
+	content.add_child(UI.label(report.update.replace("Commander", session.commander_address()), 20))
 	for effect in report.effects:
 		content.add_child(UI.label("Active: " + effect, 16, UI.AMBER))
 	for event in report.decisions:

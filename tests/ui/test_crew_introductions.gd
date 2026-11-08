@@ -7,6 +7,8 @@ func check(ok: bool, message: String) -> void:
   push_error(message)
 func run() -> void:
  var session := root.get_node("MissionSession")
+ check(session.commander_address() == "Commander", "Unnamed saves use the Commander fallback.")
+ check(session.confirm_new_commander("commander-01", "আরহাম Chen"), "Select a named commander.")
  session.select_landing_site("ridge_a")
  session.start_selected_mission()
  var world := preload("res://scenes/lunar_outpost_3d.tscn").instantiate()
@@ -18,10 +20,10 @@ func run() -> void:
  player.set_physics_process(false)
  check(not world.maya_dialogue_active, "Dialogue waits for an E interaction.")
  var lines := [
-  ["crew_briefing", "Dr. Maya Chen", "Welcome, Commander! I'm Dr. Maya Chen, your flight engineer and instructor. I'll guide you through the equipment, scientific data, and mission procedures."],
+  ["crew_briefing", "Dr. Maya Chen", "Welcome, Commander আরহাম Chen! I'm Dr. Maya Chen, your flight engineer and instructor. I'll guide you through the equipment, scientific data, and mission procedures."],
   ["water_recycler", "Dr. Alex Rivera", "Dr. Alex Rivera, planetary geologist. I'm here to help us understand the Moon's terrain, history, and potential resources."],
   ["food_storage", "Sam Okafor", "And I'm Sam Okafor, robotics and habitat engineer. Give me the equipment, and I'll help turn it into a functioning base."],
-  ["crew_briefing", "Dr. Maya Chen", "We all have our specialties, Commander. But you'll be making the final decisions."]
+  ["crew_briefing", "Dr. Maya Chen", "We all have our specialties, Commander আরহাম Chen. But you'll be making the final decisions."]
  ]
  for speech in lines:
   var actor := world.get_node("Outpost/" + str(speech[0])) as Node3D
