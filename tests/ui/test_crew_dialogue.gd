@@ -44,7 +44,7 @@ func run() -> void:
 	for id in Report.ROLES:
 		check(world.get_node("Outpost/" + id + "/StatusLabel/UpdateMarker").visible, "Mission start produces a fresh report.")
 		hud.inspect_station(id)
-		check("Sol 00" in Report.build(id, session.dashboard_state).status, "Report uses the actual sol.")
+		check("Resource report 00" in Report.build(id, session.dashboard_state).status, "Report uses the actual sol.")
 		check(Save.state_data(session.dashboard_state) == original, "Reading leaves simulation values unchanged.")
 		dialogue.hide()
 	var captured := Save.capture(session)

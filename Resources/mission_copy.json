@@ -5,8 +5,8 @@
   "mission_briefing": {
     "title": "PEAKS OF ETERNAL LIGHT",
     "subtitle": "Lunar Outpost Mission Trainer",
-    "opening": "Commander, establish a lunar outpost and sustain your crew through a short operational mission. Every sol, power, life support, terrain, and human decisions must stay in balance.",
-    "primary_objective": "Keep the crew operational through Sol [MISSION_LENGTH].",
+    "opening": "Commander, establish a lunar outpost and sustain your crew through a short operational mission. Throughout the mission, power, life support, terrain, and human decisions must stay in balance.",
+    "primary_objective": "Establish the outpost, collect samples, investigate water ice, and complete Operation Lifeline.",
     "site_choice_prompt": "Select a landing site. Compare modeled solar availability and coarse LOLA terrain values before you commit.",
     "science_notice": "Elevation and slope come from NASA's global LOLA grids; solar availability is modeled. The recorded global hydrogen map has not been sampled at these sites, so no local hydrogen estimate is assigned.",
     "success_note": "A mission is not won by one full meter. It is won by making trade-offs early enough to recover from them."
@@ -35,12 +35,12 @@
     {
       "step_id": "resolve_events",
       "title": "5. Resolve events",
-      "body": "Events present trade-offs, not trivia. Read each option, choose deliberately, and expect the consequence to affect later sols."
+      "body": "Events present trade-offs, not trivia. Read each option, choose deliberately, and expect the consequence to affect later Earth days."
     },
     {
       "step_id": "advance_sol",
-      "title": "6. Run the sol",
-      "body": "Advance one sol to apply the mission model. Watch the changed reserves and active events, then adapt before running the next sol."
+      "title": "6. Run the Earth day",
+      "body": "Advance one Earth day to apply the mission model. Watch the changed reserves and active events, then adapt before running the next Earth day."
     }
   ],
   "hud_copy": {

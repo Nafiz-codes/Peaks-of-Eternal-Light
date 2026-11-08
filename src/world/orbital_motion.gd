@@ -23,9 +23,11 @@ func advance(delta: float) -> void:
 	if get_tree().paused or not is_finite(delta) or delta < 0.0:
 		return
 	var clock: Dictionary = session.orbital_clock
-	# Visual time remains continuous when Run Sol advances resource accounting.
+	# Astronomy and daily resource accounting share elapsed Earth time.
 	if not clock.paused:
+		var previous: float = clock.elapsed_seconds
 		clock.elapsed_seconds = minf(Model.MAX_ELAPSED, clock.elapsed_seconds + delta * clock.time_scale)
+		session.account_elapsed_time(clock.elapsed_seconds - previous)
 		if clock.elapsed_seconds >= Model.MAX_ELAPSED:
 			clock.paused = true
 	apply_sky()

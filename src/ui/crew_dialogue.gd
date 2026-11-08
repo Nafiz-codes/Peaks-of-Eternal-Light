@@ -97,7 +97,7 @@ func refresh_report() -> void:
 			if session.start_selected_mission() != OK:
 				content.add_child(UI.label("Mission data could not be loaded. Try again or open the dashboard.", 16, UI.AMBER))))
 	elif not report.terminal and report.decisions.is_empty():
-		content.add_child(UI.label("No decisions awaiting you in my area. I'll update you after the next sol or a change in conditions.", 16, UI.MUTED))
+		content.add_child(UI.label("No decisions awaiting you in my area. I'll update you after the next Earth day or a change in conditions.", 16, UI.MUTED))
 	content.add_child(UI.button("View mission report" if report.terminal else "Open mission dashboard", func(): _request("dashboard", "")))
 	for button in content.find_children("*", "Button", true, false):
 		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND

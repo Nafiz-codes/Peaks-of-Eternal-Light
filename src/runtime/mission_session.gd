@@ -92,7 +92,7 @@ var crew_read_reports: Dictionary = {}
 var orbital_clock: Dictionary = preload("res://src/world/orbital_model.gd").default_clock()
 const Save = preload("res://src/runtime/mission_save.gd")
 # Temporary development aid. Set false (or remove this method/UI) before release.
-const DEV_SOL_SKIP_ENABLED := true
+const DEV_SOL_SKIP_ENABLED := false
 
 func developer_skip_sols(count: int) -> bool:
 	if not DEV_SOL_SKIP_ENABLED or not OS.is_debug_build() or count <= 0 or action_busy or get_tree().paused:
@@ -195,11 +195,18 @@ func start_selected_mission() -> Error:
 	return OK
 
 
+func construction_ready() -> bool:
+	return solar_placement.has("transform") and station_placements.has("maya_station") and station_placements.has("alex_station") and station_placements.has("sam_station")
+
+func elapsed_time_label() -> String:
+	var epoch := float(Time.get_unix_time_from_datetime_string(preload("res://src/world/orbital_model.gd").START_UTC))
+	return Time.get_datetime_string_from_unix_time(int(epoch + orbital_clock.elapsed_seconds)).replace("T", " ") + " UTC"
+
 func can_advance() -> bool:
 	return not action_busy and dashboard_state != null and dashboard_state.mission_outcome.get("status", "") == "in_progress" and dashboard_state.pending_events.is_empty()
 
 
-func advance_mission() -> bool:
+func advance_mission(skip_time := true) -> bool:
 	if not can_advance():
 		return false
 	if dashboard_state.rover_expedition.get("location", "outpost") == "expedition":
@@ -207,6 +214,8 @@ func advance_mission() -> bool:
 	action_busy = true
 	dashboard_last_tick = dashboard_simulator.advance_sol(dashboard_state)
 	dashboard_state = dashboard_last_tick.state
+	if skip_time:
+		orbital_clock.elapsed_seconds = minf(preload("res://src/world/orbital_model.gd").MAX_ELAPSED, orbital_clock.elapsed_seconds + 86400.0)
 	capture_sol_checkpoint()
 	state_changed.emit()
 	call_deferred("_unlock_action")
@@ -307,3 +316,11 @@ func transition_sol(action: Callable) -> void:
 		add_child(sol_transition)
 	sol_transition.play(action)
 
+
+func account_elapsed_time(seconds: float) -> void:
+	if dashboard_state == null or seconds <= 0.0: return
+	orbital_clock["resource_seconds"] = float(orbital_clock.get("resource_seconds", 0.0)) + seconds
+	# Defer accounting during expeditions and unresolved decisions, retaining elapsed time.
+	if float(orbital_clock.resource_seconds) >= 86400.0 and can_advance() and dashboard_state.rover_expedition.get("location", "outpost") != "expedition":
+		orbital_clock.resource_seconds -= 86400.0
+		advance_mission(false)

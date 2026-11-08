@@ -7,7 +7,7 @@ static func describe(state: Variant, events: Array) -> String:
 	var lines := PackedStringArray()
 	lines.append("Pending decisions: %d" % state.pending_events.size())
 	for active in state.active_events:
-		lines.append("Active: %s / %d sol(s) remaining" % [str(active.get("event_id", "")).replace("_", " "), int(active.get("remaining_sols", 0))])
+		lines.append("Active: %s / %d Earth day(s) remaining" % [str(active.get("event_id", "")).replace("_", " "), int(active.get("remaining_sols", 0))])
 	for resolved in state.resolved_events:
 		var choice_text := str(resolved.get("choice_id", "Acknowledged")).replace("_", " ")
 		for event in events:
@@ -19,7 +19,7 @@ static func describe(state: Variant, events: Array) -> String:
 			for choice in choices:
 				if choice.get("choice_id") == resolved.get("choice_id"):
 					choice_text = str(choice.get("text", choice_text))
-		lines.append("Sol %d / %s\n%s" % [int(resolved.get("sol", 0)), str(resolved.get("event_id", "")).replace("_", " "), choice_text])
+		lines.append("Earth day %d / %s\n%s" % [int(resolved.get("sol", 0)), str(resolved.get("event_id", "")).replace("_", " "), choice_text])
 	if state.resolved_events.is_empty():
 		lines.append("No resolved decisions yet.")
 	return "\n\n".join(lines)

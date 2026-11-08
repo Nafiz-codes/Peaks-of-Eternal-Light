@@ -100,7 +100,7 @@ static func decode(data: Variant) -> Dictionary:
 				target.assign(value.duplicate(true))
 			else:
 				state.set(key, value.duplicate(true) if value is Dictionary else value)
-		if state.site_id != data.site_id or state.sol < 0 or state.sol > state.mission_length_sols or state.mission_length_sols < 1:
+		if state.site_id != data.site_id or state.sol < 0 or state.mission_length_sols < 1:
 			return {}
 		# Canonical roster migration keeps earned resources and historical readings.
 		# Version 2 distinguishes new four-person saves from legacy versions.
@@ -127,11 +127,8 @@ static func decode(data: Variant) -> Dictionary:
 				return {}
 		if not state.mission_outcome.get("status", "") in ["in_progress", "success", "failure"]:
 			return {}
-		if state.mission_length_sols == 10:
-			state.mission_length_sols = 7
-			state.sol = mini(state.sol, 7)
-			state.mission_outcome = simulator._evaluate_mission_outcome(state)
-			simulator._update_report_data(state)
+		state.mission_outcome = simulator._evaluate_mission_outcome(state)
+		simulator._update_report_data(state)
 	var pose: Dictionary = data.pose
 	if not pose.is_empty():
 		if pose.get("site_id") != data.site_id or not pose.get("transform") is Transform3D or not pose.get("yaw") is float or not pose.get("pitch") is float:

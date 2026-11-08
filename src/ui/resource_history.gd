@@ -41,9 +41,9 @@ func _refresh() -> void:
 	var lines := PackedStringArray()
 	for record in records:
 		var value: Variant = record.get(selected_field)
-		lines.append("Sol %s / %s %s" % [record.get("sol", "?"), "%.3f" % float(value) if value is float or value is int else "Unavailable", descriptor[1]])
+		lines.append("Earth day %s / %s %s" % [record.get("sol", "?"), "%.3f" % float(value) if value is float or value is int else "Unavailable", descriptor[1]])
 	table.text = "\n".join(lines) if not lines.is_empty() else "No recorded history."
-	summary.text = "%s (%s) · Each point is one recorded sol; scale starts at zero." % descriptor
+	summary.text = "%s (%s) · Each point is one recorded Earth day; scale starts at zero." % descriptor
 	chart.visible = not records.is_empty()
 	chart.queue_redraw()
 
@@ -63,8 +63,8 @@ func _draw_chart() -> void:
 	var font := ThemeDB.fallback_font
 	chart.draw_string(font, Vector2(0, 16), "%.1f" % maximum, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.MUTED)
 	chart.draw_string(font, Vector2(12, area.end.y), "0", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.MUTED)
-	chart.draw_string(font, Vector2(44, 154), "Sol 0", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.MUTED)
-	chart.draw_string(font, Vector2(area.end.x - 48, 154), "Sol %d" % int(last_sol), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.MUTED)
+	chart.draw_string(font, Vector2(44, 154), "Earth day 0", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.MUTED)
+	chart.draw_string(font, Vector2(area.end.x - 48, 154), "Earth day %d" % int(last_sol), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.MUTED)
 	var previous := Vector2.ZERO
 	for index in range(valid.size()):
 		var record: Dictionary = valid[index]

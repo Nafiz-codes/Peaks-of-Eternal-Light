@@ -67,15 +67,15 @@ func _ready() -> void:
 		skip_count.min_value = 1
 		skip_count.max_value = 6
 		skip_count.value = 1
-		skip_count.prefix = "Sols: "
+		skip_count.prefix = "Earth days: "
 		skip_count.tooltip_text = "Temporary developer calendar jump. Supplies and mission objectives are preserved."
 		actions.add_child(skip_count)
-		var skip_button := UI.button("DEV: Skip Sols", func(): session.transition_sol(func():
+		var skip_button := UI.button("DEV: Skip Earth days", func(): session.transition_sol(func():
 			if _modal_visible(): return
 			if session.developer_skip_sols(int(skip_count.value)):
-				notice.text = "DEV: jumped to Sol %d. No supplies consumed or objectives completed. Pending decisions remain." % session.dashboard_state.sol
+				notice.text = "DEV: jumped to Earth day %d. No supplies consumed or objectives completed. Pending decisions remain." % session.dashboard_state.sol
 			else:
-				notice.text = "DEV skip unavailable: return rover to outpost and stop control. Mission must be active; final Sol uses Run the sol."))
+				notice.text = "DEV skip unavailable: return rover to outpost and stop control. Mission must be active; final Earth day uses Rest / maintain base (24h)."))
 		skip_button.name = "DeveloperSkipSols"
 		actions.add_child(skip_button)
 		var mission_choice := OptionButton.new()
@@ -90,7 +90,7 @@ func _ready() -> void:
 			else:
 				notice.text = "Return to outpost and stop rover control first. Reset the campaign if it has ended."))
 		select_mission.name = "DeveloperSelectRoverMission"
-		select_mission.tooltip_text = "Testing override: replaces rover mission progress and advances to its unlock Sol."
+		select_mission.tooltip_text = "Testing override: replaces rover mission progress and advances to its unlock Earth day."
 		actions.add_child(select_mission)
 	event_button = UI.button("Review decision", open_pending_event)
 	actions.add_child(event_button)
@@ -192,25 +192,25 @@ func refresh() -> void:
 		readings.modulate = Color.WHITE
 	heading.text = str(world.site_record.get("name", "Lunar outpost"))
 	if state == null:
-		status.text = "READY / Start a 7-sol mission at this site."
+		status.text = "READY / Start exploring this site."
 		for key in values:
 			values[key].text = key + " / Awaiting mission"
 		run_button.text = "Start mission"
 		run_button.disabled = _modal_visible()
 		event_button.disabled = true
 		return
-	heading.text += " · SOL %02d / %d" % [state.sol, state.mission_length_sols]
+	heading.text += " · " + session.elapsed_time_label()
 	var terminal: bool = state.mission_outcome.get("status", "") != "in_progress"
-	status.text = "MISSION " + str(state.mission_outcome.status).to_upper() if terminal else ("DECISION REQUIRED / Resolve before the next sol" if not state.pending_events.is_empty() else "MISSION ACTIVE / Ready for the next sol")
+	status.text = "MISSION " + str(state.mission_outcome.status).to_upper() if terminal else ("DECISION REQUIRED / Resolve before the next Earth day" if not state.pending_events.is_empty() else "MISSION ACTIVE / Ready for the next Earth day")
 	if terminal and state.mission_outcome.status == "failure":
 		status.text += " / " + str(state.mission_outcome.get("failure_reason", "")).replace("_", " ")
-	values.Energy.text = "Energy %.2f kWh · %+.2f last sol" % [state.power_kwh, state.power_balance_kwh]
+	values.Energy.text = "Energy %.2f kWh · %+.2f last Earth day" % [state.power_kwh, state.power_balance_kwh]
 	values.Water.text = "Water %.2f L · %s" % [state.water_l, state.life_support_status.get("water", "unavailable")]
 	values.Oxygen.text = "Oxygen %.2f kg · %s" % [state.oxygen_kg, state.life_support_status.get("oxygen", "unavailable")]
 	values.Food.text = "Food %.2f kg · %s" % [state.food_kg, state.life_support_status.get("food", "unavailable")]
 	values.Dose.text = "Dose %.3f mSv · modeled" % state.radiation_msv
 	values.Materials.text = "Materials %.1f units" % state.materials
-	run_button.text = "Run the sol"
+	run_button.text = "Rest / maintain base (24h)"
 	run_button.disabled = not session.can_advance() or _modal_visible()
 	event_button.disabled = terminal or state.pending_events.is_empty() or _modal_visible()
 	report_button.text = "View mission report" if terminal else "Mission dashboard"
@@ -236,7 +236,7 @@ func _advance_turn_now() -> void:
 			notice.text = "Mission data unavailable. Retry or open the dashboard to inspect the data."
 		return
 	if session.advance_mission():
-		notice.text = "Sol recorded. Readings and world indicators updated."
+		notice.text = "Earth day recorded. Readings and world indicators updated."
 		if not session.dashboard_state.pending_events.is_empty() and session.dashboard_state.mission_outcome.status == "in_progress":
 			open_pending_event()
 

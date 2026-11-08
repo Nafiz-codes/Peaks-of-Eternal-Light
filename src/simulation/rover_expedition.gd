@@ -7,10 +7,10 @@ static func fresh() -> Dictionary:
 	return {"completed": [], "mission": -1, "location": "outpost", "phase": "available",
 		"surveys": [], "samples": [], "discovered": false, "stabilized": false,
 		"relay": false, "crew_position": Vector3.ZERO, "route": PackedVector3Array(), "missing": false}
-static func assigned(d: Dictionary, sol: int) -> int:
-	if d.mission >= 0: return d.mission if sol >= SOLS[d.mission] else -1
+static func assigned(d: Dictionary, _sol: int = 0) -> int:
+	if d.mission >= 0: return d.mission
 	for i in range(3):
-		if sol >= SOLS[i] and not d.completed.has(i): return i
+		if not d.completed.has(i): return i
 	return -1
 static func migrate(training: Dictionary) -> Dictionary:
 	var d := fresh()

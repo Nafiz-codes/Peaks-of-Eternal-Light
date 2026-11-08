@@ -25,24 +25,24 @@ static func build(id: String, state: Variant, catalog: Array = []) -> Dictionary
 		report.update = "Ready when you are, Commander. Start the mission to receive my first operational report."
 	else:
 		report.terminal = state.mission_outcome.get("status", "") != "in_progress"
-		report.status = "Sol %02d / %d · %s" % [state.sol, state.mission_length_sols, str(state.mission_outcome.get("status", "")).replace("_", " ")]
+		report.status = "Resource report %02d · %s" % [state.sol, str(state.mission_outcome.get("status", "")).replace("_", " ")]
 		match id:
 			"power_console":
-				report.update = "We have %.2f kWh in reserve. Last sol we generated %.2f kWh and used %.2f kWh, for a balance of %+.2f kWh." % [state.power_kwh, state.power_generated_kwh, state.power_consumed_kwh, state.power_balance_kwh]
+				report.update = "We have %.2f kWh in reserve. Last Earth day we generated %.2f kWh and used %.2f kWh, for a balance of %+.2f kWh." % [state.power_kwh, state.power_generated_kwh, state.power_consumed_kwh, state.power_balance_kwh]
 				if state.consecutive_power_depleted_sols > 0:
-					report.update += " Power has been depleted for %d consecutive sol(s). Two consecutive depleted sols end the mission." % state.consecutive_power_depleted_sols
+					report.update += " Power has been depleted for %d consecutive Earth day(s). Two consecutive depleted Earth days end the mission." % state.consecutive_power_depleted_sols
 				elif state.power_balance_kwh < 0:
-					report.update += " We used more than we generated last sol. Keep an eye on the reserve."
+					report.update += " We used more than we generated last Earth day. Keep an eye on the reserve."
 			"water_recycler":
-				report.update = "Our water reserve is %.2f L. Last sol the crew used %.2f L and we recovered %.2f L. Water status: %s." % [state.water_l, state.water_consumed_l, state.water_recovered_l, state.life_support_status.get("water", "unavailable")]
+				report.update = "Our water reserve is %.2f L. Last Earth day the crew used %.2f L and we recovered %.2f L. Water status: %s." % [state.water_l, state.water_consumed_l, state.water_recovered_l, state.life_support_status.get("water", "unavailable")]
 			"food_storage":
-				report.update = "We have %.2f kg of food. The crew consumed %.2f kg last sol. Food status: %s." % [state.food_kg, state.food_consumed_kg, state.life_support_status.get("food", "unavailable")]
+				report.update = "We have %.2f kg of food. The crew consumed %.2f kg last Earth day. Food status: %s." % [state.food_kg, state.food_consumed_kg, state.life_support_status.get("food", "unavailable")]
 			"crew_briefing":
 				report.update = "We have %d crew, %.2f kg of oxygen (%s), and average crew stress of %.2f. Accumulated modeled radiation dose is %.3f mSv. There are %d decisions awaiting your orders." % [state.crew_size, state.oxygen_kg, state.life_support_status.get("oxygen", "unavailable"), state.crew_stress_avg, state.radiation_msv, state.pending_events.size()]
 		if id == "food_storage":
 			report.update += "\nPower: %.2f kWh; water: %.2f L; oxygen: %.2f kg; crew stress: %.2f; modeled radiation: %.3f mSv." % [state.power_kwh, state.water_l, state.oxygen_kg, state.crew_stress_avg, state.radiation_msv]
 		if state.sol == 0:
-			report.update += " This is our initial inventory; no sol has run yet."
+			report.update += " This is our initial inventory; no Earth day has run yet."
 		if report.terminal:
 			report.update += " The mission has ended. Review the mission report for the final outcome."
 			if state.mission_outcome.get("status") == "failure":
@@ -58,7 +58,7 @@ static func build(id: String, state: Variant, catalog: Array = []) -> Dictionary
 					definition = event
 					break
 			if relevant(id, definition):
-				report.effects.append("%s · %d sol(s) remaining" % [str(active.get("event_id", "Effect")).replace("_", " "), int(active.get("remaining_sols", 0))])
+				report.effects.append("%s · %d Earth day(s) remaining" % [str(active.get("event_id", "Effect")).replace("_", " "), int(active.get("remaining_sols", 0))])
 	# Full displayed content identifies an update, including a new sol or decision.
 	report.signature = JSON.stringify([report.status, report.update, report.decisions, report.effects])
 	return report

@@ -17,6 +17,13 @@ func _run() -> void:
 		var rays := -light.global_basis.z.normalized()
 		check(rays.dot(direction.normalized()) < -0.99999, site_id + ": light rays travel away from the visible Sun")
 		check(direction.is_equal_approx(world.get_node("OrbitalMotion").observation.sun_direction), site_id + ": shader shares orbital Sun")
+		if site_id == "ridge_a":
+			var terrain = preload("res://src/world/expedition_terrain.gd")
+			# Arrival camera at three metres: the lower solar limb clears the eastern saddle.
+			var lower_limb := direction - Vector3.UP * sin(float(material.get_shader_parameter("sun_angular_radius")))
+			for distance in range(20, 421, 5):
+				var ray := Vector3(0, 3, 10) + lower_limb * float(distance)
+				check(ray.y > terrain.height_at(ray.x, ray.z), "Arrival basin has an unobstructed Sun at %dm" % distance)
 		# Project a ray from the top of a one-meter pole to a flat ground plane.
 		var shadow := Vector3.UP + rays / -rays.y
 		var toward_sun := Vector3(direction.x, 0, direction.z).normalized()

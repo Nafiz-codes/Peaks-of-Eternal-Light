@@ -13,7 +13,7 @@ func show_operation_error(code: String) -> void:
 	var messages := {
 		"lander_control_required": "Enter the lander and press R to drive the rover with WASD.",
 		"mission_not_ready": "Finish any pending decision, or start a new mission if this one has ended.",
-		"rover_range_exceeded": "No range remains for this trip. Close this panel and run the next sol before dispatching again.",
+		"rover_range_exceeded": "No range remains for this trip. Close this panel and run the next Earth day before dispatching again.",
 		"insufficient_power": "Not enough energy for this operation.",
 		"insufficient_materials": "Not enough materials for this structure.",
 		"structure_already_started": "This structure is already queued or completed."
@@ -64,7 +64,7 @@ func open_operations(kind: String, state: Variant, contract: Dictionary, invoker
 			var card := UI.panel(content)
 			card.add_child(UI.label(str(structure.get("name", id)), 19))
 			var cost: Dictionary = structure.get("build_cost", {})
-			card.add_child(UI.label("Materials: %s units · Energy: %s kWh · Build time: %s sols" % [cost.get("materials", "Unavailable"), cost.get("power", "Unavailable"), structure.get("build_time_sols", "Unavailable")], 14, UI.BLUE))
+			card.add_child(UI.label("Materials: %s units · Energy: %s kWh · Build time: %s Earth days" % [cost.get("materials", "Unavailable"), cost.get("power", "Unavailable"), structure.get("build_time_sols", "Unavailable")], 14, UI.BLUE))
 			card.add_child(UI.label(str(structure.get("effect", "Effect description unavailable.")), 14))
 			var built: bool = state != null and state.built_structures.has(id)
 			var queued: bool = false if state == null else state.construction_queue.any(func(job): return str(job.get("structure_id", "")) == id)
@@ -80,7 +80,7 @@ func open_operations(kind: String, state: Variant, contract: Dictionary, invoker
 					hide()))
 	else:
 		var rover: Dictionary = contract.get("vehicles", {}).get("rover", {})
-		content.add_child(UI.label("Travel energy: %s kWh/km\nDistance cap: %s km/sol\nDiscovery chance: %s%% per new km" % [rover.get("move_cost_power_per_km", "Unavailable"), rover.get("max_distance_per_sol_km", "Unavailable"), rover.get("discovery_chance_pct_per_km", "Unavailable")]))
+		content.add_child(UI.label("Travel energy: %s kWh/km\nDistance cap: %s km/Earth day\nDiscovery chance: %s%% per new km" % [rover.get("move_cost_power_per_km", "Unavailable"), rover.get("max_distance_per_sol_km", "Unavailable"), rover.get("discovery_chance_pct_per_km", "Unavailable")]))
 		content.add_child(UI.label("Last recorded action: " + ("None" if state == null or str(state.last_rover_action).is_empty() else str(state.last_rover_action)), 16, UI.BLUE))
 		content.add_child(UI.label("Prospect: " + ("No mission" if state == null else str(state.volatile_prospect_status)), 16))
 		content.add_child(UI.label("Rover control is available only inside the lander. Enter through its hatch, then press R for the remote camera. W/S drives forward or reverse, A/D steers, Space brakes, and R returns to the crew seat. Energy and range are charged for actual distance driven.", 14, UI.AMBER))

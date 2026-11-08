@@ -158,7 +158,7 @@ func _brief(key: String, fallback: String) -> String:
 func show_sites() -> void:
 	_new_page("sites", "Choose your landing site")
 	column.add_child(UI.label(_brief("opening", "Establish a lunar outpost and sustain your crew.")))
-	column.add_child(UI.label(_brief("primary_objective", "Sustain the crew through Sol 7."), 16, UI.PURPLE))
+	column.add_child(UI.label(_brief("primary_objective", "Sustain the crew through Earth day 7."), 16, UI.PURPLE))
 	column.add_child(UI.label(_brief("science_notice", "Hydrogen indicates resource potential, not guaranteed water."), 14, UI.MUTED))
 	sites_grid = GridContainer.new()
 	sites_grid.add_theme_constant_override("h_separation", 12)
@@ -188,7 +188,7 @@ func show_sites() -> void:
 		details.add_child(UI.label("South-pole study sites. Solar availability varies with date and the sampled terrain horizon; the displayed average is not guaranteed daylight. Local water-ice abundance remains unmeasured.", 14, UI.AMBER))
 		if not _valid_site(selected):
 			details.add_child(UI.label("Required numeric site data is missing. This site cannot start a mission.", 14, UI.AMBER))
-		column.add_child(UI.label("Power uses date-dependent NASA/JPL Sun distance, solar-disk visibility, and a NASA LOLA-derived local horizon. The displayed 30-day average is context; each sol uses its own modeled geometry. Construction costs and tracking-array capacity are gameplay values.", 14, UI.AMBER))
+		column.add_child(UI.label("Power uses date-dependent NASA/JPL Sun distance, solar-disk visibility, and a NASA LOLA-derived local horizon. The displayed 30-day average is context; each Earth day uses its own modeled geometry. Construction costs and tracking-array capacity are gameplay values.", 14, UI.AMBER))
 	start_button = UI.button("Establish outpost", start_mission, not _valid_site(selected))
 	column.add_child(start_button)
 	_add_previews()
@@ -258,10 +258,10 @@ func start_mission() -> void:
 func show_dashboard() -> void:
 	if state == null:
 		return
-	_new_page("dashboard", "%s / SOL %02d / %d" % [_site(state.site_id).get("name", state.site_id), state.sol, state.mission_length_sols])
+	_new_page("dashboard", "%s / Resource report %02d" % [_site(state.site_id).get("name", state.site_id), state.sol])
 	column.add_child(UI.label(str(state.mission_outcome.get("primary_objective", "Mission objective unavailable")), 16, UI.PURPLE))
 	_add_readings(column)
-	run_button = UI.button("Run the sol", advance_turn, not _can_advance())
+	run_button = UI.button("Rest / maintain base (24h)", advance_turn, not _can_advance())
 	column.add_child(run_button)
 	dashboard_grid = GridContainer.new()
 	dashboard_grid.add_theme_constant_override("h_separation", 16)
@@ -295,10 +295,10 @@ func show_dashboard() -> void:
 		review.pressed.connect(func(): event_dialog.open_preview(pending, review, true))
 		activity.add_child(review)
 	if state.sol > 0:
-		activity.add_child(UI.label("Last sol: energy generated %.2f kWh / consumed %.2f kWh / balance %+.2f kWh" % [state.power_generated_kwh, state.power_consumed_kwh, state.power_balance_kwh], 15))
+		activity.add_child(UI.label("Last Earth day: energy generated %.2f kWh / consumed %.2f kWh / balance %+.2f kWh" % [state.power_generated_kwh, state.power_consumed_kwh, state.power_balance_kwh], 15))
 		activity.add_child(UI.label("Water consumed %.2f L / recovered %.2f L · Radiation +%.3f mSv" % [state.water_consumed_l, state.water_recovered_l, state.radiation_this_sol_msv], 15))
 	if state.consecutive_power_depleted_sols > 0:
-		activity.add_child(UI.label("! Battery depleted for %d consecutive sol(s)." % state.consecutive_power_depleted_sols, 16, UI.AMBER))
+		activity.add_child(UI.label("! Battery depleted for %d consecutive Earth day(s)." % state.consecutive_power_depleted_sols, 16, UI.AMBER))
 	UI.disclosure(activity, "Active effects and decision record", preload("res://src/ui/mission_activity.gd").describe(state, simulator.events))
 	UI.disclosure(column, "Model assumptions and source status", _model_notes())
 	UI.disclosure(column, "Selected site provenance", _site_sources(_site(state.site_id)))
@@ -321,7 +321,7 @@ func _add_readings(parent: Node) -> void:
 			card.add_child(UI.label(str(entry[3]).to_upper(), 14, UI.BLUE if entry[3] == "nominal" else UI.AMBER))
 
 func _can_advance() -> bool:
-	return state != null and not busy and state.sol < state.mission_length_sols and state.mission_outcome.get("status", "") == "in_progress" and state.pending_events.is_empty() and not event_dialog.visible and not operations.visible and not restart_dialog.visible
+	return state != null and not busy and state.mission_outcome.get("status", "") == "in_progress" and state.pending_events.is_empty() and not event_dialog.visible and not operations.visible and not restart_dialog.visible
 
 func _resolve_event(event_id: String, choice_id: String) -> void:
 	if state == null or state.mission_outcome.get("status", "") != "in_progress":
@@ -348,13 +348,12 @@ func _advance_turn_now() -> void:
 	busy = true
 	if is_instance_valid(run_button):
 		run_button.disabled = true
-	last_tick = simulator.advance_sol(state)
-	state = last_tick.state
-	var session := get_node_or_null("/root/MissionSession")
-	if session != null:
-		session.set("dashboard_state", state)
-		session.set("dashboard_last_tick", last_tick)
-		session.capture_sol_checkpoint()
+	var session := get_node("/root/MissionSession")
+	if not session.advance_mission():
+		busy = false
+		return
+	last_tick = session.dashboard_last_tick
+	state = session.dashboard_state
 	if state.mission_outcome.get("status", "") in ["success", "failure"]:
 		show_report()
 	else:
@@ -396,12 +395,12 @@ func show_report() -> void:
 	else:
 		var outcome: Dictionary = state.mission_outcome
 		report.add_child(UI.label(str(outcome.get("status", "unavailable")).to_upper(), 26, UI.PURPLE))
-		report.add_child(UI.label("%s / Sol %d of %d" % [_site(state.site_id).get("name", state.site_id), state.sol, state.mission_length_sols]))
+		report.add_child(UI.label("%s / Resource report %d" % [_site(state.site_id).get("name", state.site_id), state.sol]))
 		if outcome.get("status", "") == "failure":
-			report.add_child(UI.label("Cause: %s / first recorded on Sol %d" % [str(outcome.get("failure_reason", "Unavailable")).replace("_", " "), outcome.get("failure_sol", 0)], 18, UI.AMBER))
+			report.add_child(UI.label("Cause: %s / first recorded on Earth day %d" % [str(outcome.get("failure_reason", "Unavailable")).replace("_", " "), outcome.get("failure_sol", 0)], 18, UI.AMBER))
 		report.add_child(UI.label(_report_guidance(outcome), 15, UI.MUTED))
 		var metrics: Dictionary = state.report_data
-		report.add_child(UI.label("Mission duration completed: %.0f%% / %d of %d sols" % [float(metrics.get("survival_pct", 0.0)), int(metrics.get("sols_survived", 0)), int(metrics.get("mission_length_sols", 0))], 16))
+		report.add_child(UI.label("Resource accounting: %d Earth days" % int(metrics.get("sols_survived", 0)), 16))
 		report.add_child(UI.label("Events resolved: %d / Total modeled dose: %.2f mSv / Prospect: %s" % [int(metrics.get("events_resolved", 0)), float(metrics.get("radiation_total_msv", 0.0)), str(metrics.get("volatile_prospect_status", "none"))], 15))
 		_add_readings(column)
 		var record := UI.panel(column)

@@ -220,7 +220,7 @@ func _sync() -> void:
 func _restore_crew() -> void:
 	if data.is_empty(): return
 	var was_away := follower.collision_layer == 1
-	data.missing = bound_state.sol >= 6 and not data.completed.has(2)
+	data.missing = Rules.assigned(data) == 2
 	if data.missing:
 		if data.crew_position == Vector3.ZERO: data.crew_position = Terrain.point(Vector2(65,255))
 		crew.global_position = data.crew_position
@@ -261,7 +261,7 @@ func _stand() -> void:
 func _update_circle_visibility() -> void:
 	var controlled: bool = driver.active and driver.power_state == driver.Power.READY and not transitioning
 	var available := not data.is_empty() and bound_state != null
-	departure.visible = controlled and available and data.location == "outpost" and Rules.assigned(data, bound_state.sol) >= 0
+	departure.visible = controlled and available and data.location == "outpost" and available_assignment() >= 0
 	extraction.visible = controlled and available and data.location == "expedition"
 
 func remote_ready() -> bool:
@@ -344,10 +344,10 @@ func _physics_process(delta: float) -> void:
 	driver.repair_label.visible = not driver.active and not cinematic_motion
 	motor.volume_db = move_toward(motor.volume_db,-28.0 if audible else -80.0,delta*35)
 	elapsed += delta
-	if last_sol != bound_state.sol:
-		last_sol = bound_state.sol
+	if last_sol != available_assignment():
+		last_sol = available_assignment()
 		_restore_crew()
-		var assignment := Rules.assigned(data,last_sol)
+		var assignment := available_assignment()
 		if assignment >= 0: feedback = "NEW OPERATION AVAILABLE — " + Rules.TITLES[assignment]
 	for id in droplets: droplets[id].position.y = 1.3 + sin(elapsed*1.7)*0.18
 	if not remote_ready():
@@ -470,7 +470,7 @@ func _check_circle(delta: float) -> void:
 	armed = false
 	dwell = 0
 	if data.location == "outpost":
-		var assignment := Rules.assigned(data,bound_state.sol)
+		var assignment := available_assignment()
 		if assignment < 0:
 			feedback = "NO ACTIVE ROVER EXPEDITION — Awaiting the next scheduled operation."
 			return
@@ -616,7 +616,7 @@ func _refresh_targets() -> void:
 		targets[id].visible = data.location == "expedition" and ((data.mission == 0 and not id.begins_with("ice") and id not in data.surveys) or (data.mission == 1 and id.begins_with("ice") and id not in data.samples))
 
 func _publish() -> void:
-	var assignment := Rules.assigned(data,bound_state.sol)
+	var assignment := available_assignment()
 	var title: String = "ROVER EXPEDITIONS" if assignment < 0 else Rules.TITLES[assignment]
 	var objective := "Drive to the violet departure circle. Stop at its center."
 	var details := "Sol 2: Surface Survey · Sol 4: Frozen Horizon\nSol 6: Lifeline"
@@ -646,7 +646,7 @@ func _publish() -> void:
 			details += "\nExtraction: %.0f m · bearing %.0f°" % [driver.position.distance_to(extraction.position),rad_to_deg(atan2(extraction.position.x-driver.position.x,extraction.position.z-driver.position.z))]
 		prompt += "\nEnter: suspend expedition and recover rover."
 	if bound_state.rover_health <= 0: prompt = "Enter: recover disabled rover to outpost for repair."
-	hud_changed.emit({"visible":driver.active and driver.power_state == driver.Power.READY and not transitioning,"title":title,"objective":objective,"telemetry":"SOL %d · HEADING %.0f° · LINK CONNECTED" % [bound_state.sol,rad_to_deg(driver.heading)],"detail":details,"prompt":prompt,"progress":busy_elapsed/6 if busy_id != "" else scanner.progress/scanner.duration,"result":feedback,"navigation":_navigation()})
+	hud_changed.emit({"visible":driver.active and driver.power_state == driver.Power.READY and not transitioning,"title":title,"objective":objective,"telemetry":"HEADING %.0f° · LINK CONNECTED" % rad_to_deg(driver.heading),"detail":details,"prompt":prompt,"progress":busy_elapsed/6 if busy_id != "" else scanner.progress/scanner.duration,"result":feedback,"navigation":_navigation()})
 
 func _navigation() -> Dictionary:
 	if data.location != "expedition": return {}
@@ -685,3 +685,8 @@ func _tone(frequency: float) -> void:
 	stream.data = bytes
 	sound.stream = stream
 	sound.play()
+
+func available_assignment() -> int:
+	if data.is_empty(): return -1
+	if data.mission < 0 and data.completed.is_empty() and not session.construction_ready(): return -1
+	return Rules.assigned(data)

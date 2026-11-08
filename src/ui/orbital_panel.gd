@@ -22,7 +22,7 @@ func _ready() -> void:
 	pause.toggled.connect(func(value: bool): motion.set_paused(value))
 	content.add_child(pause)
 	var explanation := Label.new()
-	explanation.text = "Moon rotation and orbit: 27.3217 Earth days\nEarth orbit: approximately 365.256 Earth days\nEarth rotation: 23 h 56 m 4 s\n\nThe Moon travels around the Sun with Earth. Tidal locking keeps\nEarth near the same place in the lunar sky. Watch the Sun and\nEarth’s phase change as time passes.\n\nSun/Earth positions use NASA/JPL Horizons DE441 samples with linear interpolation; lunar orientation uses an IAU model. Sizes are exaggerated for visibility.\nDuring missions the sky follows manual Sol progression.\nOne game Sol represents one modeled Earth day; physics is unchanged."
+	explanation.text = "Moon rotation and orbit: 27.3217 Earth days\nEarth orbit: approximately 365.256 Earth days\nEarth rotation: 23 h 56 m 4 s\n\nThe Moon travels around the Sun with Earth. Tidal locking keeps\nEarth near the same place in the lunar sky. Watch the Sun and\nEarth’s phase change as time passes.\n\nSun/Earth positions use NASA/JPL Horizons DE441 samples with linear interpolation; lunar orientation uses an IAU model. Sizes are exaggerated for visibility.\nThe sky advances continuously in Earth time.\nResting advances the world and resource accounting by 24 hours."
 	content.add_child(explanation)
 
 func open_orbits(controller: Node) -> void:
@@ -30,12 +30,12 @@ func open_orbits(controller: Node) -> void:
 	var campaign: bool = motion.session.dashboard_state != null
 	speed.disabled = campaign
 	pause.disabled = campaign
-	speed.tooltip_text = "During a mission, the sky follows manual Sol progression (one modeled Earth day per Sol)."
+	speed.tooltip_text = "During missions, real-time astronomy and 24-hour rest share the world clock."
 	speed.select(Model.SPEEDS.find(motion.session.orbital_clock.time_scale))
 	pause.set_pressed_no_signal(motion.session.orbital_clock.paused)
 	popup_centered()
 
 func _process(_delta: float) -> void:
 	if visible and is_instance_valid(motion):
-		timestamp.text = motion.timestamp() + ("\nSynchronized to mission Sol %d / %d" % [motion.session.dashboard_state.sol, motion.session.dashboard_state.mission_length_sols] if motion.session.dashboard_state != null else "")
+		timestamp.text = motion.timestamp() + ("\nContinuous world clock" if motion.session.dashboard_state != null else "")
 		pause.set_pressed_no_signal(motion.session.orbital_clock.paused)

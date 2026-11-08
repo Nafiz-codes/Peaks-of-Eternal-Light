@@ -91,7 +91,7 @@ func begin_mission(selected_site_id: String, mission_length: int = 7) -> Variant
 func advance_sol(state: Variant) -> Dictionary:
 	assert(state != null, "A MissionState is required.")
 	assert(state.pending_events.is_empty(), "Resolve pending event decisions before advancing the mission.")
-	assert(state.sol < state.mission_length_sols, "The mission has already ended.")
+
 
 	state.sol += 1
 	state.rover_distance_this_sol_km = 0.0
@@ -126,7 +126,7 @@ func advance_sol(state: Variant) -> Dictionary:
 	state.history.append(state.snapshot())
 	return {
 		"state": state,
-		"completed": state.sol >= state.mission_length_sols,
+		"completed": false,
 		"power": power_tick,
 		"radiation": {
 			"dose_this_sol_msv": state.radiation_this_sol_msv,
@@ -498,7 +498,7 @@ func _evaluate_mission_outcome(state: Variant) -> Dictionary:
 	var failure_sol := int(existing_outcome.get("failure_sol", 0))
 	if not failure_reason.is_empty() and failure_sol == 0:
 		failure_sol = state.sol
-	var mission_finished: bool = state.sol >= state.mission_length_sols
+	var mission_finished := false
 	var status := "in_progress"
 	if not failure_reason.is_empty():
 		status = "failure"
@@ -509,7 +509,7 @@ func _evaluate_mission_outcome(state: Variant) -> Dictionary:
 		"mission_finished": mission_finished,
 		"failure_reason": failure_reason,
 		"failure_sol": failure_sol,
-		"primary_objective": "Sustain the crew through Sol %d." % state.mission_length_sols
+		"primary_objective": "Explore the Moon and support the crew."
 	}
 
 

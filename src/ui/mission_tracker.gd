@@ -53,7 +53,7 @@ func _process(_delta: float) -> void:
 		detail.text = ""
 		return
 	var objective: String = str(state.mission_outcome.get("primary_objective", ""))
-	var instruction := "Sol %d / %d" % [state.sol, state.mission_length_sols]
+	var instruction: String = session.elapsed_time_label()
 	var destination: Variant = null
 	var player: Node3D = world.get_node("Outpost/Astronaut")
 	var observer: Node3D = expeditions.driver if expeditions.driver.active else player
@@ -64,8 +64,11 @@ func _process(_delta: float) -> void:
 		objective = "Talk with Maya"
 		instruction = "Press E when Maya is nearby."
 		destination = world.get_node("Outpost/crew_briefing").global_position
+	elif not session.construction_ready() and expeditions.data.get("completed", []).is_empty() and expeditions.data.get("mission", -1) < 0:
+		objective = "Build the solar panel and three crew stations"
+		instruction = "Press B to open construction."
 	elif not expeditions.data.is_empty():
-		var assignment: int = expeditions.Rules.assigned(expeditions.data, state.sol)
+		var assignment: int = expeditions.available_assignment()
 		if assignment >= 0:
 			objective = expeditions.Rules.TITLES[assignment]
 			instruction = str(expedition_view.get("objective", ""))

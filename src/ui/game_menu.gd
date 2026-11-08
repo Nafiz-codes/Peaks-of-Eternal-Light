@@ -217,7 +217,7 @@ func _home() -> void:
 	if state == null:
 		body.add_child(UI.label("Exploration · Mission not started", 17, UI.MUTED))
 	else:
-		body.add_child(UI.label("SOL %02d / %d   ·   %s" % [state.sol, state.mission_length_sols, str(state.mission_outcome.get("status", "")).replace("_", " ").to_upper()], 18, UI.PURPLE))
+		body.add_child(UI.label("Resource report %02d   ·   %s" % [state.sol, str(state.mission_outcome.get("status", "")).replace("_", " ").to_upper()], 18, UI.PURPLE))
 		var cards := GridContainer.new()
 		cards.columns = 2
 		cards.add_theme_constant_override("h_separation", 12)
@@ -234,8 +234,8 @@ func _home() -> void:
 	actions.add_theme_constant_override("h_separation", 12)
 	actions.add_theme_constant_override("v_separation", 8)
 	body.add_child(actions)
-	actions.add_child(UI.button("Restart current sol", func(): confirm("Restart this sol?", "Restore the start of this sol, before its decisions and actions. Later changes will be lost. Saved slots are kept.", _restart_sol), session.sol_checkpoint.is_empty()))
-	actions.add_child(UI.button("Restart mission", func(): confirm("Restart the mission?", "Start again at Sol 0 at this outpost. Current progress will be lost. Saved slots are kept.", _restart_mission), state == null))
+	actions.add_child(UI.button("Restore checkpoint", func(): confirm("Restore checkpoint?", "Restore the start of this Earth day, before its decisions and actions. Later changes will be lost. Saved slots are kept.", _restart_sol), session.sol_checkpoint.is_empty()))
+	actions.add_child(UI.button("Restart mission", func(): confirm("Restart the mission?", "Start again at Earth day 0 at this outpost. Current progress will be lost. Saved slots are kept.", _restart_mission), state == null))
 	actions.add_child(UI.button("Landing site selection", func(): confirm("Return to landing sites?", "Your current mission stays in memory until another site is selected. Save first to keep a copy across restarts.", _landing)))
 	actions.add_child(UI.button("Quit to desktop", func(): confirm("Quit the game?", "Unsaved progress will be lost. You can cancel and save from Save & load.", func(): get_tree().quit())))
 	for button in actions.get_children():
@@ -275,8 +275,8 @@ func _objectives() -> void:
 		body.add_child(UI.label("Choose an outpost and start the mission from the dashboard or the Alt mission panel.", 18))
 		return
 	body.add_child(UI.label(str(state.mission_outcome.get("primary_objective", "Sustain the crew.")), 23, UI.BLUE))
-	body.add_child(UI.label("Progress: Sol %d of %d" % [state.sol, state.mission_length_sols], 18))
-	for entry in [["Water", state.water_l > 0], ["Oxygen", state.oxygen_kg > 0], ["Food", state.food_kg > 0], ["Avoid two consecutive sols without power", state.consecutive_power_depleted_sols < 2], ["Resolve pending decisions", state.pending_events.is_empty()]]:
+	body.add_child(UI.label(session.elapsed_time_label(), 18))
+	for entry in [["Water", state.water_l > 0], ["Oxygen", state.oxygen_kg > 0], ["Food", state.food_kg > 0], ["Avoid two consecutive Earth days without power", state.consecutive_power_depleted_sols < 2], ["Resolve pending decisions", state.pending_events.is_empty()]]:
 		body.add_child(UI.label(("✓ " if entry[1] else "! ") + entry[0], 17, UI.TEXT if entry[1] else UI.AMBER))
 	body.add_child(UI.label("Outcome: " + str(state.mission_outcome.get("status", "in_progress")).replace("_", " "), 18, UI.PURPLE))
 	if state.mission_outcome.get("status") == "failure":
@@ -288,7 +288,7 @@ func slot_path(index: int) -> String:
 
 func _saves() -> void:
 	heading.text = "SAVE & LOAD"
-	body.add_child(UI.label("Three local slots · includes mission history, decisions, camera position, and the current-sol checkpoint.", 16, UI.MUTED))
+	body.add_child(UI.label("Three local slots · includes mission history, decisions, camera position, and the current-Earth day checkpoint.", 16, UI.MUTED))
 	for index in range(1, 4):
 		var path := slot_path(index)
 		var data := Save.read_file(path)
@@ -296,7 +296,7 @@ func _saves() -> void:
 		var card := UI.panel(body)
 		var detail := "Empty"
 		if FileAccess.file_exists(path):
-			detail = "%s · Sol %s · %s" % [data.get("site_id", ""), data.get("state", {}).get("sol", "exploration"), data.get("saved_at", "")] if valid else "Unreadable or incompatible save"
+			detail = "%s · Earth day %s · %s" % [data.get("site_id", ""), data.get("state", {}).get("sol", "exploration"), data.get("saved_at", "")] if valid else "Unreadable or incompatible save"
 		card.add_child(UI.label("SLOT %d  /  %s" % [index, detail], 16, UI.BLUE))
 		var buttons := HBoxContainer.new()
 		card.add_child(buttons)
@@ -380,13 +380,13 @@ func _help() -> void:
 	for step in copy.tutorial_steps:
 		body.add_child(UI.label(step.title, 19))
 		body.add_child(UI.label(step.body, 16, UI.MUTED))
-	body.add_child(UI.label("Queue structures in Construction planning. Drive the rover from inside the lander with R and WASD. Advance the mission with Run the sol; resolve pending decisions before continuing.", 16, UI.AMBER))
+	body.add_child(UI.label("Queue structures in Construction planning. Drive the rover from inside the lander with R and WASD. Advance the mission with Rest / maintain base (24h); resolve pending decisions before continuing.", 16, UI.AMBER))
 
 func _science() -> void:
 	heading.text = "SCIENCE & SOURCES"
 	body.add_child(UI.label("NASA data and game assumptions", 22, UI.BLUE))
 	body.add_child(UI.label("LOLA elevation comes from 5 m regional polar DEMs; slope is a derived estimate, not a verified slope measurement or landing-pad survey. Solar visibility uses NASA/JPL Horizons geometry and a regional NASA LOLA-derived terrain horizon. Local hydrogen is unmeasured at these study coordinates. Radiation uses a NASA model with a gameplay terrain modifier; water recycling uses an ISS proxy.", 16))
-	body.add_child(UI.label("The visible Sun and Earth use NASA/JPL Horizons DE441 positions with linear interpolation and an enlarged Earth for visibility. During a mission the sky advances one modeled Earth day per sol. Solar power uses date-dependent Sun distance, solar-disk visibility, and a NASA LOLA-derived local horizon; tracking-array capacity is a gameplay rating, while the hand-placed solar panel is rated from NASA total solar irradiance (1361 W/m²) and NASA's 30% nominal space solar cell efficiency. Suits, structures, terrain, starting reserves, and event choices include authored game content.", 16, UI.MUTED))
+	body.add_child(UI.label("The visible Sun and Earth use NASA/JPL Horizons DE441 positions with linear interpolation and an enlarged Earth for visibility. The sky advances continuously; resting advances it by 24 Earth hours. Solar power uses date-dependent Sun distance, solar-disk visibility, and a NASA LOLA-derived local horizon; tracking-array capacity is a gameplay rating, while the hand-placed solar panel is rated from NASA total solar irradiance (1361 W/m²) and NASA's 30% nominal space solar cell efficiency. Suits, structures, terrain, starting reserves, and event choices include authored game content.", 16, UI.MUTED))
 	var registry: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/data_sources.json"))
 	for source in registry.sources:
 		var url: String = source.get("landing_page", source.get("url", ""))
@@ -421,7 +421,7 @@ func _restart_sol_now() -> void:
 	if session.restart_current_sol() == OK:
 		_go_to(OUTPOST)
 	else:
-		notice.text = "No start-of-sol checkpoint is available."
+		notice.text = "No start-of-Earth day checkpoint is available."
 		show_page("home")
 
 func _restart_mission() -> void:

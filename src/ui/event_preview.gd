@@ -45,7 +45,7 @@ func open_preview(event: Dictionary, invoker: Control = null, live: bool = false
 	for child in content.get_children():
 		content.remove_child(child)
 		child.queue_free()
-	content.add_child(UI.label("MISSION DECISION / Sol progression waits for your choice" if live else "LAYOUT PREVIEW / No mission effect will be applied", 14, UI.AMBER))
+	content.add_child(UI.label("MISSION DECISION / Earth day progression waits for your choice" if live else "LAYOUT PREVIEW / No mission effect will be applied", 14, UI.AMBER))
 	content.add_child(UI.label(str(event.get("category", "notification")).to_upper(), 16, UI.PURPLE))
 	content.add_child(UI.label(str(event.get("text", "No event text supplied.")), 20))
 	var choices: Variant = event.get("choices")
