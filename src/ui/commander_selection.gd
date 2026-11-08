@@ -164,6 +164,8 @@ func _build_modal() -> void:
 	material.shader = shader
 	blur.material = material
 	dialog = Panel.new()
+	dialog.theme = Theme.new()
+	dialog.theme.default_font = preload("res://Assets/fonts/corpta-demo.regular.otf")
 	dialog.add_theme_stylebox_override("panel", UI.style(Color("101a29"), Color("607b96")))
 	modal.add_child(dialog)
 	var title := UI.label("Enter Name", 30)

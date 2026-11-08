@@ -126,7 +126,22 @@ func _build() -> void:
 			if index == 1:
 				text.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 			text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			credit.add_child(text)
+			if index == 1 and entry[index] == "NASA Space Apps Challenge 2026":
+				text.text = "NASA Space Apps Challenge"
+				var title_row := HBoxContainer.new()
+				title_row.alignment = BoxContainer.ALIGNMENT_CENTER
+				title_row.add_theme_constant_override("separation", 12)
+				credit.add_child(title_row)
+				title_row.add_child(text)
+				var year := _label("2026", 36, Color("e2edf6"))
+				# The demo font lacks numerals; explicitly embolden the fallback digits.
+				var bold_digits := FontVariation.new()
+				bold_digits.base_font = ThemeDB.fallback_font
+				bold_digits.variation_embolden = 1.2
+				year.add_theme_font_override("font", bold_digits)
+				title_row.add_child(year)
+			else:
+				credit.add_child(text)
 		credit.modulate.a = 0.0
 		credits.append(credit)
 	skip = Button.new()
