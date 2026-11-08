@@ -26,7 +26,7 @@ func _ready() -> void:
 	settings = get_node("/root/GameSettings")
 	overlay = Control.new()
 	var menu_theme := Theme.new()
-	menu_theme.default_font = preload("res://Assets/fonts/corpta-demo.regular.otf")
+	menu_theme.default_font = preload("res://Assets/fonts/Request.otf")
 	overlay.theme = menu_theme
 	add_child(overlay)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
