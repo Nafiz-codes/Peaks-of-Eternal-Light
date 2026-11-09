@@ -402,6 +402,7 @@ func _physics_process(delta: float) -> void:
 	if not remote_ready():
 		scanner.reset()
 		busy_id = ""
+		busy_elapsed = 0
 		arm.pose(0)
 		_publish()
 		return
@@ -415,9 +416,14 @@ func _physics_process(delta: float) -> void:
 				_tone(900)
 				_refresh_targets()
 				session.capture_sol_checkpoint()
-		elif data.mission == 1 and busy_id != "":
-			if scanner.validate(driver,targets[busy_id]) != "":
+		elif data.mission == 1:
+			if busy_id == "" and Input.is_physical_key_pressed(KEY_E):
+				handle_key(KEY_E)
+			if busy_id == "":
+				busy_elapsed = 0
+			elif not Input.is_physical_key_pressed(KEY_E) or driver.position.distance_to(targets[busy_id].position) > 2.7 or scanner.validate(driver,targets[busy_id]) != "":
 				busy_id = ""
+				busy_elapsed = 0
 				arm.pose(0)
 			else:
 				busy_elapsed += delta
@@ -679,7 +685,7 @@ func _publish() -> void:
 		elif data.mission == 1:
 			objective = "Investigate subsurface ice-bearing regolith."
 			details = "Potential ice deposits sampled: %d / 3\nInspect the shadowed regolith. L: headlights." % data.samples.size()
-			prompt = "Brake, face a droplet within 2.5 m, press E to sample."
+			prompt = "Brake, face a droplet within 2.5 m, hold E to extract."
 		else:
 			objective = "Search beyond the eastern saddle for the missing crew member."
 			details = "Crew: Commander, Alex, Sam accounted for; Maya missing.\nCritical oxygen — locate and assist the astronaut."
@@ -695,7 +701,16 @@ func _publish() -> void:
 			details += "\nExtraction: %.0f m · bearing %.0f°" % [driver.position.distance_to(extraction.position),rad_to_deg(atan2(extraction.position.x-driver.position.x,extraction.position.z-driver.position.z))]
 		prompt += "\nEnter: suspend expedition and recover rover."
 	if bound_state.rover_health <= 0: prompt = "Enter: recover disabled rover to outpost for repair."
-	hud_changed.emit({"visible":driver.active and driver.power_state == driver.Power.READY and not transitioning,"title":title,"objective":objective,"telemetry":"HEADING %.0f° · LINK CONNECTED" % rad_to_deg(driver.heading),"detail":details,"prompt":prompt,"progress":busy_elapsed/6 if busy_id != "" else scanner.progress/scanner.duration,"result":feedback,"navigation":_navigation()})
+	var extract_nearby := false
+	var extract_hint := "Hold E to scan"
+	if data.location == "expedition" and data.mission == 1:
+		var ice_id := _nearest(true)
+		if ice_id != "" and driver.position.distance_to(targets[ice_id].position) <= 3.0:
+			extract_nearby = true
+			extract_hint = "Hold E to extract"
+			var rejection: String = scanner.validate(driver, targets[ice_id])
+			if rejection != "": extract_hint += "\n" + rejection
+	hud_changed.emit({"extract_nearby":extract_nearby,"extract_hint":extract_hint,"visible":driver.active and driver.power_state == driver.Power.READY and not transitioning,"title":title,"objective":objective,"telemetry":"HEADING %.0f° · LINK CONNECTED" % rad_to_deg(driver.heading),"detail":details,"prompt":prompt,"progress":busy_elapsed/6 if busy_id != "" else scanner.progress/scanner.duration,"result":feedback,"navigation":_navigation()})
 
 func _navigation() -> Dictionary:
 	if data.location != "expedition": return {}

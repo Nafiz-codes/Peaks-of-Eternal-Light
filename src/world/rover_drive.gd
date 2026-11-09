@@ -51,21 +51,26 @@ func _ready() -> void:
 	overlay.layer = 85
 	add_child(overlay)
 	status = Label.new()
-	status.position = Vector2(20, 20)
-	status.add_theme_font_size_override("font_size", 22)
+	overlay.add_child(status)
+	status.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	status.offset_left = 20
+	status.offset_right = -20
+	status.offset_top = -78
+	status.offset_bottom = -12
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.add_theme_font_size_override("font_size", 13)
 	status.add_theme_color_override("font_outline_color", Color.BLACK)
 	status.add_theme_constant_override("outline_size", 8)
 	status.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay.add_child(status)
 	health_bar = ProgressBar.new()
 	health_bar.step = 0.0
-	health_bar.position = Vector2(20, 185)
+	health_bar.position = Vector2(22, 244)
 	health_bar.size = Vector2(280, 26)
 	health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.add_child(health_bar)
 	var health_title := Label.new()
 	health_title.text = "ROVER HEALTH"
-	health_title.position = Vector2(20, 160)
+	health_title.position = Vector2(22, 218)
 	health_title.add_theme_constant_override("outline_size", 6)
 	health_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.add_child(health_title)
@@ -342,7 +347,7 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 	_sync_visual(delta)
 	_update_camera_motion(delta, previous_speed, boost_held and throttle > 0.0, brake)
 	_update_camera()
-	status.text = "LANDER / ROVER REMOTE CAMERA\nW/S: drive · A/D: steer · Left Shift: 2× speed · Space: brake\nMouse: look around · R: return · Esc: pause\nSpeed %.2f m/s · Travel %.1f m" % [absf(speed), observed_state.rover_total_distance_km * 1000.0]
+	status.text = "W/S: drive · A/D: steer · Left Shift: 2× speed · Space: brake\nMouse: look · R: return · L: lights · Esc: pause · Enter: recover\nSpeed %.2f m/s · Travel %.1f m" % [absf(speed), observed_state.rover_total_distance_km * 1000.0]
 	publish_elapsed += delta
 	if publish_elapsed >= 0.25:
 		publish_elapsed = 0.0
@@ -375,6 +380,7 @@ func _sync_visual(delta: float) -> void:
 func _takeover_finished() -> void:
 	if active and power_state == Power.STARTING:
 		power_state = Power.READY
+		world.get_node("MissionHUD").help_hint.hide()
 		_update_camera()
 		camera.make_current()
 		overlay.show()

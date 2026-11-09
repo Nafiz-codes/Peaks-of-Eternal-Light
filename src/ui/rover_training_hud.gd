@@ -8,6 +8,8 @@ var prompt: Label
 var progress: ProgressBar
 var result: Label
 var waypoint: Label
+var extraction_popup: VBoxContainer
+var extraction_prompt: Label
 
 func _ready() -> void:
 	layer = 86
@@ -55,6 +57,26 @@ func _ready() -> void:
 	column.add_child(progress)
 	prompt = _label(column, 16, Color("ffd18a"))
 	result = _label(column, 18, Color("83e8ef"))
+	panel.hide()
+	result.reparent(root)
+	result.position = Vector2(22, 290)
+	result.size.x = 360
+	result.add_theme_font_size_override("font_size", 14)
+	result.add_theme_color_override("font_outline_color", Color.BLACK)
+	result.add_theme_constant_override("outline_size", 6)
+	extraction_popup = VBoxContainer.new()
+	root.add_child(extraction_popup)
+	extraction_popup.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	extraction_popup.offset_left = -180
+	extraction_popup.offset_right = 180
+	extraction_popup.offset_top = -160
+	extraction_popup.offset_bottom = -90
+	extraction_popup.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	extraction_prompt = _label(extraction_popup, 18, Color.WHITE)
+	extraction_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	extraction_prompt.add_theme_color_override("font_outline_color", Color.BLACK)
+	extraction_prompt.add_theme_constant_override("outline_size", 6)
+	progress.reparent(extraction_popup)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	hide()
@@ -83,6 +105,8 @@ func render(view: Dictionary) -> void:
 	detail.text = view.detail
 	prompt.text = view.prompt
 	progress.value = view.progress * 100.0
+	extraction_popup.visible = view.get("extract_nearby", false) or view.progress > 0.0
+	extraction_prompt.text = view.get("extract_hint", "Hold E to scan")
 	progress.visible = view.progress > 0.0
 	result.text = view.result
 	var navigation: Dictionary = view.get("navigation", {})

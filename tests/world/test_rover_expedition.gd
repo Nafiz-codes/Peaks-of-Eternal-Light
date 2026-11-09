@@ -118,6 +118,12 @@ func run():
 		elif mission == 1:
 			for id in ["ice_a","ice_b","ice_c"]:
 				await position_for(id)
+				var hold := InputEventKey.new()
+				hold.keycode = KEY_E
+				hold.physical_keycode = KEY_E
+				hold.pressed = true
+				Input.parse_input_event(hold)
+				Input.flush_buffered_events()
 				controller.handle_key(KEY_E)
 				check(controller.busy_id == id,"Sampling starts: "+id)
 				controller._physics_process(2)
@@ -143,6 +149,9 @@ func run():
 					driver.camera.global_transform = camera_pose
 				controller._physics_process(4.1)
 				check(id in controller.data.samples and not controller.targets[id].visible,"Sample committed and droplet hidden")
+				hold.pressed = false
+				Input.parse_input_event(hold)
+				Input.flush_buffered_events()
 		else:
 			check(controller.data.missing,"Stable crew identity missing")
 			check(not controller.targets.astronaut.marker.visible and not controller.targets.astronaut.caption.visible,"No exact astronaut marker")

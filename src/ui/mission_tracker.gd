@@ -38,6 +38,10 @@ func _label(font_size: int) -> Label:
 
 func _process(_delta: float) -> void:
 	marker.hide()
+	var rover_active: bool = expeditions.driver.active
+	title.size.x = 360 if rover_active else 410
+	detail.position = Vector2(22, maxf(76, title.position.y + title.size.y + 8)) if rover_active else Vector2(52, 60)
+	detail.size.x = 360
 	var state = session.dashboard_state
 	# Read only the authoritative campaign and expedition objectives.
 	if state == null:
@@ -72,6 +76,9 @@ func _process(_delta: float) -> void:
 				destination = navigation.get("destination")
 			else:
 				destination = expeditions.departure.global_position
+	if rover_active and not expedition_view.is_empty():
+		objective = str(expedition_view.get("title", objective))
+		instruction = str(expedition_view.get("objective", instruction))
 	title.text = "◆  " + objective
 	detail.text = instruction
 	if destination is Vector3:
