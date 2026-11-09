@@ -51,6 +51,10 @@ func run():
 	controller._publish()
 	await process_frame
 	await process_frame
+	controller.feedback = "NEW OPERATION AVAILABLE — OPERATION FROZEN HORIZON"
+	controller._publish()
+	await process_frame
+	await process_frame
 	driver.step_drive(0, 0, 0, true)
 	check(not driver.status.text.is_empty(), "Driving hints present")
 	if DisplayServer.get_name() != "headless":
@@ -80,7 +84,7 @@ func run():
 	await process_frame
 	await process_frame
 	var tracker = world.get_node("MissionTracker")
-	check(controller.hud.result.position.y > tracker.detail.position.y, "Status below objective")
+	check(controller.hud.result.position.y >= tracker.detail.position.y + tracker.detail.size.y + 12, "Status below full objective and distance block")
 	check(driver.health_title.position.y >= controller.hud.result.position.y + controller.hud.result.get_minimum_size().y, "Health below status without overlap")
 	print("Rover HUD / hold extraction failures: ", failures)
 	quit(failures)

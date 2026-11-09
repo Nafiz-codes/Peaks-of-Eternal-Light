@@ -54,6 +54,14 @@ func _ready() -> void:
 	progress = ProgressBar.new()
 	progress.custom_minimum_size.y = 16
 	progress.show_percentage = false
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color("b8e3f4")
+	fill.set_corner_radius_all(5)
+	progress.add_theme_stylebox_override("fill", fill)
+	var track := StyleBoxFlat.new()
+	track.bg_color = Color(0.12, 0.19, 0.24, 0.35)
+	track.set_corner_radius_all(5)
+	progress.add_theme_stylebox_override("background", track)
 	progress.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(progress)
 	prompt = _label(column, 16, Color("ffd18a"))
@@ -77,9 +85,9 @@ func _ready() -> void:
 	extraction_prompt.custom_minimum_size = Vector2(360, 48)
 	extraction_prompt.add_theme_font_size_override("font_size", 18)
 	var button_style := StyleBoxFlat.new()
-	button_style.bg_color = Color(0.02, 0.08, 0.12, 0.94)
+	button_style.bg_color = Color.TRANSPARENT
 	button_style.border_color = Color("65dce5")
-	button_style.set_border_width_all(1)
+	button_style.set_border_width_all(0)
 	button_style.set_corner_radius_all(4)
 	for state in ["normal", "hover", "pressed", "focus"]:
 		extraction_prompt.add_theme_stylebox_override(state, button_style)
