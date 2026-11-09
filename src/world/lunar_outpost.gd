@@ -134,7 +134,7 @@ func refresh_feedback() -> void:
 	var session := get_node("/root/MissionSession")
 	var state: Variant = session.dashboard_state
 	var catalog: Dictionary = {} if session.dashboard_simulator == null else session.dashboard_simulator.construction
-	construction_view.sync_completed({} if state == null else state.built_structures, catalog.get("structures", []))
+	construction_view.sync_completed({} if state == null else state.built_structures, catalog.get("structures", []), session.building_placements, [] if state == null else state.construction_queue)
 	_sync_rover_action(state, session.reduce_motion)
 	if session.reduce_motion:
 		rover_view.finish_immediately(get_node("Outpost/Rover"), get_node("RoverHull"))
@@ -187,6 +187,9 @@ func _set_station_hint(station: Node, near: bool) -> void:
 	var label := station.get_node_or_null("StatusLabel") as Label3D
 	if label == null or not label.has_meta("station_title"): return
 	label.text = str(label.get_meta("station_title")) + ("\nPress E" if near else "")
+	var name_label := label.get_node_or_null("CrewName") as Label3D
+	if name_label != null:
+		name_label.position.y = 0.36 if near else 0.18
 
 
 func toggle_overview() -> void:
@@ -473,6 +476,17 @@ func _add_interaction_station(parent: Node3D, interaction_id: String, label_text
 	label.position = Vector3(0.0, 2.15, 0.0)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	station.add_child(label)
+	var tag_lines := label_text.split("\n", false, 1)
+	if tag_lines.size() == 2:
+		var name_label := label.duplicate() as Label3D
+		name_label.name = "CrewName"
+		name_label.text = tag_lines[0]
+		name_label.font = tag_font(800)
+		name_label.position = Vector3(0.0, 0.18, 0.0)
+		label.add_child(name_label)
+		label.text = tag_lines[1]
+		label.set_meta("station_title", tag_lines[1])
+		label.font = tag_font(400)
 	var marker := Label3D.new()
 	marker.name = "UpdateMarker"
 	marker.text = "!"

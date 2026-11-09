@@ -39,6 +39,18 @@ func _sweep_exclusions() -> Array[RID]:
 	return sweep_excluded
 
 func clear_segment(from: Vector3, to: Vector3) -> bool:
+	# Check the terrain between waypoints as well as their endpoints.
+	var steps := maxi(1, ceili(from.distance_to(to) / 0.4))
+	var previous := from
+	var samples: Array[Vector3] = []
+	for index in range(steps + 1):
+		var hit := ground(from.lerp(to, float(index) / steps))
+		if hit.is_empty(): return false
+		var current: Vector3 = hit.position
+		var horizontal := Vector2(current.x - previous.x, current.z - previous.z).length()
+		if absf(current.y - previous.y) > maxf(0.12, horizontal * tan(deg_to_rad(25.0))): return false
+		samples.append(current)
+		previous = current
 	for crew_position in routing_crew:
 		if Geometry3D.get_closest_point_to_segment(crew_position, from, to).distance_to(crew_position) < 0.9: return false
 	if preview_obstacle is Transform3D:
@@ -53,14 +65,16 @@ func clear_segment(from: Vector3, to: Vector3) -> bool:
 	capsule.radius = 0.42
 	capsule.height = 1.6
 	query.shape = capsule
-	query.transform.origin = from + Vector3(0, 0.88, 0)
-	query.motion = to - from
 	query.exclude = _sweep_exclusions()
 	var space := world.get_world_3d().direct_space_state
-	if not space.intersect_shape(query, 1).is_empty():
-		return false
-	var sweep := space.cast_motion(query)
-	return sweep[0] >= 0.999
+	# Sweep along the grounded route, including obstacles on top of ridges.
+	for index in range(samples.size() - 1):
+		query.transform.origin = samples[index] + Vector3(0, 0.88, 0)
+		query.motion = samples[index + 1] - samples[index]
+		if not space.intersect_shape(query, 1).is_empty(): return false
+		var sweep := space.cast_motion(query)
+		if sweep[0] < 0.999: return false
+	return true
 
 func route(from: Vector3, to: Vector3) -> PackedVector3Array:
 	var start := ground(from)

@@ -10,6 +10,7 @@ var maya_intro_complete := false
 var crew_introductions: Dictionary = {}
 var solar_placement: Dictionary = {}
 var station_placements: Dictionary = {}
+var building_placements: Dictionary = {}
 var planning_draft: Dictionary = {}
 var approved_plan: Dictionary = {}
 signal mission_plan_approved(record: Dictionary)
@@ -55,6 +56,7 @@ func confirm_new_commander(appearance: String, player_name: String) -> bool:
 	crew_introductions = {}
 	solar_placement = {}
 	station_placements = {}
+	building_placements = {}
 	planning_draft = {}
 	approved_plan = {}
 	dashboard_simulator = null
@@ -257,6 +259,7 @@ func demolish_structure(structure_id: String) -> Dictionary:
 		return {"ok": false, "error": "mission_not_ready"}
 	var result: Dictionary = dashboard_simulator.demolish_structure(dashboard_state, structure_id)
 	if result.get("ok", false):
+		building_placements.erase(structure_id)
 		capture_sol_checkpoint()
 		state_changed.emit()
 	return result
@@ -281,6 +284,7 @@ func select_landing_site(site_id: String) -> void:
 		crew_introductions = {}
 		solar_placement = {}
 		station_placements = {}
+		building_placements = {}
 		planning_draft = {}
 		approved_plan = {}
 		crew_read_reports = {}

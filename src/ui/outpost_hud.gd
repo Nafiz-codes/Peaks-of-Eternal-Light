@@ -27,6 +27,7 @@ var orbital_panel: AcceptDialog
 
 func _ready() -> void:
 	name = "MissionHUD"
+	add_child(preload("res://src/ui/survival_bars.gd").new())
 	world = get_parent()
 	session = get_node("/root/MissionSession")
 	help_hint = UI.label("Alt: show resource details\nV: first / third person · Esc: pause menu", 15, UI.TEXT)

@@ -77,7 +77,7 @@ func run() -> void:
 	placement._refresh_menu()
 	await process_frame
 	check(placement.grid.get_child_count() == 9, "Every catalog structure has a grid card.")
-	check(enabled_ids(placement) == ["Solar Array", "Maya · Operations", "Alex · Science", "Sam · Engineering"], "The solar panel and three crew stations are available at first.")
+	check(enabled_ids(placement) == ["Solar Array", "Maya · Operations", "Alex · Science", "Sam · Engineering", "Habitat Extension", "Comms Relay"], "NASA previews are accessible before solar placement.")
 	check(placement.grid.get_child(0).get_child(0).get_child(0).get_child_count() == 1, "The solar panel card shows its model preview.")
 	check(placement.grid.get_child(4).get_child(0).get_child(0).get_child_count() == 0, "Structures without a model keep a blank picture.")
 	check(session.start_selected_mission() == OK, "Mission starts.")
@@ -102,7 +102,7 @@ func run() -> void:
 	session.dashboard_state.materials = 60.0
 	placement._refresh_menu()
 	await process_frame
-	check(enabled_ids(placement) == ["Maya · Operations", "Alex · Science", "Sam · Engineering", "Radiation Shielding Wall", "Comms Relay"], "Structures costing more materials than available are grayed out.")
+	check(enabled_ids(placement) == ["Maya · Operations", "Alex · Science", "Sam · Engineering", "Radiation Shielding Wall", "Habitat Extension", "Comms Relay"], "NASA previews stay accessible even with insufficient materials.")
 	check(placement.grid.get_child(5).modulate.a < 1.0, "Unaffordable cards are visibly grayed.")
 	session.dashboard_state.built_structures["comms_relay"] = 0
 	world.refresh_feedback()

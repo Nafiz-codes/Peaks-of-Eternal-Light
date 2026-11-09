@@ -38,13 +38,13 @@ func verify_facing(id: String, before: Vector3) -> void:
 	if travel.length_squared() < 0.000001:
 		return
 	moving_crew[id] = true
+	var floor_hit: Dictionary = field.route_service.ground(actor.position)
+	check(not floor_hit.is_empty() and actor.position.distance_to(floor_hit.position) < 0.01, "Moving NPC feet stay on terrain: " + id)
 	# The imported suit's +Z front is rotated 180 degrees by StationAstronaut.
 	var suit_front: Vector3 = actor.get_node("StationAstronaut").global_basis.z.normalized()
 	if suit_front.dot(travel.normalized()) < 0.99:
 		facing_failures += 1
-	var tool: Node3D = field.props[id]
-	if (tool.global_position - actor.global_position).dot(suit_front) <= 0.0:
-		facing_failures += 1
+
 
 func run() -> void:
 	session = root.get_node("MissionSession")
@@ -188,7 +188,7 @@ func run() -> void:
 	captured.state.erase("fieldwork")
 	check(not save.decode(captured).is_empty(), "Old saves without fieldwork remain compatible.")
 	check(moving_crew.size() == 3, "Facing verification covers all three existing NPCs in motion.")
-	check(facing_failures == 0, "Astronauts face their travel direction with tools in front on outbound, return and follow paths.")
+	check(facing_failures == 0, "Astronauts face their travel direction on outbound, return and follow paths.")
 	if "--capture" in OS.get_cmdline_user_args():
 		world.get_node("MissionHUD").inspect_station("crew_briefing")
 		await process_frame

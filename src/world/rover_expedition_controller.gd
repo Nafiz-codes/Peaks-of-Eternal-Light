@@ -229,7 +229,7 @@ func _restore_crew() -> void:
 		crew.get_node("CrewBody").collision_layer = 0
 		get_parent().get_node("CrewFieldwork")._release("crew_briefing")
 		crew.rotation = Vector3.ZERO
-		for node_name in ["StatusLabel","FieldworkLabel","FieldTool"]: crew.get_node(node_name).hide()
+		for node_name in ["StatusLabel","FieldworkLabel"]: crew.get_node(node_name).hide()
 		crew.get_node("InteractionArea").monitoring = false
 		if not data.stabilized and not seated:
 			crew_player.play("idle",0)

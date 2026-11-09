@@ -8,6 +8,8 @@ var default_homes: Dictionary = {}
 var route_checked_at := 0
 var route_transform := Transform3D.IDENTITY
 var route_ok := false
+var build_error_until := 0
+const NASABuildings = preload("res://src/world/nasa_buildings.gd")
 const Station = preload("res://src/world/crew_station.gd")
 var player: Node3D
 var session: Node
@@ -34,7 +36,9 @@ const MODELS := {
  "solar_array": preload("res://Assets/expedition/solar_panel.glb"),
  "maya_station": preload("res://Assets/stations/maya_station.tscn"),
  "alex_station": preload("res://Assets/stations/alex_station.tscn"),
- "sam_station": preload("res://Assets/stations/sam_station.tscn")
+ "sam_station": preload("res://Assets/stations/sam_station.tscn"),
+ "habitat_module": preload("res://Assets/stations/hdu_1.glb"),
+ "comms_relay": preload("res://Assets/structures/comms_relay.tscn")
 }
 const PolarSolar = preload("res://src/simulation/polar_solar.gd")
 const Rating = preload("res://src/ui/outpost_hover.gd")
@@ -151,7 +155,15 @@ func _select(id: String) -> void:
 	if active: _cancel()
 	if id == "solar_array" and placed or session.station_placements.has(id): return
 	selected_id = id
-	panel = solar_panel if id == "solar_array" else _new_station(id)
+	build_error_until = 0
+	if NASABuildings.MODELS.has(id):
+		if session.dashboard_state == null: return
+		get_parent().construction_view.editing_id = id
+		get_parent().refresh_feedback()
+		panel = NASABuildings.make(id, false)
+		add_child(panel)
+	else:
+		panel = solar_panel if id == "solar_array" else _new_station(id)
 	meshes.clear()
 	for mesh in panel.find_children("*", "MeshInstance3D", true, false):
 		meshes.append(mesh)
@@ -164,8 +176,20 @@ func _select(id: String) -> void:
 	shade_checked_at = 0
 	_start()
 
+func _footprint() -> Vector2:
+	if selected_id == "solar_array": return Vector2(1.5, 1.5)
+	if NASABuildings.MODELS.has(selected_id):
+		var hull: Vector3 = panel.get_meta("hull_size")
+		return Vector2(hull.x, hull.z) * 0.5 + Vector2(0.1, 0.1)
+	return Station.footprint(selected_id)
+
+func _clearance_height() -> float:
+	if selected_id == "solar_array": return 1.5
+	if NASABuildings.MODELS.has(selected_id): return panel.get_meta("hull_size").y
+	return Station.clearance_height(selected_id)
+
 func _half_extent() -> float:
-	return 1.5 if selected_id == "solar_array" else Station.footprint(selected_id).length() / sqrt(2.0)
+	return _footprint().length() / sqrt(2.0)
 
 func _station_access_is_clear(id: String, xform: Transform3D) -> bool:
 	var dock := xform * Station.dock(id)
@@ -181,6 +205,8 @@ func _station_access_is_clear(id: String, xform: Transform3D) -> bool:
 	return true
 
 func _display_name() -> String:
+	if selected_id == "habitat_module": return "Habitat Extension"
+	if selected_id == "comms_relay": return "Comms Relay"
 	return "Solar panel" if selected_id == "solar_array" else str(Station.DEFINITIONS[selected_id].name)
 
 func _apply_station_home(id: String, xform: Transform3D, restoring := false) -> void:
@@ -244,6 +270,24 @@ func _refresh_menu() -> void:
 			available = not session.station_placements.has(id)
 			cost_text = "Free · one per NPC"
 			status = "Placed" if not available else "Click to place"
+		elif NASABuildings.MODELS.has(id):
+			var started: bool = state != null and (state.built_structures.has(id) or state.construction_queue.any(func(job): return str(job.get("structure_id", "")) == id))
+			available = state != null
+			if started:
+				status = "Relocate" if session.building_placements.has(id) else "Choose location"
+				cost_text = "Built" if state.built_structures.has(id) else "Under construction · already paid"
+			else:
+				status = "Click to aim"
+				if state == null:
+					status = "Start the mission first"
+				elif not placed:
+					status = "Preview · place solar first"
+				elif not affordable:
+					status = "Preview · need materials"
+				elif state.power_kwh < float(cost.get("power", 0)):
+					status = "Preview · need power"
+				elif not session.can_advance():
+					status = "Preview · mission action pending"
 		elif state != null and state.built_structures.has(id):
 			status = "Built"
 		elif state != null and state.construction_queue.any(func(job): return str(job.get("structure_id", "")) == id):
@@ -611,7 +655,7 @@ func _physics_process(_delta: float) -> void:
 		var ground_basis := Basis(Quaternion(Vector3.UP, hit.normal)) * Basis(Vector3.UP, yaw)
 		panel.global_transform = Transform3D(ground_basis, hit.position - hit.normal * 0.01)
 		# All corners must rest on the same level surface; reject rocks and edges.
-		var half := Vector2(1.5, 1.5) if selected_id == "solar_array" else Station.footprint(selected_id)
+		var half := _footprint()
 		for corner in [Vector3(-half.x, 0, -half.y), Vector3(half.x, 0, -half.y), Vector3(-half.x, 0, half.y), Vector3(half.x, 0, half.y)]:
 			var point: Vector3 = panel.global_transform * corner
 			if not in_build_area(point): valid = false
@@ -622,14 +666,21 @@ func _physics_process(_delta: float) -> void:
 				valid = false
 		var space := PhysicsShapeQueryParameters3D.new()
 		var box := BoxShape3D.new()
-		box.size = Vector3(half.x * 2.0, 1.5 if selected_id == "solar_array" else Station.clearance_height(selected_id), half.y * 2.0)
+		box.size = Vector3(half.x * 2.0, _clearance_height(), half.y * 2.0)
 		space.shape = box
 		space.transform = Transform3D(panel.global_basis, hit.position + hit.normal * (box.size.y * 0.5 + 0.12))
 		if selected_id == "solar_array": space.exclude = [player.get_rid()]
 		if not get_world_3d().direct_space_state.intersect_shape(space, 1).is_empty(): valid = false
-	if valid and selected_id != "solar_array":
+	if valid and NASABuildings.MODELS.has(selected_id):
+		# Preserve each crew member's reserved standing space at their outpost.
+		for other_id in session.station_placements:
+			var dock: Vector3 = stations[other_id].global_transform * Station.dock(other_id)
+			var local := panel.global_transform.affine_inverse() * dock
+			var half := _footprint() + Vector2(0.6, 0.6)
+			if absf(local.x) < half.x and absf(local.z) < half.y: valid = false
+	if valid and Station.DEFINITIONS.has(selected_id):
 		valid = _station_access_is_clear(selected_id, panel.global_transform)
-	if valid and selected_id != "solar_array":
+	if valid and Station.DEFINITIONS.has(selected_id):
 		var crew := get_parent().get_node("CrewFieldwork")
 		var npc: String = Station.DEFINITIONS[selected_id].npc
 		var dock: Vector3 = panel.global_transform * Station.dock(selected_id)
@@ -642,6 +693,7 @@ func _physics_process(_delta: float) -> void:
 	if panel.visible and selected_id == "solar_array": _update_output_card()
 	else: output_card.hide()
 	material.albedo_color = Color(0.05, 0.75, 1.0, 0.4) if valid else Color(1.0, 0.15, 0.1, 0.4)
+	if Time.get_ticks_msec() < build_error_until: return
 	label.text = "PLACE " + _display_name().to_upper() + "  ·  Move mouse to aim  ·  Q / R rotate  ·  Left click confirm  ·  B build menu  ·  C destroy\n" + ("Ready to place" if valid else ("Outside the build area: stay inside the blue markings" if not hit.is_empty() and not in_build_area(hit.position) else ("Reserved rover mission area" if not hit.is_empty() and overlaps_rover_circle(hit.position) else "Aim at clear, level ground with a reachable crew access point")))
 
 ## Built outpost structures and the placed panel can be destroyed; previews cannot.
@@ -765,6 +817,9 @@ func _input(event: InputEvent) -> void:
 
 func confirm() -> void:
 	if not active or not valid or overlaps_rover_circle(panel.global_position): return
+	if NASABuildings.MODELS.has(selected_id):
+		_confirm_building()
+		return
 	if selected_id != "solar_array":
 		if not _station_access_is_clear(selected_id, panel.global_transform):
 			valid = false
@@ -810,6 +865,26 @@ func confirm() -> void:
 	if selected_id != "solar_array": _apply_station_home(selected_id, panel.global_transform)
 	_reset_selection()
 
+func _confirm_building() -> void:
+	var state: Variant = session.dashboard_state
+	var started: bool = state.built_structures.has(selected_id) or state.construction_queue.any(func(job): return str(job.structure_id) == selected_id)
+	if not started:
+		if not placed:
+			label.text = "Place the solar panel before confirming this building."
+			build_error_until = Time.get_ticks_msec() + 3500
+			return
+		var result: Dictionary = session.queue_structure(selected_id)
+		if not result.get("ok", false):
+			label.text = "Cannot build: " + str(result.get("error", "")).replace("_", " ")
+			build_error_until = Time.get_ticks_msec() + 3500
+			return
+	session.building_placements[selected_id] = panel.global_transform
+	session.capture_sol_checkpoint()
+	var title := _display_name()
+	_cancel()
+	label.text = title + " location confirmed" + (" · construction continues" if not started else "")
+	session.state_changed.emit()
+
 func _dust_ring() -> void:
 	var dust := Node3D.new()
 	dust.name = "LandingDust"
@@ -841,7 +916,7 @@ func _dust_ring() -> void:
 		puff.material_override = dust_material
 		puff.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		dust.add_child(puff)
-		var radius := 1.0 if selected_id == "solar_array" else 1.0 / maxf(absf(outward.x) / Station.footprint(selected_id).x, absf(outward.z) / Station.footprint(selected_id).y)
+		var radius := 1.0 if selected_id == "solar_array" else 1.0 / maxf(absf(outward.x) / _footprint().x, absf(outward.z) / _footprint().y)
 		puff.position = outward * radius + Vector3.UP * 0.08
 		puff.scale = Vector3.ONE * 0.6
 		animation.tween_property(puff, "position", outward * (radius + 0.7) + Vector3.UP * 0.14, 0.85).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -858,6 +933,7 @@ func _add_collision() -> void:
 				child.set_as_top_level(true)
 
 func _cancel() -> void:
+	var was_building := NASABuildings.MODELS.has(selected_id)
 	active = false
 	_show_area(false)
 	output_card.hide()
@@ -869,6 +945,9 @@ func _cancel() -> void:
 		_reset_selection()
 	_finish_build_pose()
 	label.text = "B · Build"
+	if was_building:
+		get_parent().construction_view.editing_id = ""
+		get_parent().refresh_feedback()
 
 func _finish_build_pose() -> void:
 	player.placing_solar = false

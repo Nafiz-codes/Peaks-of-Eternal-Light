@@ -23,7 +23,6 @@ var homes: Dictionary = {}
 var station_homes: Dictionary = {}
 var station_facings: Dictionary = {}
 var station_retry: Dictionary = {}
-var props: Dictionary = {}
 var labels: Dictionary = {}
 var route_service: RefCounted
 var elapsed := 0.0
@@ -52,16 +51,6 @@ func _ready() -> void:
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		actor.add_child(label)
 		labels[id] = label
-		var prop := _box(actor, Vector3(0.32, 0.18, 0.23), Vector3(0.4, 1.05, -0.25), Color("d8b871"))
-		prop.name = "FieldTool"
-		# Primitive fallback props preserve the original astronaut model and rig.
-		var lens := _box(prop, Vector3(0.12, 0.12, 0.12), Vector3(0, 0, -0.16), Color("222936"))
-		lens.name = "CameraLens"
-		for side in [-1, 1]:
-			var tong := _box(prop, Vector3(0.025, 0.48, 0.025), Vector3(side * 0.06, -0.27, 0), Color("abb3ba"))
-			tong.name = "Tong" + str(side)
-		prop.hide()
-		props[id] = prop
 	route_service = preload("res://src/world/crew_routes.gd").new(world, config.survey_radius_m)
 	# Temporary survey props are hidden; crew tasks and saved scientific data remain.
 	var placeholders := Node3D.new()
@@ -454,7 +443,9 @@ func _move(id: String, delta: float) -> void:
 	var before := actor.position
 	var carry_help: bool = c.get("carry_assistance", false) and _player_near(id)
 	var after := before.move_toward(next, config.walk_speed_mps * (1.1 if carry_help else 1.0) * delta)
-	if not route_service.clear_segment(before, after):
+	var ground_hit: Dictionary = route_service.ground(after)
+	if not ground_hit.is_empty(): after = ground_hit.position
+	if ground_hit.is_empty() or not route_service.clear_segment(before, after):
 		c.checkpoint = c.phase
 		_block(id, "The route has become blocked. Stopped safely; assess an alternative or return.")
 		return
@@ -845,22 +836,9 @@ func follow(id: String) -> bool:
 func _update_visual(id: String, moving: bool) -> void:
 	if id == "crew_briefing" and state != null and state.sol >= 6 and not state.rover_expedition.get("completed", []).has(2):
 		labels[id].hide()
-		props[id].hide()
 		return
 	if data.is_empty():
 		return
-	var c: Dictionary = data.crew[id]
-	props[id].visible = not c.phase == "Available"
-	# Existing walk clip plus visible camera/tool movement; no new character assets.
-	props[id].position.y = 1.05 + (sin(c.progress * 2.0) * 0.08 if c.phase == "Working" else 0.0)
-	props[id].rotation.x = sin(c.progress * 2.0) * 0.3 if c.phase == "Working" else 0.0
-	var photo: bool = c.task in STEPS and c.phase == "Working" and c.step < STEPS[c.task].size() and "Photograph" in STEPS[c.task][c.step]
-	props[id].position.y = 1.4 if photo else props[id].position.y
-	props[id].get_node("CameraLens").visible = photo
-	for side in [-1, 1]:
-		var tong: MeshInstance3D = props[id].get_node("Tong" + str(side))
-		tong.visible = c.task == "sample" and c.phase == "Working" and c.step == 2
-		tong.rotation.z = side * (0.12 + absf(sin(c.progress * 1.5)) * 0.12)
 	for node in actors[id].find_children("*", "AnimationPlayer", true, false):
 		var clip := "moon_walk" if moving else "idle"
 		if node.has_animation(clip) and node.current_animation != clip:
@@ -953,10 +931,11 @@ func _approach_commander(delta: float) -> void:
 	var moving := false
 	if gap > 1.5:
 		var after := actor.position.move_toward(target, minf(config.walk_speed_mps * delta, gap - 1.5))
-		if route_service.clear_segment(actor.position, after):
+		var ground_hit: Dictionary = route_service.ground(after)
+		if not ground_hit.is_empty(): after = ground_hit.position
+		if not ground_hit.is_empty() and route_service.clear_segment(actor.position, after):
 			actor.position = after
 			data.crew.crew_briefing.position = after
 			moving = true
 	if gap > 0.1: actor.look_at(actor.get_parent().to_global(target), Vector3.UP)
 	_update_visual("crew_briefing", moving)
-	labels.crew_briefing.text = "Press E to talk to Dr. Maya." if gap <= 2.5 else ""
