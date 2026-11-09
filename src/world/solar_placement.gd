@@ -38,7 +38,10 @@ const MODELS := {
  "alex_station": preload("res://Assets/stations/alex_station.tscn"),
  "sam_station": preload("res://Assets/stations/sam_station.tscn"),
  "habitat_module": preload("res://Assets/stations/hdu_1.glb"),
- "comms_relay": preload("res://Assets/structures/comms_relay.tscn")
+ "comms_relay": preload("res://Assets/structures/comms_relay.tscn"),
+ "water_extractor": preload("res://Assets/structures/water_extractor.tscn"),
+ "greenhouse": preload("res://Assets/structures/greenhouse.tscn"),
+ "shielding_wall": preload("res://Assets/structures/radiation_shelter.tscn")
 }
 const PolarSolar = preload("res://src/simulation/polar_solar.gd")
 const Rating = preload("res://src/ui/outpost_hover.gd")
@@ -207,6 +210,9 @@ func _station_access_is_clear(id: String, xform: Transform3D) -> bool:
 func _display_name() -> String:
 	if selected_id == "habitat_module": return "Habitat Extension"
 	if selected_id == "comms_relay": return "Comms Relay"
+	if selected_id == "water_extractor": return "Water Extractor"
+	if selected_id == "greenhouse": return "Greenhouse Module"
+	if selected_id == "shielding_wall": return "Radiation Shielding Habitat"
 	return "Solar panel" if selected_id == "solar_array" else str(Station.DEFINITIONS[selected_id].name)
 
 func _apply_station_home(id: String, xform: Transform3D, restoring := false) -> void:
@@ -879,10 +885,13 @@ func _confirm_building() -> void:
 			build_error_until = Time.get_ticks_msec() + 3500
 			return
 	session.building_placements[selected_id] = panel.global_transform
+	# Like the solar panel, a confirmed building stands at once; this also finishes
+	# sites left under construction by older saves.
+	session.finish_structure(selected_id)
 	session.capture_sol_checkpoint()
 	var title := _display_name()
 	_cancel()
-	label.text = title + " location confirmed" + (" · construction continues" if not started else "")
+	label.text = title + (" relocated" if started else " built")
 	session.state_changed.emit()
 
 func _dust_ring() -> void:

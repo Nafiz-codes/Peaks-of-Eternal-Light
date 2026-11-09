@@ -22,7 +22,7 @@ func run():
  var cards: Dictionary = {}
  for card in placement.grid.get_children():
   for label in card.find_children("*", "Label", true, false):
-   if label.text in ["Habitat Extension", "Comms Relay"]: cards[label.text] = card
+   if label.text in ["Habitat Extension", "Comms Relay", "Water Extractor", "Greenhouse Module", "Radiation Shielding Habitat"]: cards[label.text] = card
  var player = world.get_node("Outpost/Astronaut")
  player.set_physics_process(false)
  placement.set_physics_process(false)
@@ -30,7 +30,7 @@ func run():
  var camera := Camera3D.new()
  world.add_child(camera)
  camera.current = true
- for entry in [["Habitat Extension", "habitat_module"], ["Comms Relay", "comms_relay"]]:
+ for entry in [["Habitat Extension", "habitat_module"], ["Comms Relay", "comms_relay"], ["Water Extractor", "water_extractor"], ["Greenhouse Module", "greenhouse"], ["Radiation Shielding Habitat", "shielding_wall"]]:
   session.dashboard_state.materials = 0
   placement._open_menu()
   var card: Button
@@ -69,12 +69,12 @@ func run():
   check(not placement.active and not player.placing_solar, "Confirmation restores normal movement")
   var paid: float = session.dashboard_state.materials
   placement._select(entry[1])
-  check(placement.active, "Already queued item remains accessible")
+  check(placement.active, "Built item can be relocated")
   placement.panel.global_transform = expected
   placement.valid = true
   placement.confirm()
-  check(session.dashboard_state.materials == paid, "Queued location changes do not charge twice")
- check(session.dashboard_state.construction_queue.size() == 2, "Both buildings retain construction times")
+  check(session.dashboard_state.materials == paid, "Relocation does not charge twice")
+ check(session.dashboard_state.construction_queue.is_empty() and session.dashboard_state.built_structures.size() >= 5, "Placed buildings are built at once, like the solar panel")
  var Save = load("res://src/runtime/mission_save.gd")
  var saved: Dictionary = Save.capture(session)
  var restored: Dictionary = Save.decode(saved)
@@ -83,12 +83,12 @@ func run():
  var factory = load("res://src/world/nasa_buildings.gd")
  # Reproduce confirmed sites, including reconstruction after loading a save.
  world.construction_view.sync_completed({}, catalog)
- world.construction_view.sync_completed({}, catalog, restored.building_placements, session.dashboard_state.construction_queue)
+ world.construction_view.sync_completed(session.dashboard_state.built_structures, catalog, restored.building_placements, session.dashboard_state.construction_queue)
  for id in factory.MODELS:
   var site = world.construction_view.completed[id]
-  check(site.get_meta("pending") and str(site.name).begins_with("Building_"), "Solid construction site remains pending")
-  check(site.global_transform == session.building_placements[id], "Pending site restores its chosen transform")
-  check(site.find_children("*", "StaticBody3D", true, false).size() == 1, "Pending site has exactly one collision body")
+  check(not site.get_meta("pending") and str(site.name).begins_with("Completed_"), "Placed building is complete, not a construction site")
+  check(site.global_transform == session.building_placements[id], "Building restores its chosen transform")
+  check(site.find_children("*", "StaticBody3D", true, false).size() == 1, "Building has exactly one collision body")
   for mesh in site.get_node("NASAModel").find_children("*", "MeshInstance3D", true, false):
    check(mesh.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON, "Confirmed model casts shadows")
    if mesh.material_override is StandardMaterial3D:
@@ -101,7 +101,7 @@ func run():
   for mesh in preview.find_children("*", "MeshInstance3D", true, false):
    check(mesh.material_override != null, "Preview uses hologram material")
  world.construction_view.clear_preview()
- world.construction_view.sync_completed({"habitat_module": 0, "comms_relay": 0}, catalog, session.building_placements)
+ world.construction_view.sync_completed({"habitat_module": 0, "comms_relay": 0, "water_extractor": 0, "greenhouse": 0, "shielding_wall": 0}, catalog, session.building_placements)
  for id in factory.MODELS:
   var completed = world.construction_view.completed[id]
   check(completed.global_transform == session.building_placements[id], "Completion uses chosen location and rotation")
@@ -114,6 +114,16 @@ func run():
   if id == "habitat_module":
    check(bounds.size.y > astronaut_height * 3.0 and bounds.size.y < astronaut_height * 3.6, "Two-level habitat has astronaut-scale headroom")
    check(model.find_child("AccessStep", true, false) != null, "Habitat includes suited-crew access steps")
+  elif id == "shielding_wall":
+   check(model.find_child("RegolithMound", true, false) != null and model.find_child("ShelterModule", true, false) != null, "Shelter has its regolith mound and modules")
+  elif id == "greenhouse":
+   check(model.find_child("Dome", true, false) != null and model.find_child("Plants", true, false) != null, "Greenhouse has its glass dome and grow racks")
+  elif id == "water_extractor":
+   check(model.find_child("Ice", true, false) != null and model.find_child("Reservoir", true, false) != null, "Extractor has its ice and reservoir")
+   var drip: Node3D = model.find_child("Drip", true, false)
+   var before: Transform3D = drip.transform
+   await create_timer(0.3).timeout
+   check(drip.transform != before, "Condensate drips continuously")
   else:
    check(bounds.size.y > astronaut_height * 2.8 and bounds.size.y < astronaut_height * 3.2, "Relay mast is realistically taller than the astronaut")
    check(model.find_child("RadioCabinet", true, false) != null and model.find_child("MastBrace", true, false) != null, "Relay includes radio equipment and structural bracing")

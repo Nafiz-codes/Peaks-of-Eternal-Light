@@ -220,6 +220,19 @@ func apply_dust_storm(state: Variant) -> bool:
 	return true
 
 
+## Placed buildings finish on confirmation, like the solar panel; costs are already paid.
+func complete_construction(state: Variant, structure_id: String) -> bool:
+	if state == null:
+		return false
+	for index in state.construction_queue.size():
+		if str(state.construction_queue[index].get("structure_id", "")) == structure_id:
+			state.construction_queue.remove_at(index)
+			state.built_structures[structure_id] = state.sol
+			_publish_action_state(state)
+			return true
+	return false
+
+
 func demolish_structure(state: Variant, structure_id: String) -> Dictionary:
 	if state == null:
 		return {"ok": false, "error": "missing_mission_state"}

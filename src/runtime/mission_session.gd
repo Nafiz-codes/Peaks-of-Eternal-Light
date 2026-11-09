@@ -249,6 +249,13 @@ func queue_structure(structure_id: String) -> Dictionary:
 	return result
 
 
+## Placed buildings stand at once, like the solar panel (no build timer).
+func finish_structure(structure_id: String) -> void:
+	if dashboard_state != null and dashboard_simulator.complete_construction(dashboard_state, structure_id):
+		capture_sol_checkpoint()
+		state_changed.emit()
+
+
 func apply_dust_storm() -> void:
 	if dashboard_state != null and dashboard_simulator.apply_dust_storm(dashboard_state):
 		state_changed.emit()

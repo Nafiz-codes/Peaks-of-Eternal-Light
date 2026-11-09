@@ -2,10 +2,14 @@ extends RefCounted
 ## NASA source assemblies, normalized in local space before entering the scene tree.
 const MODELS := {
  "habitat_module": preload("res://Assets/stations/hdu_1.glb"),
- "comms_relay": preload("res://Assets/structures/comms_relay.tscn")
+ "comms_relay": preload("res://Assets/structures/comms_relay.tscn"),
+ # Game-authored models (Assets/structures/*.gd), not NASA assets.
+ "water_extractor": preload("res://Assets/structures/water_extractor.tscn"),
+ "greenhouse": preload("res://Assets/structures/greenhouse.tscn"),
+ "shielding_wall": preload("res://Assets/structures/radiation_shelter.tscn")
 }
 # Gameplay dimensions in metres, not certified dimensions of NASA hardware.
-const EXTENTS := {"habitat_module": 9.6, "comms_relay": 5.0}
+const EXTENTS := {"habitat_module": 9.6, "comms_relay": 5.0, "water_extractor": 5.0, "greenhouse": 8.7, "shielding_wall": 13.0}
 
 static func mesh_bounds(node: Node3D, accumulated := Transform3D.IDENTITY) -> AABB:
  var result := AABB()
@@ -33,7 +37,7 @@ static func make(id: String, ghost: bool) -> Node3D:
  model.scale *= factor
  model.position += Vector3(-bounds.get_center().x, -bounds.position.y, -bounds.get_center().z) * factor
  if id == "habitat_module": _finish_habitat(root, model)
- else: _finish_relay(root, model)
+ elif id == "comms_relay": _finish_relay(root, model)
  bounds = mesh_bounds(root)
  for child in root.get_children():
   child.position -= Vector3(bounds.get_center().x, bounds.position.y, bounds.get_center().z)

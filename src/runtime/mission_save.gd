@@ -49,7 +49,7 @@ static func decode(data: Variant) -> Dictionary:
 	var buildings: Variant = data.get("building_placements", {})
 	if not buildings is Dictionary: return {}
 	for id in buildings:
-		if id not in ["habitat_module", "comms_relay"]: return {}
+		if id not in ["habitat_module", "comms_relay", "water_extractor", "greenhouse", "shielding_wall"]: return {}
 		if not buildings[id] is Transform3D or not buildings[id].is_finite(): return {}
 		if not buildings[id].basis.is_equal_approx(buildings[id].basis.orthonormalized()) or buildings[id].basis.determinant() < 0.99: return {}
 	var panel_output: Variant = placement.get("kwh_per_sol", 0.0)

@@ -7,6 +7,23 @@ Original GLBs, assembled in their source coordinate system:
 - tall_dish_post.glb: e2c77192ea7dcf395339034c4d23d9b4e5a33c0c
 - tall_dish_turntable.glb: 7920780d50d07222c9bfd5cb635cea382ad9060e
 
+## Water extractor (game-authored)
+Built in code by water_extractor.gd (no NASA source asset). A thermal ice extractor:
+a smooth, uneven lump of ice (clear shell, glowing core) sits in a heated cradle on four struts; its
+condensate forms on a nozzle and drips into an open glass reservoir, leaving ripples.
+Drops fall 0.74 m in 0.96 s, the free-fall time under lunar gravity (1.62 m/s²).
+Fitted to a 5 m footprint (about 3.9 m tall); thumbnail, ghost and completed site share it.
+
+## Greenhouse (game-authored)
+Built in code by greenhouse.gd (no NASA source asset): a frequency-4 geodesic glass dome
+(4 m radius) on a ring foundation, over four rows of tiered grow racks with grass-filled
+trays and LED bars, plus a central service column. About 8.7 m wide and 4.4 m tall.
+
+## Radiation Shielding Habitat (game-authored)
+Built in code by radiation_shelter.gd (no NASA source asset): a bulldozed regolith mound
+(regolith overburden is the shielding) with three half-buried cylindrical modules, lit
+doors and ramps, a crown hatch ring and a utility culvert. Fitted to 13 m across (scale ~1.07): doors about 1.5 m tall, mound about 2.5 m high, modules about 1.9 m in diameter.
+
 ## Habitat extension
 Reuses Assets/stations/hdu_1.glb (NASA Habitat Demonstration Unit part 1).
 Source and conversion details: ../stations/README.md.
@@ -24,13 +41,13 @@ Build-menu thumbnails, placement ghosts and completed buildings share this assem
 These are gameplay dimensions, not certified NASA hardware measurements.
 Models are ground-centered; completed structures have matching bounding-box
 collisions, while previews use a non-colliding blue hologram material.
-B-menu cards open mouse-aimed placement with Q/R rotation. Confirmation queues
-new construction at the existing cost; already queued/built models can relocate
-without a second charge. Confirmed sites show the solid textured model immediately,
-with collision and an UNDER CONSTRUCTION label until their timer finishes.
+B-menu cards open mouse-aimed placement with Q/R rotation. Like the solar panel,
+confirmation pays the existing cost and the building stands at once (no build timer);
+built models relocate for free and C destroys them for a full refund. Output does not
+depend on position (only the solar panel's does).
 Only unconfirmed placement previews use the blue hologram material.
 Positions and rotations are stored in the optional building_placements save field;
-older saves remain supported. Construction times and gameplay effects are unchanged.
+sites left under construction by older saves finish when next confirmed.
 
 NASA usage guidance: https://www.nasa.gov/nasa-brand-center/images-and-media/
 No NASA endorsement is implied.

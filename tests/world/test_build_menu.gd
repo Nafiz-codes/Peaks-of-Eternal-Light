@@ -104,7 +104,7 @@ func run() -> void:
 	session.dashboard_state.materials = 60.0
 	placement._refresh_menu()
 	await process_frame
-	check(enabled_ids(placement) == ["Maya · Operations", "Alex · Science", "Sam · Engineering", "Radiation Shielding Wall", "Habitat Extension", "Comms Relay"], "NASA previews stay accessible even with insufficient materials.")
+	check(enabled_ids(placement) == ["Maya · Operations", "Alex · Science", "Sam · Engineering", "Water Extractor", "Greenhouse Module", "Radiation Shielding Habitat", "Habitat Extension", "Comms Relay"], "NASA previews stay accessible even with insufficient materials.")
 	check(placement.grid.get_child(5).modulate.a < 1.0, "Unaffordable cards are visibly grayed.")
 	session.dashboard_state.built_structures["comms_relay"] = 0
 	world.refresh_feedback()

@@ -60,7 +60,7 @@ func _run() -> void:
 	check(hud.run_button.disabled, "Planning blocks advancing the mission.")
 	hud.advance_turn()
 	check(state.snapshot() == baseline, "Planning cannot advance state.")
-	check(labels(hud.operations).contains("35") and labels(hud.operations).contains("Radiation Shielding Wall"), "Catalog displays real costs and all structures.")
+	check(labels(hud.operations).contains("35") and labels(hud.operations).contains("Radiation Shielding Habitat"), "Catalog displays real costs and all structures.")
 	var alt := InputEventKey.new()
 	alt.keycode = KEY_ALT
 	alt.pressed = true
