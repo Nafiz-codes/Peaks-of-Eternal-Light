@@ -112,6 +112,8 @@ func _update_health() -> void:
 		repair_label.text += "\nDISABLED"
 
 func repair() -> bool:
+	var expedition := world.get_node_or_null("RoverTraining")
+	if expedition != null and expedition.has_method("damage_blocked") and expedition.damage_blocked(): return false
 	var player := world.get_node("Outpost/Astronaut")
 	var state: Variant = session.dashboard_state
 	if active or get_tree().paused or player.seated or player.ui_blocked or state == null:
@@ -246,7 +248,7 @@ func _input(event: InputEvent) -> void:
 			return
 		if event.keycode == KEY_R and (active or available()):
 			var expedition := world.get_node_or_null("RoverTraining")
-			if expedition != null and expedition.get("transitioning") == true:
+			if expedition != null and (expedition.get("transitioning") == true or (expedition.has_method("damage_blocked") and expedition.damage_blocked())):
 				get_viewport().set_input_as_handled()
 				return
 			if active and power_state == Power.STARTING:
@@ -287,6 +289,8 @@ func step_drive(delta: float, throttle: float, turn: float, brake: bool) -> void
 		speed = 0.0
 		velocity = Vector3.ZERO
 		status.text = "ROVER DISABLED\nR: return to lander\nExit the lander, approach the rover and press E to repair."
+		if observed_state.rover_expedition.get("location", "") == "expedition":
+			status.text = "MISSION FAILED — Rover destroyed. Retry the mission."
 		return
 	if power_state != Power.READY:
 		_reset_camera_motion()
@@ -452,9 +456,24 @@ func _update_camera() -> void:
 	var focus := global_position + Vector3(0, 0.6, 0)
 	var desired := focus - forward * (6.5 * cos(camera_elevation)) + Vector3.UP * (6.5 * sin(camera_elevation))
 	desired -= Vector3(sin(heading), 0, cos(heading)) * camera_lag
-	var query := PhysicsRayQueryParameters3D.create(focus, desired)
+	# Sweep a volume so the near-plane corners cannot enter ridges or rocks
+	# while the centre ray still has a clear line of sight.
+	var query := PhysicsShapeQueryParameters3D.new()
+	var clearance := SphereShape3D.new()
+	clearance.radius = 0.3
+	query.shape = clearance
+	query.transform = Transform3D(Basis.IDENTITY, focus)
+	query.motion = desired - focus
 	query.exclude = [get_rid()]
-	var obstruction := get_world_3d().direct_space_state.intersect_ray(query)
-	camera.global_position = desired if obstruction.is_empty() else obstruction.position + obstruction.normal * 0.2
+	var travel := get_world_3d().direct_space_state.cast_motion(query)
+	camera.global_position = focus + query.motion * travel[0]
+	# Shape sweeps ignore bodies already overlapping the starting shape.
+	# Recover explicitly when a close rock or steep bank surrounds the pivot.
+	query.motion = Vector3.ZERO
+	var retreat := camera.global_position
+	for step in range(40):
+		query.transform.origin = camera.global_position
+		if get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty(): break
+		camera.global_position = retreat.lerp(focus, minf((step + 1) / 20.0, 1.0)) + Vector3.UP * maxf(0.0, (step - 19) * 0.25)
 	if camera.global_position.distance_squared_to(focus) > 0.01:
 		camera.look_at(focus, Vector3.UP)

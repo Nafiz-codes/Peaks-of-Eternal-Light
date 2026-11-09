@@ -29,6 +29,7 @@ func _ready() -> void:
 				surface.add_vertex(Vector3(p.x,height_at(p.x,p.y),p.y))
 	surface.generate_normals()
 	var ground := MeshInstance3D.new()
+	ground.name = "MissionGround"
 	ground.set_meta("rover_safe_terrain", true)
 	ground.mesh = surface.commit()
 	var material := ShaderMaterial.new()
@@ -80,7 +81,14 @@ func _ready() -> void:
 		rock.scale = Vector3(size*1.5,size,size*1.1)
 		rock.position = Vector3(p.x,height_at(p.x,p.y)+size*0.3,p.y)
 		add_child(rock)
-		if size > 1.5: rock.create_convex_collision()
+		# Even small rocks must obstruct the remote camera.
+		rock.create_convex_collision()
+
+static func horizon_height(p: Vector2) -> float:
+	# Square rings need a square-distance blend. Radial distance faded corner
+	# ridges abruptly immediately outside the playable mesh.
+	var blend := smoothstep(LIMIT, 900.0, maxf(absf(p.x), absf(p.y)))
+	return lerpf(height_at(p.x, p.y), -p.length_squared() * 0.0000008, blend)
 
 func _add_horizon(material: Material) -> void:
 	var edge: Array[Vector2] = []
@@ -90,14 +98,15 @@ func _add_horizon(material: Material) -> void:
 	for i in range(210): edge.append(Vector2(-420,420-i*4))
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var radii := [420.0,520.0,750.0,1100.0,1800.0,2500.0]
+	var radii: Array[float] = []
+	for radius in range(420, 901, 20): radii.append(float(radius))
+	for radius in range(1000, 2501, 100): radii.append(float(radius))
 	for r in range(radii.size()-1):
 		for i in range(edge.size()):
 			var corners: Array[Vector3] = []
 			for pair in [[i,r],[(i+1)%edge.size(),r],[i,r+1],[(i+1)%edge.size(),r+1]]:
 				var p: Vector2 = edge[pair[0]]*radii[pair[1]]/420.0
-				var blend := smoothstep(420,900,p.length())
-				var height := height_at(p.x,p.y)*(1-blend) - blend*p.length_squared()*0.0000008
+				var height := horizon_height(p)
 				# Inner ring must meet the playable edge exactly.
 				if pair[1] == 0: height = height_at(p.x,p.y)
 				corners.append(Vector3(p.x,height,p.y))
@@ -106,6 +115,8 @@ func _add_horizon(material: Material) -> void:
 				surface.add_vertex(corners[j])
 	surface.generate_normals()
 	var horizon := MeshInstance3D.new()
+	horizon.name = "MissionHorizon"
 	horizon.mesh = surface.commit()
 	horizon.material_override = material
 	add_child(horizon)
+	horizon.create_trimesh_collision()

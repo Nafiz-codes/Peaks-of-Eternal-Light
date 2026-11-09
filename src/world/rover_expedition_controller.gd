@@ -45,6 +45,8 @@ var transition_tween: Tween
 var motor: AudioStreamPlayer
 var cinematic_motion := false
 var escort_link := false
+var damage_dialog: ConfirmationDialog
+var damage_mode := ""
 
 func _ready() -> void:
 	driver = get_parent().get_node("RoverHull")
@@ -153,6 +155,13 @@ func _ready() -> void:
 		var key := InputEventKey.new()
 		key.physical_keycode = KEY_F
 		InputMap.action_add_event("rover_scan",key)
+	damage_dialog = ConfirmationDialog.new()
+	damage_dialog.exclusive = true
+	damage_dialog.dialog_autowrap = true
+	damage_dialog.min_size = Vector2i(560, 220)
+	damage_dialog.confirmed.connect(_damage_confirm)
+	damage_dialog.canceled.connect(_damage_abort)
+	add_child(damage_dialog)
 	_sync()
 	call_deferred("_ground_departure")
 
@@ -194,6 +203,8 @@ func _sync() -> void:
 	if is_instance_valid(cinematic_camera):
 		cinematic_camera.queue_free()
 		if driver.active: driver.camera.make_current()
+	damage_mode = ""
+	damage_dialog.hide()
 	bound_state = session.dashboard_state
 	busy_id = ""
 	busy_elapsed = 0
@@ -292,7 +303,7 @@ func developer_select_mission(index: int) -> bool:
 	session.capture_sol_checkpoint()
 	return true
 func locks_drive() -> bool:
-	return transitioning or busy_id != "" or dialogue > 0
+	return transitioning or busy_id != "" or dialogue > 0 or damage_blocked()
 
 func developer_jump_event(index: int) -> bool:
 	if not OS.is_debug_build() or index < 0 or index > 3: return false
@@ -351,7 +362,7 @@ func speed_limit(throttle: float = 0.0) -> float:
 	return 0.0 if distance >= 18 else (0.35 if distance > 12 else driver.MAX_SPEED)
 
 func handle_key(key: int) -> void:
-	if not remote_ready() or data.is_empty(): return
+	if not remote_ready() or data.is_empty() or damage_blocked(): return
 	if key == KEY_ENTER and data.location == "expedition":
 		_recall()
 		return
@@ -403,6 +414,10 @@ func _physics_process(delta: float) -> void:
 	_sync()
 	_update_circle_visibility()
 	if data.is_empty(): return
+	_check_damage()
+	if damage_blocked():
+		_publish()
+		return
 	var audible: bool = cinematic_motion or (driver.active and absf(driver.speed)>0.05) or busy_id != ""
 	driver.repair_label.visible = not driver.active and not cinematic_motion
 	motor.volume_db = move_toward(motor.volume_db,-28.0 if audible else -80.0,delta*35)
@@ -501,7 +516,77 @@ func _escort(delta: float) -> void:
 	data.route = route
 	data.crew_position = crew.global_position
 
+func damage_blocked() -> bool:
+	return damage_mode != "" or data.get("phase", "") == "failed"
+
+func _check_damage() -> void:
+	if bound_state.rover_health > 10:
+		data.erase("damage_warning_acknowledged")
+	if data.location != "expedition" or transitioning: return
+	var failed: bool = bound_state.rover_health <= 0 or data.phase == "failed"
+	var warning: bool = bound_state.rover_health <= 10 and not data.get("damage_warning_acknowledged", false)
+	if not failed and not warning: return
+	var mode := "failed" if failed else "warning"
+	if damage_mode == mode: return
+	damage_mode = mode
+	if failed: data.phase = "failed"
+	driver.speed = 0
+	driver.velocity = Vector3.ZERO
+	busy_id = ""
+	busy_elapsed = 0
+	dialogue = 0
+	scanner.reset()
+	arm.pose(0)
+	hud.extract_held = false
+	motor.volume_db = -80
+	damage_dialog.title = "MISSION FAILED" if failed else "ROVER DAMAGE WARNING"
+	damage_dialog.dialog_text = "The rover is fully damaged and cannot be retrieved or used. Retry the mission to start a new attempt. This attempt's objective progress will be reset." if failed else "Rover damage has reached 90%% or more (%d%% health remaining). If fully damaged, the rover cannot be retrieved or used and the mission will fail. Continue the mission, or abort and call back the rover while it can still return." % ceili(bound_state.rover_health)
+	damage_dialog.ok_button_text = "Retry mission" if failed else "Continue mission"
+	damage_dialog.cancel_button_text = "Abort and call back rover"
+	damage_dialog.get_cancel_button().visible = not failed
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	damage_dialog.popup_centered(Vector2i(560, 220))
+	session.capture_sol_checkpoint()
+
+func _damage_confirm() -> void:
+	if damage_mode == "failed":
+		var fresh: Dictionary = Rules.fresh()
+		fresh.mission = data.mission
+		fresh.completed = data.completed.duplicate()
+		fresh.location = "expedition"
+		fresh.phase = "active"
+		fresh["dust_storm_complete"] = data.get("dust_storm_complete", false)
+		data.clear()
+		data.merge(fresh)
+		bound_state.rover_health = 100.0
+		driver._update_health()
+		escort_link = false
+		_stand()
+		_restore_crew()
+		_place_rover(Terrain.ORIGIN + Vector3(0,0,10))
+		_refresh_targets()
+		armed = false
+		dwell = 0
+		feedback = "Mission restarted. Rover health restored; complete the objectives again."
+	else:
+		data["damage_warning_acknowledged"] = true
+	damage_mode = ""
+	damage_dialog.hide()
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if driver.active else Input.MOUSE_MODE_VISIBLE
+	session.capture_sol_checkpoint()
+
+func _damage_abort() -> void:
+	if damage_mode == "failed":
+		damage_mode = ""
+		call_deferred("_check_damage")
+		return
+	damage_mode = ""
+	damage_dialog.hide()
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if driver.active else Input.MOUSE_MODE_VISIBLE
+	_recall()
+
 func _recall() -> void:
+	if damage_blocked() or bound_state.rover_health <= 0 or transitioning: return
 	transitioning = true
 	var token := generation
 	var tween := create_tween()
@@ -525,6 +610,7 @@ func _recall() -> void:
 	armed = false
 
 func _check_circle(delta: float) -> void:
+	if damage_blocked() or bound_state.rover_health <= 0: return
 	var circle := departure if data.location == "outpost" else extraction
 	var distance := Vector2(driver.position.x-circle.position.x,driver.position.z-circle.position.z).length()
 	if distance > 6:
@@ -568,7 +654,7 @@ func _place_rover(p: Vector3) -> void:
 	bound_state.rover_pose = {"position":driver.position,"heading":driver.heading}
 
 func _transition(outward: bool) -> void:
-	if transitioning: return
+	if transitioning or damage_blocked() or bound_state.rover_health <= 0: return
 	transitioning = true
 	var token := generation
 	driver.speed = 0
@@ -692,7 +778,7 @@ func _publish() -> void:
 	var objective := "Drive to the violet departure circle. Stop at its center."
 	var details := "Sol 2: Surface Survey · Sol 4: Frozen Horizon\nSol 6: Lifeline"
 	var prompt := "WASD: drive · Space: brake · R: lander · L: lights"
-	if bound_state.rover_health <= 0: prompt = "Enter: recover disabled rover to outpost for repair."
+	if bound_state.rover_health <= 0: prompt = "MISSION FAILED — Rover destroyed. Retry the mission."
 	if data.location == "expedition":
 		if data.mission == 0:
 			objective = "Investigate three geological formations."
@@ -716,7 +802,7 @@ func _publish() -> void:
 			objective = "Return to extraction" if data.mission < 2 else "Escort the astronaut to extraction"
 			details += "\nExtraction: %.0f m · bearing %.0f°" % [driver.position.distance_to(extraction.position),rad_to_deg(atan2(extraction.position.x-driver.position.x,extraction.position.z-driver.position.z))]
 		prompt += "\nEnter: suspend expedition and recover rover."
-	if bound_state.rover_health <= 0: prompt = "Enter: recover disabled rover to outpost for repair."
+	if bound_state.rover_health <= 0: prompt = "MISSION FAILED — Rover destroyed. Retry the mission."
 	var extract_nearby := false
 	var extract_hint := "Hold E to scan"
 	if data.location == "expedition" and data.mission in [0, 1]:
