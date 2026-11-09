@@ -65,6 +65,8 @@ The main entry point is `scenes/startup.tscn`. Use **F5** for the complete start
 | Alt | Toggle mission details and cursor access |
 | Esc | Pause, go back, or resume |
 
+In debug builds, press **F8** (or choose **DEV: Spectator camera** in the Alt mission panel) to detach into a collision-free spectator view. The world keeps running while your astronaut stays behind. Use **WASD** to fly in the direction you look, **mouse** to look, **Space/Ctrl** to ascend/descend (or **E/Q**), **Shift** for a speed boost, and the **mouse wheel** to adjust speed. Press **F8** or **Esc** to return to your character.
+
 ### Rover
 
 | Input | Action |

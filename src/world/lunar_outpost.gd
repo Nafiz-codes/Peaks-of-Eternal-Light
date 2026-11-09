@@ -80,6 +80,10 @@ func _ready() -> void:
 	solar.name = "SolarPlacement"
 	add_child(solar)
 	add_child(preload("res://src/ui/mission_tracker.gd").new())
+	if OS.is_debug_build():
+		var free_camera := preload("res://src/world/developer_free_camera.gd").new()
+		free_camera.name = "DeveloperFreeCamera"
+		add_child(free_camera)
 
 
 func _add_prop_collisions() -> void:

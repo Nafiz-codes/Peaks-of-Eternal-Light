@@ -61,7 +61,11 @@ static func build_surroundings(site: Dictionary, material: Material) -> MeshInst
 	for index in range(60):
 		perimeter.append(Vector2(-60, 60 - index * 2))
 	var rings: Array = []
-	for radius in [60.0, 80.0, 100.0, 120.0, 145.0, 175.0, 210.0, 250.0, 300.0, 360.0, 440.0, 540.0, 660.0, 850.0, 1100.0, 1600.0, 2500.0]:
+	var radii: Array[float] = [60.0, 80.0, 100.0, 120.0, 145.0, 175.0, 210.0, 250.0, 300.0, 360.0, 440.0, 540.0, 660.0]
+	# Sample distant basins/ridges often enough to avoid enormous planar panels.
+	for radius in range(760, 2961, 100): radii.append(float(radius))
+	radii.append(3000.0)
+	for radius in radii:
 		var ring: Array[Vector3] = []
 		for point in perimeter:
 			var p: Vector2 = point * (radius / 60.0)

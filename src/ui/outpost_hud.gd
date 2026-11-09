@@ -63,6 +63,9 @@ func _ready() -> void:
 	run_button = UI.button("Start mission", advance_turn)
 	actions.add_child(run_button)
 	if OS.is_debug_build():
+		var free_camera := UI.button("DEV: Spectator camera (F8)", func(): world.get_node("DeveloperFreeCamera").toggle())
+		free_camera.name = "DeveloperFreeCameraButton"
+		actions.add_child(free_camera)
 		var event_choice := OptionButton.new()
 		event_choice.name = "DeveloperEventChoice"
 		for label in ["Sample collection", "Water ice", "Dust storm (15 seconds)", "Lifeline"]:

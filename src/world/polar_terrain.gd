@@ -1,6 +1,6 @@
 extends RefCounted
 ## Compact NASA LOLA-derived local patches. Flattening the landing pad is an
-## explicit gameplay adaptation; source samples and horizon use original relief.
+## explicit gameplay adaptation; the horizon retains the sampled relief.
 static var patches: Dictionary = {}
 
 static func height(site_id: String, east: float, south: float) -> float:
@@ -16,7 +16,10 @@ static func height(site_id: String, east: float, south: float) -> float:
 	var first := lerpf(float(heights[index]), float(heights[index + 1]), x - ix)
 	var second := lerpf(float(heights[index + int(patch.size)]), float(heights[index + int(patch.size) + 1]), x - ix)
 	var sampled_height := lerpf(first, second, z - iz)
-	var patch_edge := maxf(absf(east), absf(south))
-	var patch_blend := 1.0 - smoothstep(2000.0, 2500.0, patch_edge)
 	var local_relief := sampled_height * smoothstep(32.0, 60.0, Vector2(east, south).length())
-	return local_relief * patch_blend
+	# Never fade the DEM to pad height: these high landing sites overlook deep
+	# basins, so that produced a square, hundreds-of-metres-high enclosing wall.
+	# Beyond the source patch, carry its edge elevation into a gently descending
+	# visual apron instead. This continuation is scenery, not measured topography.
+	var outside := Vector2(east, south) - Vector2(clampf(east, -2500.0, 2500.0), clampf(south, -2500.0, 2500.0))
+	return local_relief - outside.length_squared() / (2.0 * 1737400.0)

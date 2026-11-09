@@ -50,6 +50,7 @@ func _ready() -> void:
 	driver = get_parent().get_node("RoverHull")
 	session = get_node("/root/MissionSession")
 	landscape = preload("res://scenes/rover_expedition.tscn").instantiate()
+	landscape.hide()
 	add_child(landscape)
 	departure = Circle.new()
 	departure.hide()
@@ -259,10 +260,16 @@ func _stand() -> void:
 	crew_player.play("idle")
 
 func _update_circle_visibility() -> void:
+	_update_landscape_visibility()
 	var controlled: bool = driver.active and driver.power_state == driver.Power.READY and not transitioning
 	var available := not data.is_empty() and bound_state != null
 	departure.visible = controlled and available and data.location == "outpost" and available_assignment() >= 0
 	extraction.visible = controlled and available and data.location == "expedition"
+
+func _update_landscape_visibility() -> void:
+	# The expedition is a separate destination, not outpost horizon scenery.
+	# Its elevated square apron otherwise appears to float above the local DEM.
+	landscape.visible = driver.active and data.get("location", "outpost") == "expedition"
 
 func remote_ready() -> bool:
 	return driver.active and driver.power_state == driver.Power.READY and not transitioning and not get_tree().paused and session.can_advance()
@@ -674,6 +681,7 @@ func _frame_arrival(progress: float) -> void:
 	cinematic_camera.look_at(focus)
 
 func _refresh_targets() -> void:
+	_update_landscape_visibility()
 	if data.is_empty(): return
 	for id in Terrain.SITES:
 		targets[id].visible = data.location == "expedition" and ((data.mission == 0 and not id.begins_with("ice") and id not in data.surveys) or (data.mission == 1 and id.begins_with("ice") and id not in data.samples))
