@@ -112,7 +112,7 @@ func run():
   check(model.find_child("Foundation", true, false) != null, "Completed installation includes its foundation")
   var astronaut_height: float = world.ASTRONAUT_HEIGHT
   if id == "habitat_module":
-   check(bounds.size.y > astronaut_height * 3.0 and bounds.size.y < astronaut_height * 3.6, "Two-level habitat has astronaut-scale headroom")
+   check(bounds.size.y > astronaut_height * 3.9 and bounds.size.y < astronaut_height * 4.7, "Two-level habitat has astronaut-scale headroom")
    check(model.find_child("AccessStep", true, false) != null, "Habitat includes suited-crew access steps")
   elif id == "shielding_wall":
    check(model.find_child("RegolithMound", true, false) != null and model.find_child("ShelterModule", true, false) != null, "Shelter has its regolith mound and modules")
@@ -125,7 +125,7 @@ func run():
    await create_timer(0.3).timeout
    check(drip.transform != before, "Condensate drips continuously")
   else:
-   check(bounds.size.y > astronaut_height * 2.8 and bounds.size.y < astronaut_height * 3.2, "Relay mast is realistically taller than the astronaut")
+   check(bounds.size.y > astronaut_height * 3.6 and bounds.size.y < astronaut_height * 4.2, "Relay mast is realistically taller than the astronaut")
    check(model.find_child("RadioCabinet", true, false) != null and model.find_child("MastBrace", true, false) != null, "Relay includes radio equipment and structural bracing")
   var shape = completed.find_children("*", "CollisionShape3D", true, false)[0]
   check(shape.shape.size.is_equal_approx(bounds.size), "Collision matches full NASA model dimensions")

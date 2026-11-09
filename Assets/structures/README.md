@@ -1,5 +1,9 @@
 # NASA construction models
 
+All buildings except the Radiation Shielding Habitat are scaled 1.3x after assembly
+(BUILDING_SCALE in src/world/nasa_buildings.gd) to match it; sizes below are before
+that scale. The radiation habitat is the ~13 m reference and keeps its size.
+
 ## Comms relay
 Source: https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Tall%20Dish
 Original GLBs, assembled in their source coordinate system:

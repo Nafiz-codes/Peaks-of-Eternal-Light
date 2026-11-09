@@ -9,6 +9,7 @@ const MODELS := {
  "shielding_wall": preload("res://Assets/structures/radiation_shelter.tscn")
 }
 # Gameplay dimensions in metres, not certified dimensions of NASA hardware.
+const BUILDING_SCALE := 1.3
 const EXTENTS := {"habitat_module": 9.6, "comms_relay": 5.0, "water_extractor": 5.0, "greenhouse": 8.7, "shielding_wall": 13.0}
 
 static func mesh_bounds(node: Node3D, accumulated := Transform3D.IDENTITY) -> AABB:
@@ -38,6 +39,12 @@ static func make(id: String, ghost: bool) -> Node3D:
  model.position += Vector3(-bounds.get_center().x, -bounds.position.y, -bounds.get_center().z) * factor
  if id == "habitat_module": _finish_habitat(root, model)
  elif id == "comms_relay": _finish_relay(root, model)
+ # Buildings share the crew stations' 1.3x scale; the radiation habitat is the
+ # ~13 m reference those were matched to, so it keeps its own size.
+ if id != "shielding_wall":
+  for child in root.get_children():
+   child.scale *= BUILDING_SCALE
+   child.position *= BUILDING_SCALE
  bounds = mesh_bounds(root)
  for child in root.get_children():
   child.position -= Vector3(bounds.get_center().x, bounds.position.y, bounds.get_center().z)

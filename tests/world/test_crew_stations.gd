@@ -61,12 +61,17 @@ func run() -> void:
   var preview: Node3D = placement.panel
   var shell_bounds := AABB()
   var first_mesh := true
-  for mesh in preview.get_node("HabitatShell").find_children("*", "MeshInstance3D", true, false):
+  var is_tower := id == "maya_station"
+  for mesh in (preview.get_node("StationBuilding") if is_tower else preview.find_child("HabitatShell", true, false)).find_children("*", "MeshInstance3D", true, false):
    var box: AABB = (preview.global_transform.affine_inverse() * mesh.global_transform) * mesh.get_aabb()
    shell_bounds = box if first_mesh else shell_bounds.merge(box)
    first_mesh = false
-  check(shell_bounds.size.y > 5.4 and shell_bounds.size.y < 5.6, "Workshop shell is full astronaut scale, approximately 5.5 m high.")
-  check(is_equal_approx(shell_bounds.size.x, 9.6), "Workshop shell keeps its original proportions at 9.6 m width.")
+  if is_tower:
+   check(shell_bounds.size.x > 12.5 and shell_bounds.size.x < 13.5, "Operations tower matches the radiation habitat's ~13 m scale.")
+   check(shell_bounds.size.y > 6.5 and shell_bounds.end.y <= placement.Station.clearance_height(id), "Tower is full height and fits its clearance.")
+  else:
+   check(shell_bounds.size.y > 7.0 and shell_bounds.size.y < 7.3, "Workshop shell is scaled 1.3x, approximately 7.15 m high.")
+   check(is_equal_approx(shell_bounds.size.x, 9.6 * 1.3), "Workshop shell keeps its proportions at 1.3x (12.48 m width).")
   var landing: Transform3D = preview.transform
   var assigned: String = placement.Station.DEFINITIONS[id].npc
   if id == "alex_station":

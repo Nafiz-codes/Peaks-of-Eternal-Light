@@ -2,6 +2,8 @@ extends Node
 ## Owns every cinematic tween. The original selector becomes current_scene at handoff.
 enum State { INTRO, MENU_ENTERING, MENU_IDLE, PLAYING_OPENING, SELECTING_COMMANDER, STARTING_MISSION, GAMEPLAY }
 const SELECTOR := "res://scenes/lunar_landing_selector.tscn"
+const OUTPOST := "res://scenes/lunar_outpost_3d.tscn"
+const Save = preload("res://src/runtime/mission_save.gd")
 const UI = preload("res://src/ui/ui_style.gd")
 var state := State.INTRO
 var sequence: Tween
@@ -91,9 +93,9 @@ func _build() -> void:
 	var title := _label("PEAKS OF\nETERNAL LIGHTS", 44, Color("edf5fa"))
 	navigation.add_child(title)
 	title.position = Vector2(0, 34)
-	for i in range(4):
+	for i in range(5):
 		var button := Button.new()
-		button.text = ["START MISSION", "MISSION BRIEFING", "SETTINGS", "EXIT"][i]
+		button.text = ["START MISSION", "LOAD GAME", "MISSION BRIEFING", "SETTINGS", "EXIT"][i]
 		button.position = Vector2(0, 216 + i * 57)
 		button.size = Vector2(390, 49)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -110,7 +112,7 @@ func _build() -> void:
 		button.disabled = true
 		navigation.add_child(button)
 		buttons.append(button)
-		button.pressed.connect([_start_mission, _briefing, _settings, _exit][i])
+		button.pressed.connect([_start_mission, _load_game, _briefing, _settings, _exit][i])
 		button.mouse_entered.connect(_highlight.bind(button, true))
 		button.mouse_exited.connect(_highlight.bind(button, false))
 		button.focus_entered.connect(_highlight.bind(button, true))
@@ -390,6 +392,37 @@ func _close_dialog() -> void:
 	for button in buttons: button.disabled = false
 	buttons[0].disabled = not ready_for_mission
 	buttons[1].grab_focus()
+
+## Same three slots as the in-game Save & Load page; a valid slot jumps straight
+## into its outpost, skipping the opening and landing selection.
+func _load_game() -> void:
+	_open_dialog("LOAD GAME")
+	var menu := get_node("/root/GameMenu")
+	var any := false
+	for index in range(1, 4):
+		var path: String = menu.slot_path(index)
+		if not FileAccess.file_exists(path):
+			dialog_body.add_child(_label("SLOT %d  ·  Empty" % index, 18, Color("6f8396")))
+			continue
+		var data := Save.read_file(path)
+		var valid := not Save.decode(data).is_empty()
+		var detail := "%s  ·  saved %s" % [str(data.get("site_id", "")).replace("_", " "), data.get("saved_at", "")] if valid else "Unreadable or incompatible save"
+		var button := UI.button("SLOT %d  ·  %s" % [index, detail], _load_slot.bind(path), not valid)
+		dialog_body.add_child(button)
+		any = any or valid
+	if not any:
+		dialog_body.add_child(_label("No saved missions yet. Save from the in-game menu (Esc → Save & Load).", 16, Color("8ea2b3")))
+	_dialog_back()
+
+func _load_slot(path: String) -> void:
+	if state != State.MENU_IDLE: return
+	var session := get_node("/root/MissionSession")
+	if session.load_slot(path) != OK:
+		dialog_body.add_child(_label("Could not load this save.", 16, Color("f2b45a")))
+		return
+	state = State.GAMEPLAY
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	get_tree().change_scene_to_file(OUTPOST)
 
 func _briefing() -> void:
 	_open_dialog("MISSION BRIEFING")
