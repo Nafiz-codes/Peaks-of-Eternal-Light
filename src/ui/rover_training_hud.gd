@@ -9,7 +9,8 @@ var progress: ProgressBar
 var result: Label
 var waypoint: Label
 var extraction_popup: VBoxContainer
-var extraction_prompt: Label
+var extraction_prompt: Button
+var extract_held := false
 
 func _ready() -> void:
 	layer = 86
@@ -59,7 +60,7 @@ func _ready() -> void:
 	result = _label(column, 18, Color("83e8ef"))
 	panel.hide()
 	result.reparent(root)
-	result.position = Vector2(22, 290)
+	result.position = Vector2(22, 140)
 	result.size.x = 360
 	result.add_theme_font_size_override("font_size", 14)
 	result.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -72,8 +73,20 @@ func _ready() -> void:
 	extraction_popup.offset_top = -160
 	extraction_popup.offset_bottom = -90
 	extraction_popup.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	extraction_prompt = _label(extraction_popup, 18, Color.WHITE)
-	extraction_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	extraction_prompt = Button.new()
+	extraction_prompt.custom_minimum_size = Vector2(360, 48)
+	extraction_prompt.add_theme_font_size_override("font_size", 18)
+	var button_style := StyleBoxFlat.new()
+	button_style.bg_color = Color(0.02, 0.08, 0.12, 0.94)
+	button_style.border_color = Color("65dce5")
+	button_style.set_border_width_all(1)
+	button_style.set_corner_radius_all(4)
+	for state in ["normal", "hover", "pressed", "focus"]:
+		extraction_prompt.add_theme_stylebox_override(state, button_style)
+	extraction_popup.add_child(extraction_prompt)
+	extraction_prompt.button_down.connect(func(): extract_held = true)
+	extraction_prompt.button_up.connect(func(): extract_held = false)
+	extraction_prompt.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	extraction_prompt.add_theme_color_override("font_outline_color", Color.BLACK)
 	extraction_prompt.add_theme_constant_override("outline_size", 6)
 	progress.reparent(extraction_popup)
@@ -98,7 +111,9 @@ func _layout() -> void:
 
 func render(view: Dictionary) -> void:
 	visible = view.visible
-	if not visible: return
+	if not visible:
+		extract_held = false
+		return
 	title.text = view.title
 	objective.text = view.objective
 	telemetry.text = view.telemetry
@@ -107,7 +122,7 @@ func render(view: Dictionary) -> void:
 	progress.value = view.progress * 100.0
 	extraction_popup.visible = view.get("extract_nearby", false) or view.progress > 0.0
 	extraction_prompt.text = view.get("extract_hint", "Hold E to scan")
-	progress.visible = view.progress > 0.0
+	progress.visible = extraction_popup.visible
 	result.text = view.result
 	var navigation: Dictionary = view.get("navigation", {})
 	waypoint.visible = false # MissionTracker owns the shared crescent destination marker.

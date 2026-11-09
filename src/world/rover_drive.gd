@@ -26,6 +26,7 @@ var world: Node3D
 var rover: Node3D
 var session: Node
 var health_bar: ProgressBar
+var health_title: Label
 var repair_label: Label3D
 var contacts: Dictionary = {}
 var impact_cooldown := 0.0
@@ -68,7 +69,7 @@ func _ready() -> void:
 	health_bar.size = Vector2(280, 26)
 	health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.add_child(health_bar)
-	var health_title := Label.new()
+	health_title = Label.new()
 	health_title.text = "ROVER HEALTH"
 	health_title.position = Vector2(22, 218)
 	health_title.add_theme_constant_override("outline_size", 6)

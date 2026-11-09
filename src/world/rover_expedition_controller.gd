@@ -353,11 +353,8 @@ func handle_key(key: int) -> void:
 	if data.mission == 1:
 		var id := _nearest(true)
 		if id == "": return
-		feedback = scanner.validate(driver,targets[id])
+		feedback = _ice_rejection(id)
 		if feedback != "": return
-		if Vector2(driver.position.x-targets[id].position.x,driver.position.z-targets[id].position.z).length() > 2.5:
-			feedback = "Approach within 2.5 m so the existing sampling hand can reach the regolith."
-			return
 		busy_id = id
 		busy_elapsed = 0
 		_tone(150)
@@ -374,6 +371,16 @@ func handle_key(key: int) -> void:
 		_tone(700)
 		session.capture_sol_checkpoint()
 
+func _ice_rejection(id: String) -> String:
+	if id.is_empty() or not targets.has(id) or id in data.samples:
+		return "No ice deposit in reach"
+	var offset: Vector3 = targets[id].global_position - driver.global_position
+	if Vector2(offset.x, offset.z).length() > 3.0:
+		return "Approach within 3 m of the droplet"
+	return scanner.validate(driver, targets[id])
+
+func _extract_held() -> bool:
+	return Input.is_physical_key_pressed(KEY_E) or Input.is_key_pressed(KEY_E) or hud.extract_held
 func _nearest(ice: bool) -> String:
 	var best := ""
 	var distance := INF
@@ -410,18 +417,18 @@ func _physics_process(delta: float) -> void:
 	if data.location == "expedition":
 		if data.mission == 0:
 			var id := _nearest(false)
-			if id != "" and scanner.advance(delta,Input.is_action_pressed("rover_scan"),id,true,scanner.validate(driver,targets[id])):
+			if id != "" and scanner.advance(delta,(Input.is_action_pressed("rover_scan") or _extract_held()),id,true,scanner.validate(driver,targets[id])):
 				data.surveys.append(id)
 				feedback = "SURVEY COMPLETE — %d / 3" % data.surveys.size()
 				_tone(900)
 				_refresh_targets()
 				session.capture_sol_checkpoint()
 		elif data.mission == 1:
-			if busy_id == "" and Input.is_physical_key_pressed(KEY_E):
+			if busy_id == "" and _extract_held():
 				handle_key(KEY_E)
 			if busy_id == "":
 				busy_elapsed = 0
-			elif not Input.is_physical_key_pressed(KEY_E) or driver.position.distance_to(targets[busy_id].position) > 2.7 or scanner.validate(driver,targets[busy_id]) != "":
+			elif not _extract_held() or _ice_rejection(busy_id) != "":
 				busy_id = ""
 				busy_elapsed = 0
 				arm.pose(0)
@@ -566,6 +573,7 @@ func _transition(outward: bool) -> void:
 	await tween.finished
 	if token != generation: return
 	if outward:
+		feedback = ""
 		data.location = "expedition"
 		_place_rover(Terrain.ORIGIN + Vector3(0,0,10))
 	else:
@@ -681,11 +689,11 @@ func _publish() -> void:
 		if data.mission == 0:
 			objective = "Investigate three geological formations."
 			details = "Geological sites surveyed: %d / 3" % data.surveys.size()
-			prompt = "Brake, face the site within 6.5 m, hold F to survey."
+			prompt = "Brake, face the site within 6.5 m, hold E (or F) to survey."
 		elif data.mission == 1:
 			objective = "Investigate subsurface ice-bearing regolith."
 			details = "Potential ice deposits sampled: %d / 3\nInspect the shadowed regolith. L: headlights." % data.samples.size()
-			prompt = "Brake, face a droplet within 2.5 m, hold E to extract."
+			prompt = "Brake, face a droplet within 3 m, hold E to extract."
 		else:
 			objective = "Search beyond the eastern saddle for the missing crew member."
 			details = "Crew: Commander, Alex, Sam accounted for; Maya missing.\nCritical oxygen — locate and assist the astronaut."
@@ -703,13 +711,16 @@ func _publish() -> void:
 	if bound_state.rover_health <= 0: prompt = "Enter: recover disabled rover to outpost for repair."
 	var extract_nearby := false
 	var extract_hint := "Hold E to scan"
-	if data.location == "expedition" and data.mission == 1:
-		var ice_id := _nearest(true)
-		if ice_id != "" and driver.position.distance_to(targets[ice_id].position) <= 3.0:
-			extract_nearby = true
-			extract_hint = "Hold E to extract"
-			var rejection: String = scanner.validate(driver, targets[ice_id])
-			if rejection != "": extract_hint += "\n" + rejection
+	if data.location == "expedition" and data.mission in [0, 1]:
+		var id := _nearest(data.mission == 1)
+		if id != "":
+			var offset: Vector3 = targets[id].global_position - driver.global_position
+			var reach := 3.0 if data.mission == 1 else scanner.max_range
+			if Vector2(offset.x, offset.z).length() <= reach:
+				extract_nearby = true
+				extract_hint = "Hold E to extract" if data.mission == 1 else "Hold E to survey"
+				var rejection: String = _ice_rejection(id) if data.mission == 1 else scanner.validate(driver, targets[id])
+				if rejection != "": extract_hint += "\n" + rejection
 	hud_changed.emit({"extract_nearby":extract_nearby,"extract_hint":extract_hint,"visible":driver.active and driver.power_state == driver.Power.READY and not transitioning,"title":title,"objective":objective,"telemetry":"HEADING %.0f° · LINK CONNECTED" % rad_to_deg(driver.heading),"detail":details,"prompt":prompt,"progress":busy_elapsed/6 if busy_id != "" else scanner.progress/scanner.duration,"result":feedback,"navigation":_navigation()})
 
 func _navigation() -> Dictionary:

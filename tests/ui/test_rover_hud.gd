@@ -27,7 +27,7 @@ func run():
 	driver.set_physics_process(false)
 	controller.set_physics_process(false)
 	var target = controller.targets.ice_a
-	driver.position = target.position + Vector3(0,0.7,-2.4)
+	driver.position = target.position + Vector3(0,1.6,-2.8)
 	driver.heading = 0
 	driver.rotation.y = 0
 	driver.speed = 0
@@ -59,5 +59,28 @@ func run():
 	controller._physics_process(4.1)
 	key(false)
 	check("ice_a" in controller.data.samples and not target.visible, "Full hold awards and hides sample")
+	# Surface Survey uses the same displayed E interaction (F remains compatible).
+	controller.data.mission = 0
+	controller.data.surveys.clear()
+	controller._refresh_targets()
+	var survey = controller.targets.alpha
+	driver.position = survey.position + Vector3(0, 0.7, -4)
+	driver.speed = 0
+	driver.heading = 0
+	await physics_frame
+	controller._publish()
+	check(controller.hud.extraction_popup.visible, "Survey prompt appears before holding")
+	check(controller.hud.extraction_prompt.text.to_upper().contains("SURVEY"), "Survey prompt describes current mission")
+	key(true)
+	controller._physics_process(3.1)
+	key(false)
+	check("alpha" in controller.data.surveys, "Holding E completes surface survey")
+	controller.feedback = "EXPEDITION SUSPENDED. ROVER RECOVERED TO OUTPOST."
+	controller._publish()
+	await process_frame
+	await process_frame
+	var tracker = world.get_node("MissionTracker")
+	check(controller.hud.result.position.y > tracker.detail.position.y, "Status below objective")
+	check(driver.health_title.position.y >= controller.hud.result.position.y + controller.hud.result.get_minimum_size().y, "Health below status without overlap")
 	print("Rover HUD / hold extraction failures: ", failures)
 	quit(failures)

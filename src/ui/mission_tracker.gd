@@ -81,6 +81,12 @@ func _process(_delta: float) -> void:
 		instruction = str(expedition_view.get("objective", instruction))
 	title.text = "◆  " + objective
 	detail.text = instruction
+	if rover_active:
+		var status_label: Label = expeditions.hud.result
+		status_label.position = Vector2(22, detail.position.y + detail.get_minimum_size().y + 12)
+		var health_y: float = status_label.position.y + (status_label.get_minimum_size().y if not status_label.text.is_empty() else 0) + 18
+		expeditions.driver.health_title.position.y = health_y
+		expeditions.driver.health_bar.position.y = health_y + 26
 	if destination is Vector3:
 		var distance := observer.global_position.distance_to(destination)
 		detail.text += "  %.0f m" % distance
