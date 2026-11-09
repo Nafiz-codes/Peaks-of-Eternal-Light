@@ -247,7 +247,7 @@
       "used_by": [
         "src/world/solar_placement.gd SOLAR_IRRADIANCE_W_M2"
       ],
-      "measurement_note": "The placed solar panel uses 1361 W/m² as sunlight on a Sun-facing panel at 1 AU. Over the mission days (sampled every 30 minutes from the mission's start time), each modeled Sun position is weighted by date-dependent Sun distance (inverse square), solar-disk visibility over the local horizon, and the cosine of the angle between the Sun and the panel's cell face, which tilts 45° and turns with the player's chosen rotation and the ground slope. In-game shading at the chosen spot is applied last."
+      "measurement_note": "The placed solar panel uses 1361 W/m² as sunlight on a Sun-facing panel at 1 AU. Over the mission days (sampled every 30 minutes from the mission's start time), each modeled Sun position is weighted by date-dependent Sun distance (inverse square), solar-disk visibility over the local horizon, and the cosine of the angle between the Sun and the panel's cell face, which tilts 45° and turns with the player's chosen rotation and the ground slope. Shading at the chosen spot is then traced against the same Sun positions (every 2 hours, five points on the panel), so terrain and structures that block the Sun for part of the mission reduce output by that share."
     },
     {
       "source_id": "nasa_sst_soa_power_solar_cells",

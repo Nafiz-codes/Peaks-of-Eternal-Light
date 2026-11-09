@@ -418,5 +418,8 @@ func prepare_landing() -> void:
 func _stop_sequence() -> void:
 	if sequence: sequence.kill()
 
-func _exit_tree() -> void:
-	_stop_sequence()
+func _notification(what: int) -> void:
+	# Only on deletion: the startup handoff reparents the globe mid-animation, and
+	# killing the approach on that exit left navigation stuck with every button disabled.
+	if what == NOTIFICATION_PREDELETE:
+		_stop_sequence()

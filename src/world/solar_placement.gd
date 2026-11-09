@@ -53,6 +53,15 @@ var sun_samples: Array = []
 var face_normal := Vector3(0.0, 0.7071, 0.7071) # Replaced by the model's measured cell normal in _ready.
 const Orbit = preload("res://src/world/orbital_model.gd")
 const SUN_SAMPLES_PER_SOL := 48 # Every 30 minutes
+const BUILD_RADIUS_SCALE := 3.0
+const MAX_REACH_M := 30.0 # Farthest aimed spot from the astronaut
+## Shade is tested every 2 h of Sun positions from five points on the panel; the
+## 30-minute samples in between share that result.
+const SHADE_STRIDE := 4
+const SHADE_POINTS := [Vector3(0, 1, 0), Vector3(-1, 1, -1), Vector3(1, 1, -1), Vector3(-1, 1, 1), Vector3(1, 1, 1)]
+var shade_checked_at := 0
+var shade_transform := Transform3D()
+var preview_exposure := 1.0
 
 func _ready() -> void:
 	session = get_node("/root/MissionSession")
@@ -152,6 +161,7 @@ func _select(id: String) -> void:
 	yaw = 0.0
 	valid = false
 	route_checked_at = 0
+	shade_checked_at = 0
 	_start()
 
 func _half_extent() -> float:
@@ -344,11 +354,11 @@ func _release_build_pose() -> void:
 		pose_hold.queue_free()
 	pose_hold = null
 
-## Build area: centred on the lander, out to the purple expedition departure circle.
+## Build area: centred on the lander, three times the distance to the purple departure circle.
 func build_radius() -> float:
 	var lander: Vector3 = get_parent().get_node("Outpost/Habitat").global_position
 	var circle: Vector3 = get_parent().get_node("RoverTraining").departure.global_position
-	return Vector2(circle.x - lander.x, circle.z - lander.z).length()
+	return Vector2(circle.x - lander.x, circle.z - lander.z).length() * BUILD_RADIUS_SCALE
 
 func in_build_area(point: Vector3) -> bool:
 	var lander: Vector3 = get_parent().get_node("Outpost/Habitat").global_position
@@ -377,7 +387,7 @@ func _make_area_ring() -> MeshInstance3D:
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var space := get_world_3d().direct_space_state
 	var samples: Dictionary = {}
-	var step := 2.0
+	var step := 3.0 # Keeps the ground scan near 4,500 rays for the wider area.
 	var count := ceili(radius / step)
 	var rover := get_parent().get_node("RoverTraining")
 	for z in range(-count, count + 1):
@@ -428,7 +438,7 @@ func _aim_hit() -> Dictionary:
 	if camera == null: return {}
 	var origin := camera.project_ray_origin(get_viewport().get_visible_rect().size * 0.5)
 	var direction := camera.project_ray_normal(get_viewport().get_visible_rect().size * 0.5)
-	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * 25.0)
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * (MAX_REACH_M + 20.0))
 	query.exclude = [player.get_rid()]
 	return get_world_3d().direct_space_state.intersect_ray(query)
 
@@ -436,24 +446,33 @@ func _aim_hit() -> Dictionary:
 static func panel_output_kwh(face_yield: float, exposure: float) -> float:
 	return snappedf(PANEL_RATED_KWH_PER_SOL * clampf(face_yield, 0.0, 1.0) * clampf(exposure, 0.0, 1.0), 0.1)
 
-## Share of a 3×3 grid over the panel with a clear line to the rendered Sun.
-func sun_exposure(xform: Transform3D) -> float:
-	var sun := get_parent().get_node_or_null("LowPolarSun") as DirectionalLight3D
-	if sun == null: return 0.0
-	var toward_sun := sun.global_basis.z.normalized()
-	if toward_sun.y <= 0.0: return 0.0
+## Share of this spot's mission sunlight (on the panel face, at its angle) that terrain and
+## structures do not block. Every placement position and rotation is scored the same way.
+func mission_exposure(xform: Transform3D) -> float:
+	var normal := (xform.basis * face_normal).normalized()
 	var space := get_world_3d().direct_space_state
-	var lit := 0
-	for x in [-1.0, 0.0, 1.0]:
-		for z in [-1.0, 0.0, 1.0]:
-			var start: Vector3 = xform * Vector3(x, 1.0, z)
-			var query := PhysicsRayQueryParameters3D.create(start, start + toward_sun * 200.0)
-			query.exclude = [player.get_rid()]
-			var hit := space.intersect_ray(query)
-			# Only solid scenery shades; people, the rover and the invisible map edge do not.
-			if hit.is_empty() or not hit.collider is StaticBody3D or str(hit.collider.name) == "TerrainBoundary":
-				lit += 1
-	return lit / 9.0
+	var samples := _sun_samples()
+	var open := 0.0
+	var total := 0.0
+	for block in range(0, samples.size(), SHADE_STRIDE):
+		var lit := -1.0
+		for i in range(block, mini(block + SHADE_STRIDE, samples.size())):
+			var direction: Vector3 = samples[i][0]
+			var weight: float = samples[i][1] * maxf(0.0, normal.dot(direction))
+			if weight <= 0.0: continue
+			if lit < 0.0:
+				lit = 0.0
+				for point in SHADE_POINTS:
+					var start: Vector3 = xform * point
+					var query := PhysicsRayQueryParameters3D.create(start, start + direction * 200.0)
+					query.exclude = [player.get_rid()]
+					var hit := space.intersect_ray(query)
+					# Only solid scenery shades; people, the rover and the invisible map edge do not.
+					if hit.is_empty() or not hit.collider is StaticBody3D or str(hit.collider.name) == "TerrainBoundary":
+						lit += 1.0 / SHADE_POINTS.size()
+			open += weight * lit
+			total += weight
+	return 1.0 if total <= 0.0 else open / total
 
 ## Modeled Sun directions and strengths across the mission days the player sees,
 ## starting from the mission's bright start like the rendered sky.
@@ -540,7 +559,7 @@ func _build_output_card() -> void:
 	output_lines.title.text = "Solar panel · output here"
 	output_lines.water.text = "Water  +0 L per sol"
 	output_lines.materials.text = "Materials  +0 per sol"
-	output_lines.note.text = "Fixed daily output for this spot: %.1f kWh full-sun rating (NASA 1361 W/m² sunlight × NASA 30%% cell efficiency × 4.62 m² × 24 h) × mission sunlight on the panel's face at its current angle × panel in direct sun." % PANEL_RATED_KWH_PER_SOL
+	output_lines.note.text = "Fixed daily output for this spot: %.1f kWh full-sun rating (NASA 1361 W/m² sunlight × NASA 30%% cell efficiency × 4.62 m² × 24 h) × mission sunlight on the panel's face at its current angle × share not shaded by terrain or structures at this spot." % PANEL_RATED_KWH_PER_SOL
 	output_card.hide()
 
 func _set_bar(key: String, percent: float) -> Color:
@@ -551,13 +570,19 @@ func _set_bar(key: String, percent: float) -> Color:
 	return color
 
 func _update_output_card() -> void:
-	var exposure := sun_exposure(panel.global_transform)
+	# Shade tracing is throttled while the aim and rotation hold still.
+	var moved := shade_transform.origin.distance_to(panel.global_position) > 0.05 or not shade_transform.basis.is_equal_approx(panel.global_basis)
+	if moved and Time.get_ticks_msec() - shade_checked_at > 150:
+		shade_transform = panel.global_transform
+		shade_checked_at = Time.get_ticks_msec()
+		preview_exposure = mission_exposure(shade_transform)
+	var exposure := preview_exposure
 	var mean_yield := mean_site_yield()
 	# Uses the panel's current yaw and the ground tilt under it.
 	var facing := facing_yield((panel.global_basis * face_normal).normalized())
 	preview_kwh = panel_output_kwh(facing, exposure)
 	var exposure_color := _set_bar("exposure_bar", exposure * 100.0)
-	output_lines.exposure.text = "Panel in direct sun  %d%% · %s" % [roundi(exposure * 100.0), Rating.sunlight_rating(exposure * 100.0).label]
+	output_lines.exposure.text = "Unshaded over the mission  %d%% · %s" % [roundi(exposure * 100.0), Rating.sunlight_rating(exposure * 100.0).label]
 	output_lines.exposure.add_theme_color_override("font_color", exposure_color)
 	var facing_share := 0.0 if mean_yield <= 0.0 else facing / mean_yield
 	var facing_color := _set_bar("facing_bar", facing_share * 100.0)
@@ -582,7 +607,7 @@ func _physics_process(_delta: float) -> void:
 	valid = not hit.is_empty() and hit.collider.name == "LunarSurfaceCollision"
 	panel.visible = valid
 	if valid:
-		valid = hit.normal.y > 0.94 and hit.position.distance_to(player.global_position) > 2.0 and hit.position.distance_to(player.global_position) < 15.0 and in_build_area(hit.position) and not overlaps_rover_circle(hit.position)
+		valid = hit.normal.y > 0.94 and hit.position.distance_to(player.global_position) > 2.0 and hit.position.distance_to(player.global_position) < MAX_REACH_M and in_build_area(hit.position) and not overlaps_rover_circle(hit.position)
 		var ground_basis := Basis(Quaternion(Vector3.UP, hit.normal)) * Basis(Vector3.UP, yaw)
 		panel.global_transform = Transform3D(ground_basis, hit.position - hit.normal * 0.01)
 		# All corners must rest on the same level surface; reject rocks and edges.
@@ -754,8 +779,10 @@ func confirm() -> void:
 	active = false
 	_show_area(false)
 	output_card.hide()
-	# preview_kwh was measured at this exact transform on the last physics frame.
 	if selected_id == "solar_array":
+		# Score the exact final transform; the card's shade check may be up to 150 ms old.
+		preview_exposure = mission_exposure(panel.global_transform)
+		preview_kwh = panel_output_kwh(facing_yield((panel.global_basis * face_normal).normalized()), preview_exposure)
 		session.solar_placement = {"transform": panel.transform, "kwh_per_sol": preview_kwh}
 		_set_panel_output(preview_kwh)
 	else:

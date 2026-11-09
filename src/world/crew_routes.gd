@@ -2,6 +2,7 @@ extends RefCounted
 ## Local surveyed-pad fallback: capsule sweeps and floor checks, never global GPS.
 var world: Node3D
 var excluded: Array[RID] = []
+var sweep_excluded: Array[RID] = []
 var radius := 14.0
 # Temporary preview obstacle: validate access before a new station becomes solid.
 var preview_obstacle: Variant = null
@@ -28,6 +29,15 @@ func ground(point: Vector3) -> Dictionary:
 		return {}
 	return hit
 
+## Sweeps skip the regolith: rolling ground off the flat pad would otherwise block
+## every straight walk. Ground and slope are already checked by ground() and the rise limit.
+func _sweep_exclusions() -> Array[RID]:
+	if sweep_excluded.is_empty():
+		sweep_excluded = excluded.duplicate()
+		var surface := world.find_child("LunarSurfaceCollision", true, false) as CollisionObject3D
+		if surface != null: sweep_excluded.append(surface.get_rid())
+	return sweep_excluded
+
 func clear_segment(from: Vector3, to: Vector3) -> bool:
 	for crew_position in routing_crew:
 		if Geometry3D.get_closest_point_to_segment(crew_position, from, to).distance_to(crew_position) < 0.9: return false
@@ -45,7 +55,7 @@ func clear_segment(from: Vector3, to: Vector3) -> bool:
 	query.shape = capsule
 	query.transform.origin = from + Vector3(0, 0.88, 0)
 	query.motion = to - from
-	query.exclude = excluded
+	query.exclude = _sweep_exclusions()
 	var space := world.get_world_3d().direct_space_state
 	if not space.intersect_shape(query, 1).is_empty():
 		return false
@@ -64,20 +74,26 @@ func route(from: Vector3, to: Vector3) -> PackedVector3Array:
 	var graph := AStar3D.new()
 	graph.add_point(0, from)
 	graph.add_point(1, to)
+	var cells := {}
 	for z in range(floori(minf(from.z, to.z) - 7.0), ceili(maxf(from.z, to.z) + 7.0), 2):
 		for x in range(floori(minf(from.x, to.x) - 7.0), ceili(maxf(from.x, to.x) + 7.0), 2):
 			var hit := ground(Vector3(x, 0, z))
 			if not hit.is_empty() and clear_segment(hit.position, hit.position):
-				graph.add_point(graph.get_available_point_id(), hit.position)
-	var ids := graph.get_point_ids()
-	for a in ids:
-		for b in ids:
-			if b <= a:
-				continue
-			var p := graph.get_point_position(a)
-			var q := graph.get_point_position(b)
+				var id := graph.get_available_point_id()
+				graph.add_point(id, hit.position)
+				cells[Vector2i(x, z)] = id
+	# Link only grid neighbours (2 m and diagonal); all-pairs grew quadratically with distance.
+	for cell in cells:
+		for step in [Vector2i(2, 0), Vector2i(0, 2), Vector2i(2, 2), Vector2i(2, -2)]:
+			var other: Vector2i = cell + step
+			if cells.has(other) and clear_segment(graph.get_point_position(cells[cell]), graph.get_point_position(cells[other])):
+				graph.connect_points(cells[cell], cells[other])
+	for endpoint in [0, 1]:
+		var p := graph.get_point_position(endpoint)
+		for cell in cells:
+			var q := graph.get_point_position(cells[cell])
 			if p.distance_to(q) <= 3.1 and clear_segment(p, q):
-				graph.connect_points(a, b)
+				graph.connect_points(endpoint, cells[cell])
 	var points := graph.get_point_path(0, 1)
 	if not points.is_empty():
 		points.remove_at(0)
