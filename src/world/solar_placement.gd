@@ -318,7 +318,7 @@ func _refresh_menu() -> void:
 		picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		picture.add_theme_stylebox_override("panel", UI.style(Color("0d111c"), Color("2a3247")))
 		body.add_child(picture)
-		if MODELS.has(id): _add_preview(picture, MODELS[id])
+		if MODELS.has(id): _add_preview(picture, MODELS[id], id)
 		for line in [[str(structure.get("name", id)), 16, UI.TEXT], [cost_text, 14, UI.BLUE], [status, 13, UI.AMBER if available else UI.MUTED]]:
 			var text := UI.label(line[0], line[1], line[2])
 			text.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -332,7 +332,7 @@ func _refresh_menu() -> void:
 				_refresh_menu())
 
 ## Studio shot of a real model; structures without one keep a blank frame.
-func _add_preview(frame: Control, scene: PackedScene) -> void:
+func _add_preview(frame: Control, scene: PackedScene, id := "") -> void:
 	var holder := SubViewportContainer.new()
 	holder.stretch = true
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -342,7 +342,7 @@ func _add_preview(frame: Control, scene: PackedScene) -> void:
 	view.own_world_3d = true
 	view.transparent_bg = true
 	holder.add_child(view)
-	var model := scene.instantiate() as Node3D
+	var model := NASABuildings.make(id, false) if NASABuildings.MODELS.has(id) else scene.instantiate() as Node3D
 	view.add_child(model)
 	preload("res://src/world/imported_asset_fit.gd").fit(model, 3.0)
 	var camera := Camera3D.new()

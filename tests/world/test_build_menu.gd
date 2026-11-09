@@ -77,10 +77,12 @@ func run() -> void:
 	placement._refresh_menu()
 	await process_frame
 	check(placement.grid.get_child_count() == 9, "Every catalog structure has a grid card.")
-	check(enabled_ids(placement) == ["Solar Array", "Maya · Operations", "Alex · Science", "Sam · Engineering", "Habitat Extension", "Comms Relay"], "NASA previews are accessible before solar placement.")
+	check(enabled_ids(placement) == ["Solar Array", "Maya · Operations", "Alex · Science", "Sam · Engineering"], "Paid buildings require a started mission.")
 	check(placement.grid.get_child(0).get_child(0).get_child(0).get_child_count() == 1, "The solar panel card shows its model preview.")
 	check(placement.grid.get_child(4).get_child(0).get_child(0).get_child_count() == 0, "Structures without a model keep a blank picture.")
 	check(session.start_selected_mission() == OK, "Mission starts.")
+	placement._refresh_menu()
+	check(enabled_ids(placement) == ["Solar Array", "Maya · Operations", "Alex · Science", "Sam · Engineering", "Habitat Extension", "Comms Relay"], "NASA previews are accessible before solar placement in a started mission.")
 	placement.placed = true
 	placement._refresh_menu()
 	await process_frame

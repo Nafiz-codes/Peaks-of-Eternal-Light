@@ -81,6 +81,18 @@ func run():
  check(not restored.is_empty() and restored.building_placements == session.building_placements, "Building transforms survive save and load")
  var catalog = session.dashboard_simulator.construction.structures
  var factory = load("res://src/world/nasa_buildings.gd")
+ # Reproduce confirmed sites, including reconstruction after loading a save.
+ world.construction_view.sync_completed({}, catalog)
+ world.construction_view.sync_completed({}, catalog, restored.building_placements, session.dashboard_state.construction_queue)
+ for id in factory.MODELS:
+  var site = world.construction_view.completed[id]
+  check(site.get_meta("pending") and str(site.name).begins_with("Building_"), "Solid construction site remains pending")
+  check(site.global_transform == session.building_placements[id], "Pending site restores its chosen transform")
+  check(site.find_children("*", "StaticBody3D", true, false).size() == 1, "Pending site has exactly one collision body")
+  for mesh in site.get_node("NASAModel").find_children("*", "MeshInstance3D", true, false):
+   check(mesh.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON, "Confirmed model casts shadows")
+   if mesh.material_override is StandardMaterial3D:
+    check(mesh.material_override.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED, "Confirmed model has no hologram override")
  world.construction_view.sync_completed({}, catalog)
  for id in factory.MODELS:
   check(world.construction_view.show_preview(id, catalog), "NASA preview exists")
@@ -96,6 +108,15 @@ func run():
   var model = completed.get_node("NASAModel")
   var bounds: AABB = factory.mesh_bounds(model)
   check(absf(bounds.position.y) < 0.001, "NASA model base rests on ground")
+  check(absf(bounds.get_center().x) < 0.001 and absf(bounds.get_center().z) < 0.001, "Entire installation is centered for placement")
+  check(model.find_child("Foundation", true, false) != null, "Completed installation includes its foundation")
+  var astronaut_height: float = world.ASTRONAUT_HEIGHT
+  if id == "habitat_module":
+   check(bounds.size.y > astronaut_height * 3.0 and bounds.size.y < astronaut_height * 3.6, "Two-level habitat has astronaut-scale headroom")
+   check(model.find_child("AccessStep", true, false) != null, "Habitat includes suited-crew access steps")
+  else:
+   check(bounds.size.y > astronaut_height * 2.8 and bounds.size.y < astronaut_height * 3.2, "Relay mast is realistically taller than the astronaut")
+   check(model.find_child("RadioCabinet", true, false) != null and model.find_child("MastBrace", true, false) != null, "Relay includes radio equipment and structural bracing")
   var shape = completed.find_children("*", "CollisionShape3D", true, false)[0]
   check(shape.shape.size.is_equal_approx(bounds.size), "Collision matches full NASA model dimensions")
  placement._open_menu()

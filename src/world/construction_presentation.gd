@@ -31,19 +31,13 @@ func sync_completed(built: Dictionary, catalog: Array, placements: Dictionary = 
 		if not desired.has(id) or not SLOTS.has(id) or id == editing_id: continue
 		if not completed.has(id):
 			var pending := not built.has(id)
-			var visual := _make_structure(id, str(entry.get("name", id)), pending)
+			# Confirmation installs the solid model immediately. Only an unconfirmed
+			# placement preview is a hologram; pending controls status and effects.
+			var visual := _make_structure(id, str(entry.get("name", id)), false)
 			visual.set_meta("pending", pending)
 			if pending:
 				visual.name = "Building_" + id
 				for caption in visual.find_children("*", "Label3D", true, false): caption.text = str(entry.name) + "\nUNDER CONSTRUCTION"
-				var body := StaticBody3D.new()
-				var shape := CollisionShape3D.new()
-				var hull := BoxShape3D.new()
-				hull.size = visual.get_node("NASAModel").get_meta("hull_size")
-				shape.shape = hull
-				shape.position.y = hull.size.y * 0.5
-				body.add_child(shape)
-				visual.add_child(body)
 			add_child(visual)
 			completed[id] = visual
 			if is_instance_valid(preview) and preview.get_meta("structure_id") == id: clear_preview()
