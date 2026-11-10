@@ -33,7 +33,7 @@ static func build(ground: MeshInstance3D, site_id: String) -> Node3D:
 		# Keep the full base, construction slots, and boundary approaches open.
 		if Vector2(point.x, point.z).length() < 34.0 or maxf(absf(point.x), absf(point.z)) > 56.0:
 			continue
-		if preload("res://src/world/construction_plots.gd").reserved(Vector2(point.x, point.z)) or _planning_clearance(Vector2(point.x, point.z), planning):
+		if _planning_clearance(Vector2(point.x, point.z), planning):
 			continue
 		var width := rng.randf_range(0.2, 0.65) if rng.randf() < 0.7 else rng.randf_range(0.8, 2.0)
 		var crowded := false

@@ -233,8 +233,7 @@ func _add_lighting() -> void:
 
 
 func _add_terrain() -> void:
-	var legacy := preload("res://src/world/construction_plots.gd").legacy_regions(get_node("/root/MissionSession"))
-	var ground := preload("res://src/world/outpost_terrain.gd").build(site_record, legacy)
+	var ground := preload("res://src/world/outpost_terrain.gd").build(site_record)
 	ground.set_meta("rover_safe_terrain", true)
 	add_child(ground)
 	ground.create_trimesh_collision()
