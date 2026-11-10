@@ -17,6 +17,7 @@ var placement_camera: Camera3D
 var return_camera: Camera3D
 var drag_active := false
 var drag_position := Vector3.ZERO
+var placement_distance := 12.0
 var placement_reason := ""
 var placement_actions: HBoxContainer
 var relocation_original: Node3D
@@ -546,16 +547,9 @@ func _open_placement_view() -> void:
 			child.set_process_input(false)
 			child.hide()
 	return_camera = get_viewport().get_camera_3d()
-	placement_camera = Camera3D.new()
-	add_child(placement_camera)
 	var center: Vector2 = Plots.PLOTS[selected_id].center
-	drag_position = _plot_ground(center)
-	placement_camera.position = drag_position + Vector3(0, 32, 22)
-	placement_camera.look_at(drag_position)
-	placement_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	placement_camera.size = maxf(Plots.PLOTS[selected_id].size.x, Plots.PLOTS[selected_id].size.y) + 18.0
-	placement_camera.make_current()
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	placement_distance = _footprint().length() + 8.0
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	placement_actions.show()
 	drag_active = false
 	var shader := area_ring.material_override as ShaderMaterial
@@ -762,7 +756,12 @@ func _physics_process(_delta: float) -> void:
 	if destroying:
 		_set_target(null if hit.is_empty() else _structure_at(hit.collider))
 		return
-	if drag_active and not hit.is_empty(): drag_position = hit.position
+	var camera := get_viewport().get_camera_3d()
+	if camera == null: return
+	var forward := -camera.global_basis.z
+	forward.y = 0.0
+	if forward.length_squared() < 0.001: return
+	drag_position = player.global_position + forward.normalized() * placement_distance
 	var ground_query := PhysicsRayQueryParameters3D.create(drag_position + Vector3.UP * 30, drag_position - Vector3.UP * 30)
 	ground_query.exclude = [player.get_rid()]
 	hit = get_world_3d().direct_space_state.intersect_ray(ground_query)
@@ -785,11 +784,13 @@ func _physics_process(_delta: float) -> void:
 				valid = false
 		var space := PhysicsShapeQueryParameters3D.new()
 		var box := BoxShape3D.new()
-		box.size = Vector3(half.x * 2.0, _clearance_height(), half.y * 2.0)
+		# Keep a walking clearance outside the building's physical footprint.
+		box.size = Vector3(half.x * 2.0 + 2.0, _clearance_height(), half.y * 2.0 + 2.0)
 		space.shape = box
 		space.transform = Transform3D(panel.global_basis, hit.position + hit.normal * (box.size.y * 0.5 + 0.12))
-		if selected_id == "solar_array": space.exclude = [player.get_rid()]
 		if not get_world_3d().direct_space_state.intersect_shape(space, 1).is_empty(): valid = false
+		if Vector2(panel.global_position.x - player.global_position.x, panel.global_position.z - player.global_position.z).length() < half.length() + 4.0:
+			valid = false
 	if valid and NASABuildings.MODELS.has(selected_id):
 		# Preserve each crew member's reserved standing space at their outpost.
 		for other_id in session.station_placements:
@@ -815,7 +816,7 @@ func _physics_process(_delta: float) -> void:
 	placement_actions.get_child(0).disabled = not valid
 	if Time.get_ticks_msec() < build_error_until: return
 	placement_reason = "Ready to place" if valid else ("Keep the whole building and entrance inside its assigned plot" if not _plot_fits() else "Ground or access blocked — move or rotate the building")
-	label.text = "PLACE " + _display_name().to_upper() + "  ·  Hold left mouse to drag  ·  Q / R rotate  ·  Enter confirm  ·  Esc cancel\n" + placement_reason
+	label.text = "PLACE " + _display_name().to_upper() + "  ·  Walk + look to position  ·  Wheel: distance  ·  Q / R rotate  ·  Click / Enter confirm  ·  Esc cancel\n" + placement_reason + "  ·  Distance %.0f m" % placement_distance
 
 ## Built outpost structures and the placed panel can be destroyed; previews cannot.
 func _structure_at(collider: Object) -> Node3D:
@@ -927,12 +928,13 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		return
 	if not active or player.ui_blocked: return
+	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		placement_distance = clampf(placement_distance + (-1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0), _footprint().length() + 4.0, 65.0)
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if not event.pressed:
-			drag_active = false
-		elif get_viewport().gui_get_hovered_control() == null:
-			drag_active = true
-			get_viewport().set_input_as_handled()
+		if event.pressed: confirm()
+		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and event.pressed:
 		if event.keycode in [KEY_Q, KEY_R]:
