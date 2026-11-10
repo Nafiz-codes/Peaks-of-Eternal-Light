@@ -202,16 +202,20 @@ func _layout() -> void:
 	var w := size.x / factor
 	var h := size.y / factor
 	_place(headline, Rect2(60, 50, 400, 110))
-	_place(select_button, Rect2(w - 230, 60, 170, 54))
-	_place(stage, Rect2(w / 2 - 330, h - 735, 660, 580))
-	_place(preview, Rect2(w / 2 - 180, h - 770, 360, 540))
+	# Keep the showcase, primary action and overview on one center line.
+	# Scale the character and platform together to preserve foot placement.
+	var showcase_scale := 0.88
+	var overview_top := h - 180.0
+	_place(select_button, Rect2(w / 2 - 96, overview_top - 66, 192, 54))
+	_place(stage, Rect2(w / 2 - 330 * showcase_scale, overview_top - 560, 660 * showcase_scale, 580 * showcase_scale))
+	_place(preview, Rect2(w / 2 - 180 * showcase_scale, overview_top - 595, 360 * showcase_scale, 540 * showcase_scale))
 	preview_origin = preview.position
 	_finish_slide()
 	(stage.get_child(0) as SubViewport).render_target_update_mode = SubViewport.UPDATE_ONCE
-	_place(left_button, Rect2(w / 2 - 400, h * 0.46, 64, 72))
-	_place(right_button, Rect2(w / 2 + 336, h * 0.46, 64, 72))
+	_place(left_button, Rect2(w / 2 - 400, overview_top - 300, 64, 72))
+	_place(right_button, Rect2(w / 2 + 336, overview_top - 300, 64, 72))
 	for i in cards.size():
-		_place(cards[i], Rect2(w / 2 - 414 + i * 212, h - 180, 192, 150))
+		_place(cards[i], Rect2(w / 2 - 414 + i * 212, overview_top, 192, 150))
 		_place(card_images[i], Rect2(6, 6, 180, 138))
 	dialog.scale = Vector2.ONE * minf(1.0, factor)
 	dialog.size = Vector2(440, 290)
