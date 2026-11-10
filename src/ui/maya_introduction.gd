@@ -5,7 +5,9 @@ const INTRODUCTIONS := {
  "crew_briefing": {"speaker": "Dr. Maya Chen", "text": LINE},
  "water_recycler": {"speaker": "Dr. Alex Rivera", "text": "Dr. Alex Rivera, planetary geologist. I'm here to help us understand the Moon's terrain, history, and potential resources."},
  "food_storage": {"speaker": "Sam Okafor", "text": "And I'm Sam Okafor, robotics and habitat engineer. Give me the equipment, and I'll help turn it into a functioning base."},
- "maya_closing": {"speaker": "Dr. Maya Chen", "text": "We all have our specialties, Commander. But you'll be making the final decisions."}
+ "maya_closing": {"speaker": "Dr. Maya Chen", "text": "We all have our specialties, Commander. But you'll be making the final decisions."},
+ "storm_damage": {"speaker": "Dr. Maya Chen", "text": "Commander, the dust storm damaged some of our structures. Walk up to a marked one and press E to repair it, or talk to me if you decide to leave them. Unrepaired, they will give us far less."},
+ "storm_lost_contact": {"speaker": "Dr. Maya Chen", "text": "Commander, we've lost contact with Alex. He went out to check a reading before the storm and hasn't reported back. Take the rover to his last known location and bring him home."}
 }
 var dialogue_id := "crew_briefing"
 var player: Node
@@ -82,7 +84,7 @@ func _ready() -> void:
 	content.modulate.a = 0.0
 	var fade := create_tween()
 	fade.tween_property(content, "modulate:a", 1.0, 0.18)
-	fade.tween_interval(6.0)
+	fade.tween_interval(maxf(6.0, spoken_text.length() * 0.055)) # Longer lines stay up longer.
 	fade.tween_property(content, "modulate:a", 0.0, 0.18)
 	fade.tween_callback(func():
 		player.ui_blocked = previous_blocked

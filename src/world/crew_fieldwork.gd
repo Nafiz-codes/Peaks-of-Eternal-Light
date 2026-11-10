@@ -13,6 +13,9 @@ const STEPS := {
 const SITES := {"sample_a": Vector3(-3, 0, 7), "sample_b": Vector3(4, 0, 8),
 	"instrument_a": Vector3(-7, 0, 7), "instrument_b": Vector3(-5, 0, 9)}
 const LOCKER := Vector3(0, 0, 6)
+const Expedition = preload("res://src/simulation/rover_expedition.gd")
+## The astronaut away from the outpost while Lifeline is open (see RoverExpeditionController).
+const LOST_CREW := "water_recycler"
 var config: Dictionary
 var world: Node3D
 var session: Node
@@ -154,10 +157,11 @@ func _physics_process(delta: float) -> void:
 		if world.dialogue_speaker == id:
 			_update_visual(id, false)
 			continue
-		if id == "crew_briefing" and not session.maya_intro_complete:
+		# Maya walks up to the Commander for her introduction and her storm briefings.
+		if id == "crew_briefing" and (not session.maya_intro_complete or Expedition.aftermath(state.rover_expedition) in ["briefing", "alert"]):
 			_approach_commander(delta)
 			continue
-		if id == "crew_briefing" and state.rover_expedition.get("missing", false):
+		if id == LOST_CREW and state.rover_expedition.get("missing", false):
 			continue
 		_tick(id, delta)
 	# Local instrument records only modeled health/uptime, never invented moonquakes.
@@ -212,7 +216,7 @@ func _release(id: String) -> void:
 			data.locks.erase(item)
 
 func assign(id: String, task: String, site := "") -> bool:
-	if id == "crew_briefing" and state != null and state.rover_expedition.get("missing", false):
+	if id == LOST_CREW and state != null and state.rover_expedition.get("missing", false):
 		return false
 	if state == null or not session.can_advance() or get_tree().paused or not IDS.has(id):
 		return false
@@ -838,7 +842,7 @@ func follow(id: String) -> bool:
 	return true
 
 func _update_visual(id: String, moving: bool) -> void:
-	if id == "crew_briefing" and state != null and state.rover_expedition.get("missing", false):
+	if id == LOST_CREW and state != null and state.rover_expedition.get("missing", false):
 		labels[id].hide()
 		return
 	if data.is_empty():

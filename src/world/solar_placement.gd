@@ -773,6 +773,7 @@ func _destroy_target() -> void:
 	if doomed == solar_panel:
 		_reset_selection()
 		session.solar_placement = {}
+		if session.dashboard_state != null: session.dashboard_state.damaged_structures.erase("solar_panel")
 		_set_panel_output(0.0)
 		placed = false
 		for mesh in meshes:

@@ -40,6 +40,10 @@ const SOLAR_ARRAY_GENERATION_KWH_PER_SOL := 18.0
 ## Gameplay value: share of sunlight left during the dust storm (visuals use the same value).
 const DUST_STORM_LIGHT_MULTIPLIER := 0.5
 const HISTORY_DAYS := 60
+## Gameplay values: a damaged structure keeps this share of its output until repaired,
+## and the dust storm can damage these. "solar_panel" is the hand-placed panel.
+const DAMAGED_OUTPUT_SHARE := 0.4
+const STORM_DAMAGE_TARGETS := ["solar_panel", "water_extractor", "greenhouse", "shielding_wall", "solar_array"]
 
 var sites: Array[Dictionary] = []
 var bvad_constants: Dictionary = {}
@@ -107,7 +111,7 @@ func advance_sol(state: Variant) -> Dictionary:
 	state.power_kwh = clampf(state.power_kwh + state.power_balance_kwh, 0.0, _battery_capacity(state))
 
 	state.terrain_shielding_factor = _terrain_shielding_factor(site)
-	var structural_dose_multiplier := SHIELDING_WALL_DOSE_MULTIPLIER if state.built_structures.has("shielding_wall") else 1.0
+	var structural_dose_multiplier := lerpf(1.0, SHIELDING_WALL_DOSE_MULTIPLIER, _output_share(state, "shielding_wall")) if state.built_structures.has("shielding_wall") else 1.0
 	state.radiation_this_sol_msv = LUNAR_SURFACE_GCR_MSV_PER_SOL * (1.0 - state.terrain_shielding_factor) * structural_dose_multiplier
 	state.radiation_msv += state.radiation_this_sol_msv
 
@@ -222,6 +226,39 @@ func apply_dust_storm(state: Variant) -> bool:
 	})
 	_publish_action_state(state)
 	return true
+
+
+## After the dust storm: one to three of the outpost's working structures are damaged.
+## Returns the damaged ids (empty when there is nothing to damage).
+func apply_storm_damage(state: Variant) -> Array:
+	var damaged: Array = []
+	if state == null:
+		return damaged
+	var candidates: Array = []
+	for id in STORM_DAMAGE_TARGETS:
+		var present: bool = state.placed_panel_kwh_per_sol > 0.0 if id == "solar_panel" else state.built_structures.has(id)
+		if present and not state.damaged_structures.has(id):
+			candidates.append(id)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("storm_damage:%s:%d" % [state.site_id, state.sol])
+	for index in mini(candidates.size(), rng.randi_range(1, 3)):
+		var id: String = candidates.pop_at(rng.randi_range(0, candidates.size() - 1))
+		state.damaged_structures[id] = true
+		damaged.append(id)
+	_publish_action_state(state)
+	return damaged
+
+
+func repair_structure(state: Variant, structure_id: String) -> bool:
+	if state == null or not state.damaged_structures.has(structure_id):
+		return false
+	state.damaged_structures.erase(structure_id)
+	_publish_action_state(state)
+	return true
+
+
+func _output_share(state: Variant, structure_id: String) -> float:
+	return DAMAGED_OUTPUT_SHARE if state.damaged_structures.has(structure_id) else 1.0
 
 
 ## Placed buildings finish on confirmation, like the solar panel; costs are already paid.
@@ -546,13 +583,13 @@ func _calculate_power(state: Variant, site: Dictionary) -> Dictionary:
 	var illumination_fraction := PolarSolar.daily_fraction(site, _solar_day(state))
 	var solar_yield := PolarSolar.daily_fraction(site, _solar_day(state), true)
 	var active_effect_multiplier := _active_power_generation_multiplier(state.active_events)
-	var solar_array_output := SOLAR_ARRAY_GENERATION_KWH_PER_SOL if state.built_structures.has("solar_array") and not state.damaged_structures.has("solar_array") else 0.0
+	var solar_array_output := SOLAR_ARRAY_GENERATION_KWH_PER_SOL * _output_share(state, "solar_array") if state.built_structures.has("solar_array") else 0.0
 	# Sunlight lost to a dust storm reaches every solar collector alike.
 	var light_multiplier := _active_effect_multiplier_for(state.active_events, "solar_light_multiplier")
 	var generated_kwh := (BASE_SOLAR_GENERATION_KWH_PER_SOL + solar_array_output) * solar_yield * active_effect_multiplier * _active_effect_multiplier_for(state.active_events, "output_multiplier") * light_multiplier
 	# The placed panel's rating already includes its site and spot, so only lost light scales it:
 	# outside a storm the amount shown when placing is exactly what arrives every sol.
-	generated_kwh += state.placed_panel_kwh_per_sol * light_multiplier
+	generated_kwh += state.placed_panel_kwh_per_sol * light_multiplier * _output_share(state, "solar_panel")
 	var baseline_kw_per_person := _field_value(bvad_constants, "power_baseline_kw_per_person")
 	var consumed_kwh := baseline_kw_per_person * float(state.crew_size) * 24.0 * _active_effect_multiplier_for(state.active_events, "power_consumption_multiplier")
 	return {
@@ -573,10 +610,10 @@ func _calculate_life_support(state: Variant) -> Dictionary:
 	)
 	var recycling_efficiency := clampf(_field_value(bvad_constants, "water_recycling_efficiency_pct") / 100.0, 0.0, 1.0)
 	var structure_output_multiplier := _active_effect_multiplier_for(state.active_events, "output_multiplier")
-	var extractor_output := 16.0 * structure_output_multiplier if state.built_structures.has("water_extractor") and not state.damaged_structures.has("water_extractor") and state.volatile_prospect_status == "extraction_candidate" else 0.0
+	var extractor_output := 16.0 * structure_output_multiplier * _output_share(state, "water_extractor") if state.built_structures.has("water_extractor") and state.volatile_prospect_status == "extraction_candidate" else 0.0
 	var water_recovered_l := water_consumed_l * recycling_efficiency * _active_effect_multiplier_for(state.active_events, "water_recovery_multiplier") + extractor_output
 	var oxygen_consumed_kg := crew_count * _field_value(bvad_constants, "o2_consumption_kg_per_person_per_day")
-	var greenhouse_output := 1.2 * structure_output_multiplier * _active_effect_multiplier_for(state.active_events, "food_production_multiplier") if state.built_structures.has("greenhouse") and not state.damaged_structures.has("greenhouse") else 0.0
+	var greenhouse_output := 1.2 * structure_output_multiplier * _active_effect_multiplier_for(state.active_events, "food_production_multiplier") * _output_share(state, "greenhouse") if state.built_structures.has("greenhouse") else 0.0
 	var food_consumed_kg := maxf(0.0, crew_count * _field_value(bvad_constants, "food_consumption_kg_dry_per_person_per_day") - greenhouse_output)
 	return {
 		"water_consumed_l": water_consumed_l,

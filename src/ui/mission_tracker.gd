@@ -63,6 +63,15 @@ func _process(_delta: float) -> void:
 		objective = "Talk with Maya"
 		instruction = "Press E when Maya is nearby."
 		destination = world.get_node("Outpost/crew_briefing").global_position
+	elif expeditions.Rules.aftermath(expeditions.data) in ["briefing", "alert"]:
+		objective = "Talk with Maya"
+		instruction = "Press E when Maya is nearby."
+		destination = world.get_node("Outpost/crew_briefing").global_position
+	elif expeditions.Rules.aftermath(expeditions.data) == "repairs":
+		var repairs: Node = world.get_node("StructureRepairs")
+		objective = "Repair the storm damage"
+		instruction = "%d damaged. Press E at a marked structure, or talk to Maya to leave them." % repairs.points.size()
+		destination = repairs.nearest(player.global_position)
 	elif not session.construction_ready() and expeditions.data.get("completed", []).is_empty() and expeditions.data.get("mission", -1) < 0:
 		objective = "Build the solar panel and three crew stations"
 		instruction = "Press B to open construction."

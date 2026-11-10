@@ -257,6 +257,23 @@ func finish_structure(structure_id: String) -> void:
 		state_changed.emit()
 
 
+func apply_storm_damage() -> Array:
+	if dashboard_state == null:
+		return []
+	var damaged: Array = dashboard_simulator.apply_storm_damage(dashboard_state)
+	capture_sol_checkpoint()
+	state_changed.emit()
+	return damaged
+
+
+func repair_structure(structure_id: String) -> bool:
+	if dashboard_state == null or not dashboard_simulator.repair_structure(dashboard_state, structure_id):
+		return false
+	capture_sol_checkpoint()
+	state_changed.emit()
+	return true
+
+
 func apply_dust_storm() -> void:
 	if dashboard_state != null and dashboard_simulator.apply_dust_storm(dashboard_state):
 		state_changed.emit()

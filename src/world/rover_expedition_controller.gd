@@ -2,6 +2,8 @@ extends Node3D
 ## One physical rover and four canonical crew identities across connected locations.
 signal hud_changed(view: Dictionary)
 const Rules = preload("res://src/simulation/rover_expedition.gd")
+## The astronaut who loses contact in the dust storm and is rescued in Lifeline (Alex).
+const LOST_CREW := "water_recycler"
 const Terrain = preload("res://src/world/expedition_terrain.gd")
 const Target = preload("res://src/world/rover_scan_target.gd")
 const Circle = preload("res://src/world/expedition_circle.gd")
@@ -85,7 +87,7 @@ func _ready() -> void:
 	target.marker.hide()
 	target.caption.hide()
 	targets.astronaut = target
-	crew = get_parent().get_node("Outpost/crew_briefing")
+	crew = get_parent().get_node("Outpost/" + LOST_CREW)
 	for pair in [["Astronaut","CREW_01"],["crew_briefing","CREW_02"],["water_recycler","CREW_03"],["food_storage","CREW_04"]]:
 		get_parent().get_node("Outpost/"+pair[0]).set_meta("crew_id",pair[1])
 	crew.get_node("CrewBody").set_meta("rover_target","astronaut")
@@ -239,7 +241,7 @@ func _restore_crew() -> void:
 		follower.global_position = crew.global_position
 		follower.collision_layer = 1
 		crew.get_node("CrewBody").collision_layer = 0
-		get_parent().get_node("CrewFieldwork")._release("crew_briefing")
+		get_parent().get_node("CrewFieldwork")._release(LOST_CREW)
 		crew.rotation = Vector3.ZERO
 		for node_name in ["StatusLabel","FieldworkLabel"]: crew.get_node(node_name).hide()
 		crew.get_node("InteractionArea").monitoring = false
@@ -259,9 +261,9 @@ func _restore_crew() -> void:
 		crew.get_node("InteractionArea").monitoring = true
 		var fieldwork := get_parent().get_node("CrewFieldwork")
 		if was_away and data.completed.has(2) and not fieldwork.data.is_empty():
-			fieldwork.data.crew.crew_briefing.position = crew.position
-			fieldwork.data.crew.crew_briefing.path = PackedVector3Array()
-			fieldwork._finish("crew_briefing")
+			fieldwork.data.crew[LOST_CREW].position = crew.position
+			fieldwork.data.crew[LOST_CREW].path = PackedVector3Array()
+			fieldwork._finish(LOST_CREW)
 	targets.astronaut.position = crew.global_position
 
 func _stand() -> void:
@@ -790,7 +792,7 @@ func _publish() -> void:
 			prompt = "Brake, face a droplet within 3 m, hold E to extract."
 		else:
 			objective = "Search beyond the eastern saddle for the missing crew member."
-			details = "Crew: Commander, Alex, Sam accounted for; Maya missing.\nCritical oxygen — locate and assist the astronaut."
+			details = "Crew: Commander, Maya, Sam accounted for; Alex missing.\nCritical oxygen — locate and assist the astronaut."
 			prompt = "Approach carefully. E: emergency oxygen and communications."
 			if data.stabilized:
 				objective = "Escort the astronaut on foot to extraction."
@@ -858,5 +860,7 @@ func _tone(frequency: float) -> void:
 func available_assignment() -> int:
 	if data.is_empty(): return -1
 	if preload("res://src/world/dust_storm.gd").pending(data): return -1
+	# Lifeline opens only after Maya's storm briefings (damage, then the lost astronaut).
+	if Rules.aftermath(data) not in ["", "done"]: return -1
 	if data.mission < 0 and data.completed.is_empty() and not session.construction_ready(): return -1
 	return Rules.assigned(data)

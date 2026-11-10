@@ -43,6 +43,9 @@ func run():
  assert(env.fog_density == before)
  assert(not world.has_meta("storm_light_factor") and not storm.sign_layer.visible)
  assert(world.get_node("LowPolarSun").light_color.is_equal_approx(Color("ffe5bd")))
+ # Lifeline waits for Maya's storm briefings (damage, then the lost astronaut).
+ assert(expedition.available_assignment() == -1 and expedition.Rules.aftermath(expedition.data) == "briefing")
+ expedition.data["aftermath"] = "done"
  assert(expedition.available_assignment() == 2)
  storm._process(1.0)
  assert(not storm.active)

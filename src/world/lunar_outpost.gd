@@ -27,6 +27,8 @@ var feedback_tween: Tween
 var overview := false
 var camera_tween: Tween
 var construction_view: Node3D
+var skip_repairs_dialog: ConfirmationDialog
+const Expedition = preload("res://src/simulation/rover_expedition.gd")
 
 
 func _ready() -> void:
@@ -69,6 +71,7 @@ func _ready() -> void:
 	training.name = "RoverTraining"
 	add_child(training)
 	add_child(preload("res://src/world/dust_storm.gd").new())
+	add_child(preload("res://src/world/structure_repairs.gd").new())
 	session.state_changed.connect(refresh_feedback)
 	refresh_feedback()
 	var solar := preload("res://src/world/solar_placement.gd").new()
@@ -480,9 +483,22 @@ func _on_player_interaction(interaction_id: String) -> void:
 	var session := get_node("/root/MissionSession")
 	if maya_dialogue_active: return
 	var introduction := ""
+	if interaction_id.begins_with("repair:"):
+		get_node("StructureRepairs").start(interaction_id.trim_prefix("repair:"))
+		return
+	# After the dust storm Maya reports the damage, then the lost astronaut.
+	var expedition: Dictionary = get_node("RoverTraining").data
+	var aftermath := Expedition.aftermath(expedition)
 	if interaction_id == "crew_briefing":
 		if not session.maya_intro_complete:
 			introduction = "crew_briefing"
+		elif aftermath == "briefing":
+			introduction = "storm_damage"
+		elif aftermath == "alert":
+			introduction = "storm_lost_contact"
+		elif aftermath == "repairs":
+			_ask_skip_repairs()
+			return
 		elif session.crew_introductions.get("water_recycler", false) and session.crew_introductions.get("food_storage", false) and not session.crew_introductions.get("maya_closing", false):
 			introduction = "maya_closing"
 	elif interaction_id in ["water_recycler", "food_storage"] and not session.crew_introductions.get(interaction_id, false):
@@ -490,6 +506,10 @@ func _on_player_interaction(interaction_id: String) -> void:
 	if not introduction.is_empty():
 		var actor := get_node("Outpost/" + interaction_id) as Node3D
 		if get_node("Outpost/Astronaut").global_position.distance_to(actor.global_position) > 2.5: return
+		if introduction == "storm_damage":
+			# Nothing to damage: go straight to the lost-contact report.
+			if session.apply_storm_damage().is_empty(): introduction = "storm_lost_contact"
+			else: expedition["aftermath"] = "repairs"
 		maya_dialogue_active = true
 		dialogue_speaker = interaction_id
 		var fieldwork := get_node("CrewFieldwork")
@@ -500,7 +520,11 @@ func _on_player_interaction(interaction_id: String) -> void:
 			if introduction == "crew_briefing":
 				session.maya_intro_complete = true
 				if not fieldwork.data.is_empty(): fieldwork.data.crew.crew_briefing.auto_attempted = true
-			else:
+			elif introduction == "storm_lost_contact":
+				# Lifeline opens now; the rover controller moves Alex to his last known position.
+				expedition["aftermath"] = "done"
+				session.capture_sol_checkpoint()
+			elif introduction != "storm_damage":
 				session.crew_introductions[introduction] = true
 			maya_dialogue_active = false
 			dialogue_speaker = ""
@@ -516,6 +540,28 @@ func _on_player_interaction(interaction_id: String) -> void:
 	# Inspect authoritative readings; stations never modify resource values.
 	get_node("MissionHUD").inspect_station(interaction_id)
 
+
+## The Commander may leave the storm damage: Maya then moves on to the lost-contact report.
+func _ask_skip_repairs() -> void:
+	var player := get_node("Outpost/Astronaut")
+	if skip_repairs_dialog == null:
+		skip_repairs_dialog = ConfirmationDialog.new()
+		skip_repairs_dialog.title = "Leave the storm damage?"
+		skip_repairs_dialog.dialog_text = "Damaged structures keep working at well under half output until they are repaired. You can still repair them later."
+		skip_repairs_dialog.dialog_autowrap = true
+		skip_repairs_dialog.min_size = Vector2i(520, 200)
+		skip_repairs_dialog.ok_button_text = "Leave them"
+		skip_repairs_dialog.cancel_button_text = "Keep repairing"
+		skip_repairs_dialog.exclusive = true
+		skip_repairs_dialog.confirmed.connect(func():
+			get_node("RoverTraining").data["aftermath"] = "alert"
+			get_node("/root/MissionSession").capture_sol_checkpoint()
+			get_node("/root/MissionSession").state_changed.emit())
+		skip_repairs_dialog.visibility_changed.connect(func():
+			player.ui_blocked = skip_repairs_dialog.visible
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE if skip_repairs_dialog.visible else Input.MOUSE_MODE_CAPTURED))
+		add_child(skip_repairs_dialog)
+	if not player.ui_blocked: skip_repairs_dialog.popup_centered()
 
 func _add_site_readout() -> void:
 	var site_id := "ridge_a"

@@ -85,6 +85,10 @@ func run():
 	driver.camera.global_transform = camera_pose
 	for mission in range(3):
 		await advance_to(Rules.SOLS[mission])
+		if mission == 2:
+			# The storm and Maya's briefings have their own tests; open Lifeline directly.
+			controller.data["dust_storm_complete"] = true
+			controller.data["aftermath"] = "done"
 		check(Rules.assigned(controller.data,session.dashboard_state.sol) == mission,"Correct assignment")
 		driver.active = false
 		controller._update_circle_visibility()
@@ -199,7 +203,7 @@ func run():
 		check(not controller.armed,"Return marker disarmed")
 		check(not Save.decode(Save.capture(session)).is_empty(),"Completed mission save validates")
 	check(not controller.data.missing,"Rescued crew restored")
-	var crew_phase: String = world.get_node("CrewFieldwork").data.crew.crew_briefing.phase
+	var crew_phase: String = world.get_node("CrewFieldwork").data.crew[controller.LOST_CREW].phase
 	check(controller.crew.get_node("InteractionArea").monitoring and controller.crew.get_node("CrewBody").collision_layer == 1 and crew_phase in ["Available","Preparing","Traveling","Working","Recording results","Returning"],"Rescued Maya resumes normal fieldwork: "+crew_phase)
 	check(world.find_children("StationAstronaut","Node3D",true,false).size() == 3,"Four unique crew after cinematic")
 	await capture("completed")

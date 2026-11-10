@@ -12,6 +12,14 @@ static func assigned(d: Dictionary, _sol: int = 0) -> int:
 	for i in range(3):
 		if not d.completed.has(i): return i
 	return -1
+## What follows the dust storm, before Lifeline opens: "briefing" (Maya reports the
+## damage), "repairs" (the Commander fixes or leaves it), "alert" (Maya reports the lost
+## astronaut), then "done". Empty when the storm is not the latest thing that happened.
+static func aftermath(d: Dictionary) -> String:
+	var completed: Array = d.get("completed", [])
+	if not completed.has(1) or completed.has(2) or int(d.get("mission", -1)) == 2 or not bool(d.get("dust_storm_complete", false)):
+		return ""
+	return str(d.get("aftermath", "briefing"))
 static func migrate(training: Dictionary) -> Dictionary:
 	var d := fresh()
 	if training.is_empty(): return d
@@ -37,6 +45,7 @@ static func valid_save(d: Variant) -> bool:
 	if d.is_empty(): return true
 	if d.has("damage_warning_acknowledged") and not d.damage_warning_acknowledged is bool: return false
 	if d.has("dust_storm_complete") and not d.dust_storm_complete is bool: return false
+	if d.has("aftermath") and d.aftermath not in ["briefing", "repairs", "alert", "done"]: return false
 	if d.has("dust_storm_elapsed"):
 		if not d.dust_storm_elapsed is float or not is_finite(d.dust_storm_elapsed) or d.dust_storm_elapsed < 0.0 or d.dust_storm_elapsed > 15.0: return false
 	var defaults := fresh()
