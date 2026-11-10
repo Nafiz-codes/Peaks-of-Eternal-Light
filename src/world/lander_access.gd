@@ -56,7 +56,7 @@ func _process(_delta: float) -> void:
 	var session := get_node("/root/MissionSession")
 	rover_button.disabled = session.dashboard_state != null and not session.can_advance()
 	rover_button.text = "Start rover expeditions  [R]" if session.dashboard_state == null else ("Resolve mission decisions before driving" if rover_button.disabled else "Rover expeditions  [R]")
-	rover_button.tooltip_text = "Departure circle: Sol 2 Survey, Sol 4 Frozen Horizon, Sol 6 Lifeline. Remote rover controls: hold F to scan, E to interact, L for headlights."
+	rover_button.tooltip_text = "Departure circle: Surface Survey, then Frozen Horizon, then Lifeline. Remote rover controls: hold F to scan, E to interact, L for headlights."
 	button.visible = not busy and not player.ui_blocked and door_available()
 	button.text = "Get outside  [E]" if inside else "Get inside  [E]"
 	button.tooltip_text = "Press E to enter or exit. Esc opens the pause menu."

@@ -8,7 +8,7 @@ func _init() -> void:
 	_assert(simulator.call("load_contracts") == OK, "All five resource contracts should load.")
 	_assert(simulator.get("sites").size() == 4, "The starter site contract should expose four sites.")
 	_assert(simulator.get("crew").size() == 4, "The starter crew contract should include four members including the player.")
-	_assert(simulator.get("events").size() == 21, "The completed event contract should expose twenty-one events.")
+	_assert(simulator.get("events").size() == 20, "The completed event contract should expose twenty events.")
 	for site in simulator.get("sites"):
 		_assert(not site.get("illumination_pct", {}).get("verified", true), "Modeled illumination must remain explicitly unverified.")
 		_assert(site.get("elevation_m", {}).get("verified", false), "Every selected site has verified elevation data.")
@@ -58,18 +58,8 @@ func _init() -> void:
 	_assert(first_tick.get("outcome").get("status") == "in_progress", "A mission remains in progress while its objective is unfinished.")
 
 	var second_tick: Dictionary = simulator.call("advance_sol", state)
-	_assert(second_tick.get("completed", false), "A two-sol mission completes after its second tick.")
-	_assert(second_tick.get("outcome").get("status") == "success", "A mission that reaches its final sol with reserves succeeds.")
+	_assert(second_tick.get("outcome").get("status") == "in_progress", "The mission is open-ended: it stays in progress while reserves last.")
 	_assert(state.get("history").size() == 3, "History includes the initial state and each completed tick.")
-
-	var final_decision_state: Object = simulator.call("begin_mission", "ridge_a", 1)
-	final_decision_state.sol = 1
-	final_decision_state.pending_events.append({"event_id": "final_sol_decision", "choices": [{"choice_id": "confirm"}], "effects": {}})
-	var waiting_outcome: Dictionary = simulator.call("_evaluate_mission_outcome", final_decision_state)
-	_assert(waiting_outcome.status == "in_progress" and waiting_outcome.mission_finished, "A final-sol decision must be resolved before reporting success.")
-	final_decision_state.pending_events.clear()
-	var completed_outcome: Dictionary = simulator.call("_evaluate_mission_outcome", final_decision_state)
-	_assert(completed_outcome.status == "success", "Resolving the final decision releases the completed mission outcome.")
 
 	var low_oxygen_state: Object = simulator.call("begin_mission", "ridge_a", 1)
 	low_oxygen_state.set("oxygen_kg", 5.0)
@@ -141,7 +131,6 @@ func _run_full_mission(simulator: Object, site_id: String) -> void:
 		_assert(state.get("power_kwh") >= 0.0 and state.get("water_l") >= 0.0, "%s never creates negative reserves." % site_id)
 		_assert(state.get("oxygen_kg") >= 0.0 and state.get("food_kg") >= 0.0, "%s never creates negative life-support reserves." % site_id)
 		_assert(state.get("radiation_this_sol_msv") > 0.0 and state.get("radiation_msv") > 0.0, "%s accumulates a positive lunar radiation dose." % site_id)
-		_assert(tick.get("completed", false) == (expected_sol == MISSION_LENGTH), "%s reports completion only on its final sol." % site_id)
 		while not state.get("pending_events").is_empty():
 			var pending: Dictionary = state.get("pending_events")[0]
 			var choices: Array = pending.get("choices", [])
@@ -151,7 +140,7 @@ func _run_full_mission(simulator: Object, site_id: String) -> void:
 			var resolution: Dictionary = simulator.call("resolve_event_choice", state, str(pending.get("event_id", "")), choice_id)
 			_assert(resolution.get("ok", false), "%s resolves triggered event choices through the simulator." % site_id)
 
-	_assert(state.get("mission_outcome").get("status") == "success", "%s completes the balanced first-choice 7-sol baseline." % site_id)
+	_assert(state.get("mission_outcome").get("status") == "in_progress", "%s survives the balanced first-choice 7-sol baseline." % site_id)
 
 
 func _assert(condition: bool, message: String) -> void:

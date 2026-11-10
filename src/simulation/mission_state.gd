@@ -35,6 +35,8 @@ var construction_queue: Array[Dictionary] = []
 var damaged_structures: Dictionary = {}
 ## Fixed daily output of the hand-placed solar panel, set from its placement.
 var placed_panel_kwh_per_sol: float = 0.0
+## World-clock seconds at mission start, so power uses the same days as the sky.
+var clock_start_seconds: float = 0.0
 var last_rover_action: String = ""
 var rover_distance_this_sol_km: float = 0.0
 var rover_total_distance_km: float = 0.0

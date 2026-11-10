@@ -40,10 +40,10 @@ static func observation_at(site: Dictionary, elapsed: float) -> Dictionary:
 	var coords: Dictionary = site.coordinates
 	return Orbit.observer(Orbit.days_from_j2000(elapsed), coords.latitude_deg, coords.longitude_deg, float(site.elevation_m.value) / 1000.0)
 
-static func daily_fraction(site: Dictionary, day_index: int, include_distance := false) -> float:
+static func daily_fraction(site: Dictionary, day_index: float, include_distance := false) -> float:
 	# Midpoint quadrature at 15-minute intervals over the COMPLETED Earth day.
 	# Capacity assumes Sun-tracking panels, not horizontal panels at the pole.
-	var key := "%s:%d:%s" % [site.hash(), day_index, include_distance]
+	var key := "%s:%s:%s" % [site.hash(), day_index, include_distance]
 	if daily_cache.has(key):
 		return daily_cache[key]
 	var total := 0.0

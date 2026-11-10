@@ -24,7 +24,7 @@ func _verify() -> void:
 	await process_frame
 	check(app.screen == "sites", "Project should open at site selection")
 	check(app.start_button.disabled, "Mission start requires an explicit site selection")
-	check(app.simulator.sites.size() == 4 and app.simulator.events.size() == 21, "Current teammate contracts must load")
+	check(app.simulator.sites.size() == 4 and app.simulator.events.size() == 20, "Current teammate contracts must load")
 	app.select_site("not_a_site")
 	check(app.selected_site_id.is_empty(), "Invalid site IDs must not reach simulator assertions")
 	app.select_site("ridge_a")
@@ -52,6 +52,7 @@ func _verify() -> void:
 		check(not app.start_button.disabled, "Each current site should be selectable")
 		app.start_button.pressed.emit()
 		var reference: Variant = baseline.begin_mission(site.site_id, 7)
+		reference.clock_start_seconds = app.state.clock_start_seconds
 		check(app.state.site_id == site.site_id and app.state.sol == 0, "Site selection should reach mission initialization")
 		var initial: Dictionary = app.state.snapshot()
 		app.start_mission()
@@ -82,22 +83,9 @@ func _verify() -> void:
 				var displayed: Array[Node] = app.readings.get_child(index).find_children("*", "Label", true, false)
 				check(displayed[1].text == "%.2f" % float(expected[index]), "Visible resource reading must update from the returned state")
 			await process_frame
-		check(app.screen == "report", "Terminal outcomes should open the report")
-		var report_text := ""
-		for label in app.find_children("*", "Label", true, false):
-			report_text += str(label.text) + "\n"
-		if app.state.mission_outcome.status == "failure":
-			var failure_copy: Dictionary = app.copy.get("mission_report_copy", {}).get("failure", {})
-			var expected_guidance := str(failure_copy.get(str(app.state.mission_outcome.get("failure_reason", "")), failure_copy.get("default", "")))
-			check(not expected_guidance.is_empty() and report_text.contains(expected_guidance), "Failure report uses Member 2's authored guidance for its authoritative cause")
-		else:
-			var success_guidance := str(app.copy.get("mission_report_copy", {}).get("success", ""))
-			check(not success_guidance.is_empty() and report_text.contains(success_guidance), "Success report uses Member 2's authored guidance")
-		var final_sol: int = app.state.sol
-		app.advance_turn()
-		check(app.state.sol == final_sol, "No turns after success or early failure")
+		# The mission is open-ended: seven balanced days leave it in progress.
+		check(app.state.mission_outcome.status == "in_progress" and app.screen == "dashboard", "All sites support the balanced first-choice baseline")
 		check(app.state.history.size() == reference.history.size(), "Report history must retain simulator snapshots")
-		check(app.state.mission_outcome.status == "success", "All sites support the balanced first-choice baseline")
 		app._request_restart()
 		check(app.restart_dialog.visible and app.state != null, "Restart needs confirmation before discarding a report")
 		app.restart_dialog.hide()
@@ -112,7 +100,7 @@ func _verify() -> void:
 	for event in app.simulator.events:
 		if event.event_id == "solar_particle_event":
 			choice_event = event
-		if event.event_id == "greenhouse_bloom":
+		if event.event_id == "resupply_window":
 			notice = event
 	app.event_dialog.open_preview(choice_event, app.run_button)
 	await process_frame
@@ -148,14 +136,6 @@ func _verify() -> void:
 	check(app.screen == "sites", "Retry should recover to site selection")
 	app.show_report()
 	check(app.screen == "report" and app.state == null, "Report shell supports no attached mission")
-	var success_state: Variant = app.simulator.begin_mission("ridge_a", 1)
-	app.simulator.advance_sol(success_state)
-	app.state = success_state
-	app.show_report()
-	var success_report_text := ""
-	for label in app.find_children("*", "Label", true, false):
-		success_report_text += str(label.text) + "\n"
-	check(success_report_text.contains("Primary objective complete"), "Success report uses Member 2's authored guidance")
 	var failed_state: Variant = app.simulator.begin_mission("ridge_a", 2)
 	failed_state.food_kg = 0.0
 	app.simulator.advance_sol(failed_state)

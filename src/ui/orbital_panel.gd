@@ -13,7 +13,7 @@ func _ready() -> void:
 	timestamp = Label.new()
 	content.add_child(timestamp)
 	speed = OptionButton.new()
-	for label in ["1× — real time", "60× — 1 minute / second", "3,600× — 1 hour / second (default)", "86,400× — 1 day / second"]:
+	for label in ["1× — real time (default)", "60× — 1 minute / second", "3,600× — 1 hour / second", "86,400× — 1 day / second"]:
 		speed.add_item(label)
 	content.add_child(speed)
 	speed.item_selected.connect(func(index: int): motion.set_speed(Model.SPEEDS[index]))

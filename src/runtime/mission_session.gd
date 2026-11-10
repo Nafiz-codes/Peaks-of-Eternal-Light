@@ -191,6 +191,7 @@ func start_selected_mission() -> Error:
 	for site in simulator.sites:
 		if str(site.site_id) == selected_site_id:
 			orbital_clock.elapsed_seconds = preload("res://src/simulation/polar_solar.gd").bright_start(site)
+	dashboard_state.clock_start_seconds = orbital_clock.elapsed_seconds
 	dashboard_last_tick = {}
 	capture_sol_checkpoint()
 	state_changed.emit()

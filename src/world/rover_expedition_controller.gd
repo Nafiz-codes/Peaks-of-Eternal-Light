@@ -776,7 +776,7 @@ func _publish() -> void:
 	var assignment := available_assignment()
 	var title: String = "ROVER EXPEDITIONS" if assignment < 0 else Rules.TITLES[assignment]
 	var objective := "Drive to the violet departure circle. Stop at its center."
-	var details := "Sol 2: Surface Survey · Sol 4: Frozen Horizon\nSol 6: Lifeline"
+	var details := "Surface Survey, then Frozen Horizon, then Lifeline.\nEach operation unlocks when the one before it is complete."
 	var prompt := "WASD: drive · Space: brake · R: lander · L: lights"
 	if bound_state.rover_health <= 0: prompt = "MISSION FAILED — Rover destroyed. Retry the mission."
 	if data.location == "expedition":

@@ -244,15 +244,18 @@ func _site_sources(site: Dictionary) -> String:
 func start_mission() -> void:
 	if not load_error.is_empty() or not _valid_site(_site(selected_site_id)) or state != null:
 		return
-	state = simulator.begin_mission(selected_site_id, MISSION_LENGTH)
 	last_tick = {}
 	var session := get_node_or_null("/root/MissionSession")
 	if session != null:
-		session.call("select_landing_site", selected_site_id)
-		session.set("dashboard_simulator", simulator)
-		session.set("dashboard_state", state)
-		session.set("dashboard_last_tick", last_tick)
-		session.capture_sol_checkpoint()
+		# The session's start applies the placed solar panel and the world clock.
+		session.select_landing_site(selected_site_id)
+		if session.start_selected_mission() != OK:
+			show_load_error("Mission data could not be loaded. Check the Resources files and retry.")
+			return
+		simulator = session.dashboard_simulator
+		state = session.dashboard_state
+	else:
+		state = simulator.begin_mission(selected_site_id, MISSION_LENGTH)
 	show_dashboard()
 
 func show_dashboard() -> void:
@@ -456,7 +459,7 @@ func _model_notes() -> String:
 func _add_previews() -> void:
 	var previews := UI.panel(column)
 	previews.add_child(UI.label("INTERFACE PREVIEWS / No event effects applied", 14, UI.MUTED))
-	for desired in ["solar_particle_event", "greenhouse_bloom"]:
+	for desired in ["solar_particle_event", "resupply_window"]:
 		for event in simulator.events:
 			if event.get("event_id", "") == desired:
 				var trigger := UI.button("Preview " + ("choice event" if desired == "solar_particle_event" else "notification"), Callable())

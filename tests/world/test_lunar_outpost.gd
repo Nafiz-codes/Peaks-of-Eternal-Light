@@ -110,7 +110,6 @@ func _run() -> void:
 	_assert(absf(rover_bounds.position.y) < 0.02, "The imported rover rests on the ground.")
 	_assert(rover_bounds.size.x < 4.3 and rover_bounds.size.z < 4.3, "The rover fits the outpost footprint.")
 	_assert(outpost.get_node("Outpost/Habitat").scene_file_path == "res://Assets/outpost/habitat.tscn", "The habitat uses its reusable asset scene.")
-	_assert(outpost.get_node("Outpost/SolarArray").scene_file_path == "res://Assets/outpost/solar_array.tscn", "The solar array uses its reusable asset scene.")
 	_assert(outpost.get_node_or_null("Outpost/Astronaut/CameraPivot/SpringArm/ThirdPersonCamera") != null, "The 3D scene includes a collision-aware orbit camera.")
 	_assert(outpost.get_node_or_null("Outpost/water_recycler/InteractionArea") != null, "Life-support interaction stations are present.")
 	_assert(outpost.get_node_or_null("SelectedSiteReadout") != null, "The outpost displays the selected landing site.")

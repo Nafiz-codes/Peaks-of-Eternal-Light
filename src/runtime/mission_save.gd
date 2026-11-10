@@ -49,7 +49,7 @@ static func decode(data: Variant) -> Dictionary:
 	var buildings: Variant = data.get("building_placements", {})
 	if not buildings is Dictionary: return {}
 	for id in buildings:
-		if id not in ["habitat_module", "comms_relay", "water_extractor", "greenhouse", "shielding_wall"]: return {}
+		if not preload("res://src/world/nasa_buildings.gd").MODELS.has(id): return {}
 		if not buildings[id] is Transform3D or not buildings[id].is_finite(): return {}
 		if not buildings[id].basis.is_equal_approx(buildings[id].basis.orthonormalized()) or buildings[id].basis.determinant() < 0.99: return {}
 	var panel_output: Variant = placement.get("kwh_per_sol", 0.0)
@@ -60,13 +60,17 @@ static func decode(data: Variant) -> Dictionary:
 	var planner := Planner.new()
 	if not draft.is_empty() and (not planner.shape_valid(draft) or draft.site_id != data.site_id): return {}
 	if not approved.is_empty():
-		if not planner.shape_valid(approved.get("plan")) or approved.plan.site_id != data.site_id or approved.get("completed") != true or approved.get("delivery_status") != "pending": return {}
+		var plan_ok: bool = planner.shape_valid(approved.get("plan")) and approved.plan.site_id == data.site_id and approved.get("completed") == true and approved.get("delivery_status") == "pending"
 		var signature := planner.data_signature(data.site_id)
-		if approved.get("plan_id") != var_to_bytes([approved.plan,signature,Planner.MODEL_REVISION]).hex_encode().sha256_text() or approved.get("model_revision") != Planner.MODEL_REVISION or approved.get("data_signature") != signature: return {}
-		var evaluation := planner.evaluate(approved.plan)
-		if not evaluation.valid: return {}
-		approved = approved.duplicate(true)
-		approved.evaluation = evaluation # Never trust saved derived totals.
+		plan_ok = plan_ok and approved.get("plan_id") == var_to_bytes([approved.plan,signature,Planner.MODEL_REVISION]).hex_encode().sha256_text() and approved.get("model_revision") == Planner.MODEL_REVISION and approved.get("data_signature") == signature
+		var evaluation: Dictionary = planner.evaluate(approved.plan) if plan_ok else {}
+		if plan_ok and evaluation.valid:
+			approved = approved.duplicate(true)
+			approved.evaluation = evaluation # Never trust saved derived totals.
+		else:
+			# Game data changed since approval (or the plan was edited): it must be
+			# approved again, but the rest of the save is still good.
+			approved = {}
 	var orbital_clock: Variant = data.get("orbital_clock", preload("res://src/world/orbital_model.gd").default_clock())
 	if not preload("res://src/world/orbital_model.gd").valid_clock(orbital_clock):
 		return {}
@@ -92,7 +96,7 @@ static func decode(data: Variant) -> Dictionary:
 			var key: String = property.name
 			if not data.state.has(key) or typeof(data.state[key]) != property.type:
 				# Older version 1 saves omit newer fields; preserve their defaults.
-				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "rover_training", "rover_expedition", "placed_panel_kwh_per_sol"] and not data.state.has(key):
+				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "rover_training", "rover_expedition", "placed_panel_kwh_per_sol", "clock_start_seconds"] and not data.state.has(key):
 					continue
 				return {}
 			var value: Variant = data.state[key]
@@ -107,6 +111,8 @@ static func decode(data: Variant) -> Dictionary:
 			else:
 				state.set(key, value.duplicate(true) if value is Dictionary else value)
 		if state.site_id != data.site_id or state.sol < 0 or state.mission_length_sols < 1:
+			return {}
+		if state.clock_start_seconds < 0.0 or state.clock_start_seconds > preload("res://src/world/orbital_model.gd").MAX_ELAPSED:
 			return {}
 		# Canonical roster migration keeps earned resources and historical readings.
 		# Version 2 distinguishes new four-person saves from legacy versions.
@@ -165,8 +171,6 @@ static func restore(session: Node, data: Dictionary) -> Error:
 	session.outpost_pose = restored.pose
 	session.crew_read_reports = restored.crew_read_reports
 	session.orbital_clock = restored.orbital_clock
-	if restored.state != null:
-		session.orbital_clock.elapsed_seconds = restored.state.sol * preload("res://src/world/orbital_model.gd").DAY
 	session.action_busy = false
 	session.return_scene_path = ""
 	return OK
@@ -178,8 +182,11 @@ static func write_file(path: String, data: Dictionary) -> Error:
 	file.store_var(data, false)
 	file.flush()
 	var error := file.get_error()
+	if error == OK and file.get_position() > MAX_BYTES:
+		error = ERR_FILE_CANT_WRITE
 	file.close()
 	if error != OK:
+		DirAccess.remove_absolute(path + ".tmp")
 		return error
 	return DirAccess.rename_absolute(path + ".tmp", path)
 

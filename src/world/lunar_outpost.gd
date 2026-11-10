@@ -7,7 +7,6 @@ extends Node3D
 const ASTRONAUT_SCENE := preload("res://Assets/animated_astronaut/source/Walking astronaut.glb")
 const ROVER_SCENE := preload("res://Assets/curiosity_rover.glb")
 const HABITAT_SCENE := preload("res://Assets/outpost/habitat.tscn")
-const SOLAR_SCENE := preload("res://Assets/outpost/solar_array.tscn")
 const ASTRONAUT_HEIGHT := 1.7
 const LunarAstronautScript := preload("res://src/world/lunar_astronaut.gd")
 
@@ -28,7 +27,6 @@ var feedback_tween: Tween
 var overview := false
 var camera_tween: Tween
 var construction_view: Node3D
-var rover_view: Node
 
 
 func _ready() -> void:
@@ -60,9 +58,6 @@ func _ready() -> void:
 	construction_view = preload("res://src/world/construction_presentation.gd").new()
 	construction_view.name = "ConstructionPresentation"
 	add_child(construction_view)
-	rover_view = preload("res://src/world/rover_presentation.gd").new()
-	rover_view.name = "RoverPresentation"
-	add_child(rover_view)
 	var fieldwork := preload("res://src/world/crew_fieldwork.gd").new()
 	fieldwork.name = "CrewFieldwork"
 	add_child(fieldwork)
@@ -98,22 +93,6 @@ func _add_prop_collisions() -> void:
 		collision.shape = shape
 		body.add_child(collision)
 		add_child(body)
-	for panel in get_node("Outpost/SolarArray").get_children():
-		var bounds := AABB()
-		var first := true
-		for mesh in panel.find_children("*", "MeshInstance3D", true, false):
-			var box: AABB = mesh.global_transform * mesh.get_aabb()
-			bounds = box if first else bounds.merge(box)
-			first = false
-		var hull := StaticBody3D.new()
-		hull.name = "SolarHull" if panel.get_index() == 0 else "SolarHull2"
-		var collision := CollisionShape3D.new()
-		var shape := BoxShape3D.new()
-		shape.size = bounds.size
-		collision.shape = shape
-		hull.add_child(collision)
-		add_child(hull)
-		hull.global_position = bounds.get_center()
 
 
 func _add_feedback_nodes() -> void:
@@ -141,7 +120,6 @@ func refresh_feedback() -> void:
 	construction_view.sync_completed({} if state == null else state.built_structures, catalog.get("structures", []), session.building_placements, [] if state == null else state.construction_queue)
 	_sync_rover_action(state, session.reduce_motion)
 	if session.reduce_motion:
-		rover_view.finish_immediately(get_node("Outpost/Rover"), get_node("RoverHull"))
 		if camera_tween != null and camera_tween.is_running():
 			camera_tween.kill()
 			var player := get_node("Outpost/Astronaut")
@@ -285,9 +263,6 @@ func _add_outpost() -> void:
 	add_child(outpost)
 
 	_add_habitat(outpost)
-	var solar_root := Node3D.new()
-	solar_root.name = "SolarArray"
-	outpost.add_child(solar_root)
 	_add_astronaut(outpost)
 	_add_rover(outpost)
 	_add_interaction_station(outpost, "power_console", "Energy console", Vector3(-5.5, 0.0, 3.2), SOLAR)
@@ -318,51 +293,6 @@ func _add_habitat(parent: Node3D) -> void:
 	hull.add_child(collision)
 	habitat.add_child(hull)
 
-
-func _add_solar_array(parent: Node3D) -> void:
-	var array := SOLAR_SCENE.instantiate() as Node3D
-	# Retain the original scene root/path and replace only its visual children.
-	for child in array.get_children():
-		array.remove_child(child)
-		child.free()
-	array.position = Vector3(-6.0, 0.0, -5.5)
-	parent.add_child(array)
-	var orbit := preload("res://src/world/orbital_model.gd")
-	var sunlight := Vector3.ZERO
-	# Fixed mounting optimized for the seven-day mission's above-horizon Sun.
-	for hour in range(169):
-		var sample: Dictionary = orbit.observer(orbit.days_from_j2000(hour * 3600.0), site_record.coordinates.latitude_deg, site_record.coordinates.longitude_deg)
-		if sample.sun_direction.y > 0:
-			sunlight += sample.sun_direction
-	var azimuth := atan2(sunlight.x, sunlight.z) if sunlight.length_squared() > 0.001 else 0.0
-	var side := Vector3(cos(azimuth), 0, -sin(azimuth))
-	for index in range(2):
-		var panel_center := array.position + side * (-1.575 if index == 0 else 1.575)
-		# Fit an identity wrapper so the GLB root's authored transform is included.
-		var panel := Node3D.new()
-		panel.name = "Panel%d" % (index + 1)
-		array.add_child(panel)
-		panel.add_child(preload("res://Assets/expedition/solar_panel.glb").instantiate())
-		preload("res://src/world/imported_asset_fit.gd").fit(panel, 3.0)
-		panel.rotation.y = azimuth
-		# Both footprints are inside every site's level landing pad (height zero).
-		# Bury the frame feet slightly to avoid a visible daylight gap.
-		panel.position.y = -0.015
-		# Rotated bounding boxes include empty space below the real frame feet.
-		var lowest := INF
-		var minimum := Vector3(INF, INF, INF)
-		var maximum := Vector3(-INF, -INF, -INF)
-		for mesh in panel.find_children("*", "MeshInstance3D", true, false):
-			for vertex in mesh.mesh.get_faces():
-				var point: Vector3 = mesh.global_transform * vertex
-				lowest = minf(lowest, point.y)
-				minimum = minimum.min(point)
-				maximum = maximum.max(point)
-		if is_finite(lowest):
-			panel.global_position.y -= lowest + 0.015
-			var center := (minimum + maximum) * 0.5
-			panel.global_position.x += panel_center.x - center.x
-			panel.global_position.z += panel_center.z - center.z
 
 func _add_astronaut(parent: Node3D) -> void:
 	var astronaut := LunarAstronautScript.new()

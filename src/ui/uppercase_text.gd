@@ -26,6 +26,8 @@ func _process(_delta: float) -> void:
 			controls.erase(id)
 			continue
 		if node is Control:
+			# Hidden menus hold most controls; they are converted when shown.
+			if not node.is_visible_in_tree(): continue
 			var tip: String = node.tooltip_text.to_upper()
 			if node.tooltip_text != tip:
 				node.tooltip_text = tip

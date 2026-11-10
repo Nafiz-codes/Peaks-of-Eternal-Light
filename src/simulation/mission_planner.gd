@@ -137,7 +137,7 @@ func evaluate(p: Variant) -> Dictionary:
 	var life: Dictionary = simulator._calculate_life_support(state)
 	var days: float = p.hours / 24.0
 	var supplies := {"water_l":state.water_l + days * life.water_balance_l,"oxygen_kg":state.oxygen_kg-days*life.oxygen_consumed_kg,"food_kg":state.food_kg-days*life.food_consumed_kg}
-	if p.hours < state.mission_length_sols * 24: errors.append("Approval requires coverage of the full seven-day mission; increase the evaluation interval to at least 168 hours.")
+	if p.hours < state.mission_length_sols * 24: errors.append("Approval requires a seven-day evaluation window; increase the evaluation interval to at least 168 hours.")
 	if units > float(config.capacity_units): errors.append("Cargo exceeds capacity: remove optional equipment.")
 	if zone.slope_deg > float(config.max_slope_deg): errors.append("Construction slope exceeds 18 degrees: choose a gentler zone.")
 	var array_space := 4 if p.solar_placement == "extended" else 6
@@ -155,10 +155,12 @@ func _yields(id: String, hours: int) -> Array:
 	if yield_cache.has(key): return yield_cache[key]
 	var record := site(id)
 	var values := []
+	# Plan against the days the mission will actually see, like the sky and simulator.
+	var start := Solar.bright_start(record)
 	for hour in range(hours):
 		var total := 0.0
 		for quarter in range(4):
-			var obs := Solar.observation_at(record,(hour+(quarter+0.5)/4.0)*3600.0)
+			var obs := Solar.observation_at(record,start+(hour+(quarter+0.5)/4.0)*3600.0)
 			total += Solar.visibility(record,obs)*pow(Solar.Orbit.AU_KM/float(obs.sun_distance_km),2)
 		values.append(total/4.0)
 	yield_cache[key] = values

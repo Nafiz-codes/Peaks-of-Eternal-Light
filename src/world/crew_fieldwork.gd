@@ -23,6 +23,7 @@ var homes: Dictionary = {}
 var station_homes: Dictionary = {}
 var station_facings: Dictionary = {}
 var station_retry: Dictionary = {}
+var station_backoff: Dictionary = {}
 var labels: Dictionary = {}
 var route_service: RefCounted
 var elapsed := 0.0
@@ -156,7 +157,7 @@ func _physics_process(delta: float) -> void:
 		if id == "crew_briefing" and not session.maya_intro_complete:
 			_approach_commander(delta)
 			continue
-		if id == "crew_briefing" and not state.rover_expedition.is_empty() and state.sol >= 6 and not state.rover_expedition.completed.has(2):
+		if id == "crew_briefing" and state.rover_expedition.get("missing", false):
 			continue
 		_tick(id, delta)
 	# Local instrument records only modeled health/uptime, never invented moonquakes.
@@ -211,7 +212,7 @@ func _release(id: String) -> void:
 			data.locks.erase(item)
 
 func assign(id: String, task: String, site := "") -> bool:
-	if id == "crew_briefing" and state != null and state.sol >= 6 and not state.rover_expedition.get("completed", []).has(2):
+	if id == "crew_briefing" and state != null and state.rover_expedition.get("missing", false):
 		return false
 	if state == null or not session.can_advance() or get_tree().paused or not IDS.has(id):
 		return false
@@ -343,6 +344,7 @@ func request_station_arrival(id: String, restoring := false) -> void:
 	c["station_relocation"] = true
 	c.auto_attempted = true # Do not immediately walk away on the old autonomy timer.
 	station_retry[id] = 0.0
+	station_backoff.erase(id)
 
 func _tick(id: String, delta: float) -> void:
 	var c: Dictionary = data.crew[id]
@@ -351,8 +353,10 @@ func _tick(id: String, delta: float) -> void:
 		var relocate: bool = c.get("station_relocation", false) and c.phase != "Returning"
 		var retry_return: bool = c.phase == "Blocked" and c.checkpoint == "Returning"
 		if (relocate or retry_return) and station_retry[id] <= 0.0:
-			station_retry[id] = 1.0
-			return_to_base(id)
+			# A failed route search is costly: wait 1 s, 2 s, 4 s ... up to 15 s.
+			station_backoff[id] = minf(15.0, float(station_backoff.get(id, 0.5)) * 2.0)
+			station_retry[id] = station_backoff[id]
+			if return_to_base(id): station_backoff.erase(id)
 			return
 	if c.phase == "Available":
 		if station_homes.has(id) and actors[id].position.distance_to(homes[id]) > 0.6:
@@ -834,7 +838,7 @@ func follow(id: String) -> bool:
 	return true
 
 func _update_visual(id: String, moving: bool) -> void:
-	if id == "crew_briefing" and state != null and state.sol >= 6 and not state.rover_expedition.get("completed", []).has(2):
+	if id == "crew_briefing" and state != null and state.rover_expedition.get("missing", false):
 		labels[id].hide()
 		return
 	if data.is_empty():

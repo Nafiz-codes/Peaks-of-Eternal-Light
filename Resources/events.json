@@ -119,17 +119,6 @@
       ]
     },
     {
-      "event_id": "greenhouse_bloom",
-      "category": "discovery",
-      "trigger_condition": "structure_built: greenhouse AND sols_since_built >= 2",
-      "effects": {
-        "food_production_multiplier": 1.2,
-        "duration_sols": 4
-      },
-      "text": "An unexpectedly strong crop cycle boosts food output for a while.",
-      "choices": null
-    },
-    {
       "event_id": "micrometeorite_strike",
       "category": "hazard",
       "trigger_condition": "random_chance: 3% per sol",

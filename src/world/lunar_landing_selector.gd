@@ -308,7 +308,6 @@ func _add_menu() -> void:
 	column.add_child(title)
 	caption = Label.new()
 	caption.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
-	caption.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	caption.text = "GLOBAL MOON · LROC / LOLA\nRight-drag to orbit · Scroll to zoom\nClick a label on the Moon to land"
 	column.add_child(caption)
 	var dashboard_button := Button.new()

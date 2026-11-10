@@ -66,7 +66,7 @@ func _run() -> void:
 		var footprint := visual.mesh.get_aabb().size * visual.scale
 		check(maxf(footprint.x, footprint.z) <= 2.01, "Imported units normalize to natural rock sizes")
 	check(used_meshes.size() == 9, "All eight rock variants and the separate stone are used")
-	for prop in ["Habitat", "SolarArray", "Rover", "power_console", "water_recycler", "food_storage", "crew_briefing"]:
+	for prop in ["Habitat", "Rover", "power_console", "water_recycler", "food_storage", "crew_briefing"]:
 		for mesh in world.get_node("Outpost/" + prop).find_children("*", "MeshInstance3D", true, false):
 			var bounds: AABB = mesh.global_transform * mesh.get_aabb()
 			for x in [bounds.position.x, bounds.end.x]:

@@ -39,6 +39,7 @@ const BASE_SOLAR_GENERATION_KWH_PER_SOL := 65.0
 const SOLAR_ARRAY_GENERATION_KWH_PER_SOL := 18.0
 ## Gameplay value: share of sunlight left during the dust storm (visuals use the same value).
 const DUST_STORM_LIGHT_MULTIPLIER := 0.5
+const HISTORY_DAYS := 60
 
 var sites: Array[Dictionary] = []
 var bvad_constants: Dictionary = {}
@@ -126,6 +127,9 @@ func advance_sol(state: Variant) -> Dictionary:
 	state.mission_outcome = _evaluate_mission_outcome(state)
 	_update_report_data(state)
 	state.history.append(state.snapshot())
+	# The mission is open-ended: keep the first snapshot and the latest 60 days.
+	if state.history.size() > HISTORY_DAYS + 1:
+		state.history.remove_at(1)
 	return {
 		"state": state,
 		"completed": false,
@@ -320,14 +324,13 @@ func _evaluate_event_triggers(state: Variant) -> void:
 
 func _event_condition_met(event_id: String, state: Variant) -> bool:
 	var site: Dictionary = _find_site(state.site_id)
-	var illumination := 100.0 * PolarSolar.daily_fraction(site, maxi(0, state.sol - 1))
+	var illumination := 100.0 * PolarSolar.daily_fraction(site, _solar_day(state))
 	match event_id:
 		"solar_array_dust_accumulation": return state.sol > 3 and _has_rover_or_eva_activity(state)
 		"solar_particle_event": return true
 		"volatile_prospect_detected": return state.volatile_prospect_found and state.volatile_prospect_status == "uninvestigated" and state.last_rover_action in ["survey", "traverse"]
 		"equipment_malfunction": return state.sol >= 3 and not state.built_structures.is_empty()
 		"crew_conflict": return state.crew_stress_avg > 0.6
-		"greenhouse_bloom": return _structure_age(state, "greenhouse") >= 2
 		"micrometeorite_strike": return true
 		"water_recycler_clog": return state.sol > 2
 		"rover_mobility_hazard": return state.last_rover_action == "traverse"
@@ -336,7 +339,7 @@ func _event_condition_met(event_id: String, state: Variant) -> bool:
 		"extended_illumination_window": return illumination >= 50.0
 		"crew_process_improvement": return state.sol >= 4 and state.crew_stress_avg < 0.45
 		"comms_blackout": return not state.built_structures.has("comms_relay")
-		"greenhouse_nutrient_imbalance": return _structure_age(state, "greenhouse") >= 0
+		"greenhouse_nutrient_imbalance": return state.built_structures.has("greenhouse")
 		"radiation_shelter_drill": return state.sol >= 2
 		"prospect_confirmation": return state.volatile_prospect_found and state.last_rover_action == "prospecting"
 		"rover_sample_cache": return state.volatile_prospect_status == "investigated" and state.last_rover_action == "prospecting"
@@ -432,10 +435,6 @@ func _has_rover_or_eva_activity(state: Variant) -> bool:
 	return not str(state.last_rover_action).is_empty()
 
 
-func _structure_age(state: Variant, structure_id: String) -> int:
-	return int(state.built_structures.get(structure_id, -1000))
-
-
 func _find_structure(structure_id: String) -> Dictionary:
 	for structure in construction.get("structures", []):
 		if structure is Dictionary and str(structure.get("structure_id", "")) == structure_id:
@@ -503,7 +502,6 @@ func _update_report_data(state: Variant) -> void:
 	state.report_data = {
 		"sols_survived": state.sol,
 		"mission_length_sols": state.mission_length_sols,
-		"survival_pct": 100.0 * float(state.sol) / maxf(1.0, float(state.mission_length_sols)),
 		"failure_reason": depletion_reason,
 		"failure_sol": state.mission_outcome.get("failure_sol", 0),
 		"initial_reserves": {"power_kwh": initial.get("power_kwh", 0.0), "water_l": initial.get("water_l", 0.0), "oxygen_kg": initial.get("oxygen_kg", 0.0), "food_kg": initial.get("food_kg", 0.0), "materials": initial.get("materials", 0.0)},
@@ -531,24 +529,22 @@ func _evaluate_mission_outcome(state: Variant) -> Dictionary:
 	var failure_sol := int(existing_outcome.get("failure_sol", 0))
 	if not failure_reason.is_empty() and failure_sol == 0:
 		failure_sol = state.sol
-	var mission_finished := false
-	var status := "in_progress"
-	if not failure_reason.is_empty():
-		status = "failure"
-	elif mission_finished and state.pending_events.is_empty():
-		status = "success"
 	return {
-		"status": status,
-		"mission_finished": mission_finished,
+		"status": "failure" if not failure_reason.is_empty() else "in_progress",
 		"failure_reason": failure_reason,
 		"failure_sol": failure_sol,
 		"primary_objective": "Explore the Moon and support the crew."
 	}
 
 
+## The Earth day just completed, counted from the same start as the visible sky.
+func _solar_day(state: Variant) -> float:
+	return state.clock_start_seconds / PolarSolar.Orbit.DAY + maxi(0, state.sol - 1)
+
+
 func _calculate_power(state: Variant, site: Dictionary) -> Dictionary:
-	var illumination_fraction := PolarSolar.daily_fraction(site, maxi(0, state.sol - 1))
-	var solar_yield := PolarSolar.daily_fraction(site, maxi(0, state.sol - 1), true)
+	var illumination_fraction := PolarSolar.daily_fraction(site, _solar_day(state))
+	var solar_yield := PolarSolar.daily_fraction(site, _solar_day(state), true)
 	var active_effect_multiplier := _active_power_generation_multiplier(state.active_events)
 	var solar_array_output := SOLAR_ARRAY_GENERATION_KWH_PER_SOL if state.built_structures.has("solar_array") and not state.damaged_structures.has("solar_array") else 0.0
 	# Sunlight lost to a dust storm reaches every solar collector alike.

@@ -108,31 +108,6 @@ func _run() -> void:
 	hud.operations.hide()
 	check(not world.get_node("Outpost/Astronaut").ui_blocked, "Closing operations restores exploration input.")
 	check(root.gui_get_focus_owner() == hud.run_button, "Closing operations restores invoker focus.")
-	var rover := world.get_node("Outpost/Rover")
-	var hull := world.get_node("RoverHull")
-	var parked: Vector3 = rover.position
-	check(rover.position.is_equal_approx(Vector3(5.2, 0, -2.8)), "Normal play leaves rover parked.")
-	var route := {"ok": true, "action_id": "fixture_route_1", "presentation_route": [parked, parked + Vector3(1, 0, 0), parked + Vector3(2, 0, 1)]}
-	check(not world.rover_view.play_confirmed_route(rover, hull, {"ok": false}, false), "Rejected actions do not animate.")
-	check(not world.rover_view.play_confirmed_route(rover, hull, {"ok": true, "action_id": "bad", "presentation_route": [parked, "invalid"]}, false), "Malformed routes do not animate.")
-	check(world.rover_view.play_confirmed_route(rover, hull, route, false), "Confirmed route fixture starts animation.")
-	await create_timer(0.3).timeout
-	check(rover.position.distance_to(parked) > 0.01 and rover.position.distance_to(route.presentation_route[-1]) > 0.01, "Rover interpolates rather than teleporting.")
-	check(hull.position.is_equal_approx(rover.position + Vector3(0, 0.65, 0)), "Collision hull follows the rover.")
-	check(not world.rover_view.play_confirmed_route(rover, hull, route, false), "Duplicate action does not replay.")
-	session.reduce_motion = true
-	world.refresh_feedback()
-	check(rover.position.is_equal_approx(route.presentation_route[-1]), "Enabling reduced motion finishes active rover motion.")
-	route.action_id = "fixture_route_2"
-	route.presentation_route = [rover.position, parked]
-	check(world.rover_view.play_confirmed_route(rover, hull, route, true) and rover.position.is_equal_approx(parked), "Reduced-motion route immediately displays the confirmed destination.")
-	check(is_equal_approx(rover.rotation.y, atan2(-2.0, -1.0)), "Reduced motion preserves the final travel heading.")
-	check(not world.rover_view.play_confirmed_route(rover, hull, {"ok": true, "action_id": "fixture_route_1", "presentation_route": [parked, parked + Vector3(9, 0, 0)]}, true), "An older confirmed action cannot replay after a newer action.")
-	route.action_id = "fixture_route_3"
-	route.presentation_route = [parked, parked + Vector3(1, 0, 0), parked + Vector3(2, 0, 1)]
-	check(world.rover_view.play_confirmed_route(rover, hull, route, false), "A new confirmed action can animate.")
-	await create_timer(1.5).timeout
-	check(rover.position.is_equal_approx(route.presentation_route[-1]), "All route segments finish at their confirmed destination.")
 	session.reduce_motion = false
 	world.toggle_overview()
 	await create_timer(0.1).timeout

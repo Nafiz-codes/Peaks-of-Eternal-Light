@@ -75,7 +75,7 @@ func run() -> void:
 		var yields := planner._yields(site.site_id,24)
 		var mean := 0.0
 		for value in yields: mean += value/24.0
-		check(is_equal_approx(mean,planner.Solar.daily_fraction(site,0,true)),"Hourly power matches authoritative daily solar quadrature")
+		check(is_equal_approx(mean,planner.Solar.daily_fraction(site,planner.Solar.bright_start(site)/86400.0,true)),"Hourly power matches authoritative daily solar quadrature")
 		session.select_landing_site(site.site_id)
 		session.begin_planning()
 		var before := Save.state_data(session.dashboard_state)
@@ -92,10 +92,10 @@ func run() -> void:
 		check(Save.restore(session,Save.read_file("user://planner-test.save"))==OK,"Disk restore")
 		check(session.approved_plan.get("plan",{}).get("site_id")==site.site_id,"Approved site retained")
 		data.approved_plan.plan.cargo.supplies = 0
-		check(Save.decode(data).is_empty(),"Corrupt approval rejected")
+		check(not Save.decode(data).is_empty() and Save.decode(data).approved_plan.is_empty(),"Corrupt approval is dropped; the save still loads")
 		data = Save.capture(session)
 		data.approved_plan.plan_id = "tampered"
-		check(Save.decode(data).is_empty(),"Corrupt handoff identity rejected")
+		check(not Save.decode(data).is_empty() and Save.decode(data).approved_plan.is_empty(),"Stale or tampered approval is dropped; the save still loads")
 		var legacy := Save.capture(session)
 		legacy.version = 3
 		legacy.erase("planning_draft")

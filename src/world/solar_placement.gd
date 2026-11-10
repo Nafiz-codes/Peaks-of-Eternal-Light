@@ -29,6 +29,8 @@ var destroying := false
 var target: Node3D
 var highlight: StandardMaterial3D
 var area_ring: MeshInstance3D
+var area_layout := 0
+var previews: Dictionary = {}
 var pose_hold: SkeletonModifier3D
 const UI = preload("res://src/ui/ui_style.gd")
 const DESTROY_HINT := "DESTROY  ·  Aim at a structure  ·  Left click destroy  ·  B build menu  ·  C exit"
@@ -36,13 +38,11 @@ const MODELS := {
  "solar_array": preload("res://Assets/expedition/solar_panel.glb"),
  "maya_station": preload("res://Assets/stations/maya_station.tscn"),
  "alex_station": preload("res://Assets/stations/alex_station.tscn"),
- "sam_station": preload("res://Assets/stations/sam_station.tscn"),
- "habitat_module": preload("res://Assets/stations/hdu_1.glb"),
- "comms_relay": preload("res://Assets/structures/comms_relay.tscn"),
- "water_extractor": preload("res://Assets/structures/water_extractor.tscn"),
- "greenhouse": preload("res://Assets/structures/greenhouse.tscn"),
- "shielding_wall": preload("res://Assets/structures/radiation_shelter.tscn")
+ "sam_station": preload("res://Assets/stations/sam_station.tscn")
 }
+## Buildings are listed once, in NASABuildings.MODELS.
+static func placeable(id: String) -> bool:
+	return MODELS.has(id) or NASABuildings.MODELS.has(id)
 const PolarSolar = preload("res://src/simulation/polar_solar.gd")
 const Rating = preload("res://src/ui/outpost_hover.gd")
 ## Panel rating from NASA values; sources in Resources/data_sources.json.
@@ -208,11 +208,9 @@ func _station_access_is_clear(id: String, xform: Transform3D) -> bool:
 	return true
 
 func _display_name() -> String:
-	if selected_id == "habitat_module": return "Habitat Extension"
-	if selected_id == "comms_relay": return "Comms Relay"
-	if selected_id == "water_extractor": return "Water Extractor"
-	if selected_id == "greenhouse": return "Greenhouse Module"
-	if selected_id == "shielding_wall": return "Radiation Shielding Habitat"
+	if NASABuildings.MODELS.has(selected_id):
+		# Placing a building needs a running mission, so its catalog is loaded.
+		return str(session.dashboard_simulator._find_structure(selected_id).get("name", selected_id.replace("_", " ")))
 	return "Solar panel" if selected_id == "solar_array" else str(Station.DEFINITIONS[selected_id].name)
 
 func _apply_station_home(id: String, xform: Transform3D, restoring := false) -> void:
@@ -229,11 +227,13 @@ func _apply_station_home(id: String, xform: Transform3D, restoring := false) -> 
 
 
 func _open_menu() -> void:
-	# Rebuild when opening so newly placed structures leave the marked ground.
-	if is_instance_valid(area_ring):
+	# Rebuild only after a change, so newly placed structures leave the marked ground.
+	var layout := hash([session.solar_placement, session.station_placements, session.building_placements])
+	if layout != area_layout and is_instance_valid(area_ring):
 		remove_child(area_ring)
 		area_ring.queue_free()
 		area_ring = null
+	area_layout = layout
 	_show_area(true)
 	_refresh_menu()
 	build_menu.show()
@@ -249,6 +249,9 @@ func _close_menu_and(action := Callable()) -> void:
 
 ## Rebuilt on open so costs, availability and the stock of materials are current.
 func _refresh_menu() -> void:
+	# Keep the 3D thumbnails: only the cards around them are rebuilt.
+	for holder in previews.values():
+		if holder.get_parent() != null: holder.get_parent().remove_child(holder)
 	for child in grid.get_children():
 		grid.remove_child(child)
 		child.queue_free()
@@ -324,12 +327,12 @@ func _refresh_menu() -> void:
 		picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		picture.add_theme_stylebox_override("panel", UI.style(Color("0d111c"), Color("2a3247")))
 		body.add_child(picture)
-		if MODELS.has(id): _add_preview(picture, MODELS[id], id)
+		if placeable(id): _add_preview(picture, MODELS.get(id), id)
 		for line in [[str(structure.get("name", id)), 16, UI.TEXT], [cost_text, 14, UI.BLUE], [status, 13, UI.AMBER if available else UI.MUTED]]:
 			var text := UI.label(line[0], line[1], line[2])
 			text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			body.add_child(text)
-		if MODELS.has(id):
+		if placeable(id):
 			card.pressed.connect(_close_menu_and.bind(_select.bind(id)))
 		else:
 			card.pressed.connect(func():
@@ -339,7 +342,11 @@ func _refresh_menu() -> void:
 
 ## Studio shot of a real model; structures without one keep a blank frame.
 func _add_preview(frame: Control, scene: PackedScene, id := "") -> void:
+	if previews.has(id):
+		frame.add_child(previews[id])
+		return
 	var holder := SubViewportContainer.new()
+	previews[id] = holder
 	holder.stretch = true
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(holder)
