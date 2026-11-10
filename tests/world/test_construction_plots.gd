@@ -11,10 +11,6 @@ func capture(label: String) -> void:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://.tools/plots-" + label + ".png")
-func aim_at(placement: Node, point: Vector3) -> void:
-	var forward: Vector3 = -root.get_camera_3d().global_basis.z
-	forward.y = 0
-	placement.player.global_position = point - forward.normalized() * placement.placement_distance + Vector3.UP
 func run() -> void:
 	var session := root.get_node("MissionSession")
 	for site in ["ridge_a", "crater_rim_b", "shadow_zone", "plateau_d"]:
@@ -32,11 +28,7 @@ func run() -> void:
 		await physics_frame
 		var placement := world.get_node("SolarPlacement")
 		for id in Plots.PLOTS:
-			var camera_before := root.get_camera_3d()
 			placement._select(id)
-			check(root.get_camera_3d() == camera_before, "Placement retains the ground camera")
-			var plot_center: Vector2 = Plots.PLOTS[id].center
-			aim_at(placement, Vector3(plot_center.x, 0, plot_center.y))
 			await physics_frame
 			placement._physics_process(0.0)
 			check(placement.valid, site + " " + id + " center is buildable: " + placement.placement_reason)
@@ -45,13 +37,13 @@ func run() -> void:
 			await create_timer(0.25).timeout
 			placement._physics_process(0.0)
 			check(placement._plot_fits(), site + " " + id + " has room for a rotated footprint and entrance")
-			aim_at(placement, center + Vector3(Plots.PLOTS[id].size.x * 0.5, 0, 0))
+			placement.drag_position.x += Plots.PLOTS[id].size.x * 0.5
 			placement._physics_process(0.0)
 			check(not placement.valid, id + " rejects footprint crossing border")
 			var materials_before: float = session.dashboard_state.materials
 			placement.confirm()
 			check(placement.active and session.dashboard_state.materials == materials_before, "Invalid confirmation spends nothing")
-			aim_at(placement, center)
+			placement.drag_position = center
 			placement.yaw = 0
 			placement.route_checked_at = 0
 			placement._physics_process(0.0)

@@ -52,17 +52,11 @@ static func grade(point: Vector2, original: float, levels: Dictionary, protected
 	for region in protected:
 		var outside := (point - region.get_center()).abs() - region.size * 0.5
 		preserve = maxf(preserve, 1.0 - smoothstep(0.0, 4.0, maxf(outside.x, outside.y)))
-	var influence := 0.0
-	var target := 0.0
-	var total_weight := 0.0
 	for id in PLOTS:
 		var plot: Dictionary = PLOTS[id]
 		var outside: Vector2 = (point - plot.center).abs() - plot.size * 0.5
-		# Rounded shoulders merge adjoining pads without first-match seams.
-		var distance := Vector2(maxf(outside.x, 0.0), maxf(outside.y, 0.0)).length()
-		var weight := 1.0 - smoothstep(1.0, 28.0, distance)
-		influence = maxf(influence, weight)
-		target += float(levels[id]) * weight
-		total_weight += weight
-	if total_weight <= 0.0: return original
-	return lerpf(lerpf(original, target / total_weight, influence), original, preserve)
+		var distance := maxf(outside.x, outside.y)
+		if distance < 5.0:
+			var graded := lerpf(float(levels[id]), original, smoothstep(1.0, 5.0, distance))
+			return lerpf(graded, original, preserve)
+	return original

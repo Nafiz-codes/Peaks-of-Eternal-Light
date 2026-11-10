@@ -41,12 +41,8 @@ void fragment() {
 	float distance_fade = 1.0 - smoothstep(22.0, 95.0, length(VERTEX));
 	float relief = crater_relief(p);
 	float patches = noise(p * 0.18) * 0.55 + noise(p * 0.85) * 0.3 + noise(p * 3.0) * 0.15;
-	// Fade subpixel grains before they alias into a checkerboard.
-	float footprint = max(length(dFdx(p)), length(dFdy(p)));
-	float grit_weight = 1.0 - smoothstep(0.003, 0.015, footprint);
-	float gravel_weight = 1.0 - smoothstep(0.015, 0.06, footprint);
-	float grit = mix(0.5, noise(p * 65.0), grit_weight);
-	float gravel = pow(noise(p * 18.0), 5.0) * gravel_weight;
+	float grit = noise(p * 65.0);
+	float gravel = pow(noise(p * 18.0), 5.0);
 	float height = (relief + (noise(p * 5.0) - 0.5) * 0.012 + gravel * 0.025 + grit * 0.0015) * distance_fade;
 	vec3 dx = dFdx(VERTEX);
 	vec3 dy = dFdy(VERTEX);
