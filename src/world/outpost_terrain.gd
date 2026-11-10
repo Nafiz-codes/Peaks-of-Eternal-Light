@@ -2,9 +2,16 @@ extends RefCounted
 
 const TychoElevation = preload("res://src/world/tycho_elevation.gd")
 const PolarTerrain = preload("res://src/world/polar_terrain.gd")
+const Plots = preload("res://src/world/construction_plots.gd")
+
+static func plot_levels(_site: Dictionary) -> Dictionary:
+	var result := {}
+	# Prepared pads share the central outpost datum for step-free crew access.
+	for id in Plots.PLOTS: result[id] = 0.0
+	return result
 
 # Deterministic art direction per site, not a reconstruction of LOLA pixels.
-static func build(site: Dictionary) -> MeshInstance3D:
+static func build(site: Dictionary, protected: Array[Rect2] = []) -> MeshInstance3D:
 	var seed_value := absi(str(site.get("site_id", "ridge_a")).hash())
 	var noise := FastNoiseLite.new()
 	noise.seed = seed_value % 2147483647
@@ -12,6 +19,7 @@ static func build(site: Dictionary) -> MeshInstance3D:
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var amplitude := 2.0 + float(seed_value % 5)
+	var levels := plot_levels(site)
 	for z in range(-30, 30):
 		for x in range(-30, 30):
 			var points: Array[Vector3] = []
@@ -24,6 +32,7 @@ static func build(site: Dictionary) -> MeshInstance3D:
 					height = TychoElevation.height(px, pz)
 				elif str(site.get("terrain_model", "")) == "polar_lola":
 					height = PolarTerrain.height(str(site.site_id), px, pz)
+				height = Plots.grade(Vector2(px, pz), height, levels, protected)
 				# Level departure clearing, blended into the surrounding terrain.
 				var departure_distance := Vector2(px - 32.0, pz - 12.0).length()
 				height = lerpf(1.0, height, smoothstep(8.0, 16.0, departure_distance))

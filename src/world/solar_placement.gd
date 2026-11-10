@@ -11,6 +11,17 @@ var route_ok := false
 var build_error_until := 0
 const NASABuildings = preload("res://src/world/nasa_buildings.gd")
 const Station = preload("res://src/world/crew_station.gd")
+const Plots = preload("res://src/world/construction_plots.gd")
+var plot_markers: Node3D
+var placement_camera: Camera3D
+var return_camera: Camera3D
+var drag_active := false
+var drag_position := Vector3.ZERO
+var placement_reason := ""
+var placement_actions: HBoxContainer
+var relocation_original: Node3D
+var hidden_hud: Array[CanvasLayer] = []
+var hud_input_enabled: Dictionary = {}
 var player: Node3D
 var session: Node
 var build_menu: PanelContainer
@@ -114,9 +125,25 @@ func _ready() -> void:
 	label.offset_bottom = -22
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.add_theme_font_size_override("font_size", 20)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 6)
 	hud.add_child(label)
 	label.text = "B · Build"
 	_build_output_card()
+	placement_actions = HBoxContainer.new()
+	hud.add_child(placement_actions)
+	placement_actions.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	placement_actions.offset_left = -200
+	placement_actions.offset_right = 200
+	placement_actions.offset_top = -150
+	placement_actions.offset_bottom = -100
+	placement_actions.add_child(UI.button("Confirm placement", confirm))
+	placement_actions.add_child(UI.button("Cancel", _cancel))
+	placement_actions.get_child(0).custom_minimum_size = Vector2(240, 48)
+	placement_actions.get_child(1).custom_minimum_size = Vector2(140, 48)
+	placement_actions.add_theme_constant_override("separation", 12)
+	placement_actions.hide()
 	panel.visible = placed
 	build_menu = PanelContainer.new()
 	build_menu.position = Vector2(32, 145)
@@ -155,9 +182,18 @@ func _new_station(id: String) -> Node3D:
 	return station
 
 func _select(id: String) -> void:
+	if not Plots.PLOTS.has(id): return
 	if active: _cancel()
-	if id == "solar_array" and placed or session.station_placements.has(id): return
 	selected_id = id
+	if id == "solar_array" and placed or session.station_placements.has(id):
+		relocation_original = solar_panel if id == "solar_array" else stations[id]
+		remove_child(relocation_original)
+		if id == "solar_array":
+			solar_panel = relocation_original.duplicate() as Node3D
+			for collider in solar_panel.find_children("*", "StaticBody3D", true, false):
+				collider.get_parent().remove_child(collider)
+				collider.free()
+			add_child(solar_panel)
 	build_error_until = 0
 	if NASABuildings.MODELS.has(id):
 		if session.dashboard_state == null: return
@@ -272,13 +308,13 @@ func _refresh_menu() -> void:
 		var cost_text := "Materials %d · Energy %d kWh" % [materials, int(cost.get("power", 0))]
 		if id == "solar_array":
 			# The first panel is free so the outpost can be powered straight away.
-			available = not placed
-			cost_text = "Free · first panel"
-			status = "Placed" if placed else "Click to place"
+			available = true
+			cost_text = "Free · relocate" if placed else "Free · first panel"
+			status = "Relocate within plot" if placed else "Choose position in plot"
 		elif Station.DEFINITIONS.has(id):
-			available = not session.station_placements.has(id)
+			available = true
 			cost_text = "Free · one per NPC"
-			status = "Placed" if not available else "Click to place"
+			status = "Relocate within plot" if session.station_placements.has(id) else "Choose position in plot"
 		elif NASABuildings.MODELS.has(id):
 			var started: bool = state != null and (state.built_structures.has(id) or state.construction_queue.any(func(job): return str(job.get("structure_id", "")) == id))
 			available = state != null
@@ -369,7 +405,7 @@ func _add_preview(frame: Control, scene: PackedScene, id := "") -> void:
 func _start() -> void:
 	active = true
 	_show_area(true)
-	# Camera view and pitch stay exactly as they were while walking.
+	_open_placement_view()
 	player.placing_solar = true
 	if player.animation_player != null:
 		player.animation_player.play("idle")
@@ -434,68 +470,133 @@ func _show_area(visible_: bool) -> void:
 	if area_ring == null and visible_:
 		area_ring = _make_area_ring()
 	if area_ring != null: area_ring.visible = visible_
+	if is_instance_valid(plot_markers):
+		for child in plot_markers.get_children():
+			if child is Label3D: child.visible = visible_
 
-## A faint terrain-conforming grid over clear, level construction ground.
-## The selected building preview still checks its complete footprint and crew route.
+## Terrain-conforming plot borders replace the unrestricted construction grid.
 func _make_area_ring() -> MeshInstance3D:
-	var lander: Vector3 = get_parent().get_node("Outpost/Habitat").global_position
-	var radius := build_radius()
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var space := get_world_3d().direct_space_state
-	var samples: Dictionary = {}
-	var step := 3.0 # Keeps the ground scan near 4,500 rays for the wider area.
-	var count := ceili(radius / step)
-	var rover := get_parent().get_node("RoverTraining")
-	for z in range(-count, count + 1):
-		for x in range(-count, count + 1):
-			var point := Vector3(lander.x + x * step, lander.y, lander.z + z * step)
-			if not in_build_area(point): continue
-			var reserved := false
-			for circle in [rover.departure, rover.extraction]:
-				if Vector2(point.x - circle.global_position.x, point.z - circle.global_position.z).length() < 6.0: reserved = true
-			if reserved: continue
-			var query := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 60, point - Vector3.UP * 60)
-			query.exclude = [player.get_rid()]
-			var hit := space.intersect_ray(query)
-			if not hit.is_empty() and hit.collider.name == "LunarSurfaceCollision" and hit.normal.y > 0.94:
-				samples[Vector2i(x,z)] = hit.position + Vector3.UP * 0.025
-	for z in range(-count, count):
-		for x in range(-count, count):
-			var keys := [Vector2i(x,z), Vector2i(x+1,z), Vector2i(x,z+1), Vector2i(x+1,z+1)]
-			if not keys.all(func(key): return samples.has(key)): continue
-			for index in [0, 1, 2, 1, 3, 2]:
-				var point: Vector3 = samples[keys[index]]
-				surface.set_uv(Vector2(point.x, point.z))
-				surface.add_vertex(point)
+	for id in Plots.PLOTS:
+		var bounds := Plots.rect(id)
+		var corners := [bounds.position, Vector2(bounds.end.x, bounds.position.y), bounds.end, Vector2(bounds.position.x, bounds.end.y)]
+		for edge in range(4):
+			var a: Vector2 = corners[edge]
+			var b: Vector2 = corners[(edge + 1) % 4]
+			var count := ceili(a.distance_to(b))
+			var across := (b - a).normalized().orthogonal() * 0.10
+			for i in count:
+				var start: Vector2 = a.lerp(b, float(i) / count)
+				var end: Vector2 = a.lerp(b, float(i + 1) / count)
+				for point in [start-across, end-across, start+across, end-across, end+across, start+across]:
+					surface.set_uv(point)
+					surface.add_vertex(_plot_ground(point) + Vector3.UP * 0.06)
 	var ring := MeshInstance3D.new()
-	ring.name = "BuildAreaRing"
+	ring.name = "ConstructionPlotBorders"
 	ring.mesh = surface.commit()
 	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var shader := Shader.new()
-	shader.code = """shader_type spatial;
-render_mode unshaded, cull_disabled, depth_draw_never;
-void fragment() {
- vec2 cell = abs(fract(UV / 2.0 + 0.5) - 0.5) * 2.0;
- vec2 width = max(fwidth(UV), vec2(0.015));
- float line = 1.0 - smoothstep(0.025, 0.025 + max(width.x, width.y), min(cell.x, cell.y));
- ALBEDO = vec3(0.08, 0.60, 1.0);
- ALPHA = 0.015 + 0.07 * line;
-}
-"""
+	shader.code = "shader_type spatial; render_mode unshaded, cull_disabled; uniform vec2 selected_center; uniform vec2 selected_half; uniform bool selecting = false; void fragment(){ bool selected = selecting && all(lessThanEqual(abs(UV-selected_center),selected_half+vec2(0.3))); ALBEDO = selected ? vec3(0.2,0.9,1.0) : vec3(0.25,0.45,0.5); }"
 	var hologram := ShaderMaterial.new()
 	hologram.shader = shader
 	ring.material_override = hologram
 	add_child(ring)
 	ring.global_transform = Transform3D.IDENTITY
+	if not is_instance_valid(plot_markers):
+		plot_markers = Node3D.new()
+		plot_markers.name = "SurveyedPlotMarkers"
+		add_child(plot_markers)
+		for id in Plots.PLOTS:
+			var bounds := Plots.rect(id)
+			var caption := Label3D.new()
+			caption.name = id
+			caption.text = Plots.PLOTS[id].name.to_upper()
+			caption.font_size = 36
+			caption.pixel_size = 0.014
+			caption.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			caption.modulate = Color("8ba9b5")
+			plot_markers.add_child(caption)
+			caption.position = _plot_ground(Vector2(bounds.get_center().x, bounds.position.y)) + Vector3.UP * 0.5
+			for corner in [bounds.position, bounds.end, Vector2(bounds.position.x, bounds.end.y), Vector2(bounds.end.x, bounds.position.y)]:
+				var stake := MeshInstance3D.new()
+				var mesh := CylinderMesh.new()
+				mesh.top_radius = 0.06
+				mesh.bottom_radius = 0.06
+				mesh.height = 0.4
+				stake.mesh = mesh
+				var paint := StandardMaterial3D.new()
+				paint.albedo_color = Color("90a3aa")
+				stake.material_override = paint
+				plot_markers.add_child(stake)
+				stake.position = _plot_ground(corner) + Vector3.UP * 0.2
 	return ring
+
+func _plot_ground(point: Vector2) -> Vector3:
+	var query := PhysicsRayQueryParameters3D.create(Vector3(point.x, 100, point.y), Vector3(point.x, -100, point.y))
+	query.exclude = [player.get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	return hit.position if not hit.is_empty() else Vector3(point.x, 0, point.y)
+
+func _open_placement_view() -> void:
+	for child in get_parent().get_children():
+		if child is CanvasLayer and child.visible:
+			hidden_hud.append(child)
+			hud_input_enabled[child] = child.is_processing_input()
+			child.set_process_input(false)
+			child.hide()
+	return_camera = get_viewport().get_camera_3d()
+	placement_camera = Camera3D.new()
+	add_child(placement_camera)
+	var center: Vector2 = Plots.PLOTS[selected_id].center
+	drag_position = _plot_ground(center)
+	placement_camera.position = drag_position + Vector3(0, 32, 22)
+	placement_camera.look_at(drag_position)
+	placement_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	placement_camera.size = maxf(Plots.PLOTS[selected_id].size.x, Plots.PLOTS[selected_id].size.y) + 18.0
+	placement_camera.make_current()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	placement_actions.show()
+	drag_active = false
+	var shader := area_ring.material_override as ShaderMaterial
+	shader.set_shader_parameter("selecting", true)
+	shader.set_shader_parameter("selected_center", center)
+	shader.set_shader_parameter("selected_half", Plots.PLOTS[selected_id].size * 0.5)
+	for id in Plots.PLOTS:
+		plot_markers.get_node(NodePath(id)).modulate = Color("8cecff") if id == selected_id else Color("647680")
+
+func _close_placement_view() -> void:
+	for layer in hidden_hud:
+		if is_instance_valid(layer):
+			layer.show()
+			layer.set_process_input(hud_input_enabled.get(layer, false))
+	hidden_hud.clear()
+	hud_input_enabled.clear()
+	drag_active = false
+	if is_instance_valid(placement_camera):
+		if is_instance_valid(return_camera): return_camera.make_current()
+		placement_camera.queue_free()
+		placement_camera = null
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if is_instance_valid(placement_actions): placement_actions.hide()
+	if is_instance_valid(area_ring):
+		(area_ring.material_override as ShaderMaterial).set_shader_parameter("selecting", false)
+
+func _plot_fits() -> bool:
+	if not Plots.fits(selected_id, panel.global_transform, _footprint()): return false
+	if Station.DEFINITIONS.has(selected_id):
+		var dock := panel.global_transform * Station.dock(selected_id)
+		for offset in [Vector3(-1, 0, -1), Vector3(1, 0, 1), Vector3(-1, 0, 1), Vector3(1, 0, -1)]:
+			if not Plots.contains(selected_id, dock + offset): return false
+	return true
 
 func _aim_hit() -> Dictionary:
 	var camera := get_viewport().get_camera_3d()
 	if camera == null: return {}
-	var origin := camera.project_ray_origin(get_viewport().get_visible_rect().size * 0.5)
-	var direction := camera.project_ray_normal(get_viewport().get_visible_rect().size * 0.5)
-	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * (MAX_REACH_M + 20.0))
+	var pointer := get_viewport().get_mouse_position() if active else get_viewport().get_visible_rect().size * 0.5
+	var origin := camera.project_ray_origin(pointer)
+	var direction := camera.project_ray_normal(pointer)
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * (200.0 if active else MAX_REACH_M + 20.0))
 	query.exclude = [player.get_rid()]
 	return get_world_3d().direct_space_state.intersect_ray(query)
 
@@ -652,7 +753,7 @@ func _update_output_card() -> void:
 	output_card.show()
 	var bounds := get_viewport().get_visible_rect().size
 	output_card.size = output_card.get_combined_minimum_size()
-	output_card.position = Vector2(clampf(bounds.x * 0.5 + 60.0, 12.0, maxf(12.0, bounds.x - output_card.size.x - 12.0)), clampf(bounds.y * 0.5 - output_card.size.y * 0.5, 12.0, maxf(12.0, bounds.y - output_card.size.y - 12.0)))
+	output_card.position = Vector2(maxf(12.0, bounds.x - output_card.size.x - 20.0), 30.0)
 
 func _physics_process(_delta: float) -> void:
 	if not active and not destroying: return
@@ -661,17 +762,22 @@ func _physics_process(_delta: float) -> void:
 	if destroying:
 		_set_target(null if hit.is_empty() else _structure_at(hit.collider))
 		return
+	if drag_active and not hit.is_empty(): drag_position = hit.position
+	var ground_query := PhysicsRayQueryParameters3D.create(drag_position + Vector3.UP * 30, drag_position - Vector3.UP * 30)
+	ground_query.exclude = [player.get_rid()]
+	hit = get_world_3d().direct_space_state.intersect_ray(ground_query)
 	valid = not hit.is_empty() and hit.collider.name == "LunarSurfaceCollision"
 	panel.visible = valid
 	if valid:
-		valid = hit.normal.y > 0.94 and hit.position.distance_to(player.global_position) > 2.0 and hit.position.distance_to(player.global_position) < MAX_REACH_M and in_build_area(hit.position) and not overlaps_rover_circle(hit.position)
+		valid = hit.normal.y > 0.94 and not overlaps_rover_circle(hit.position)
 		var ground_basis := Basis(Quaternion(Vector3.UP, hit.normal)) * Basis(Vector3.UP, yaw)
 		panel.global_transform = Transform3D(ground_basis, hit.position - hit.normal * 0.01)
+		if not _plot_fits(): valid = false
 		# All corners must rest on the same level surface; reject rocks and edges.
 		var half := _footprint()
 		for corner in [Vector3(-half.x, 0, -half.y), Vector3(half.x, 0, -half.y), Vector3(-half.x, 0, half.y), Vector3(half.x, 0, half.y)]:
 			var point: Vector3 = panel.global_transform * corner
-			if not in_build_area(point): valid = false
+			if not Plots.contains(selected_id, point): valid = false
 			var support_query := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 2.0, point - Vector3.UP * 0.3)
 			support_query.exclude = [player.get_rid()]
 			var support := get_world_3d().direct_space_state.intersect_ray(support_query)
@@ -706,8 +812,10 @@ func _physics_process(_delta: float) -> void:
 	if panel.visible and selected_id == "solar_array": _update_output_card()
 	else: output_card.hide()
 	material.albedo_color = Color(0.05, 0.75, 1.0, 0.4) if valid else Color(1.0, 0.15, 0.1, 0.4)
+	placement_actions.get_child(0).disabled = not valid
 	if Time.get_ticks_msec() < build_error_until: return
-	label.text = "PLACE " + _display_name().to_upper() + "  ·  Move mouse to aim  ·  Q / R rotate  ·  Left click confirm  ·  B build menu  ·  C destroy\n" + ("Ready to place" if valid else ("Outside the build area: stay inside the blue markings" if not hit.is_empty() and not in_build_area(hit.position) else ("Reserved rover mission area" if not hit.is_empty() and overlaps_rover_circle(hit.position) else "Aim at clear, level ground with a reachable crew access point")))
+	placement_reason = "Ready to place" if valid else ("Keep the whole building and entrance inside its assigned plot" if not _plot_fits() else "Ground or access blocked — move or rotate the building")
+	label.text = "PLACE " + _display_name().to_upper() + "  ·  Hold left mouse to drag  ·  Q / R rotate  ·  Enter confirm  ·  Esc cancel\n" + placement_reason
 
 ## Built outpost structures and the placed panel can be destroyed; previews cannot.
 func _structure_at(collider: Object) -> Node3D:
@@ -819,9 +927,22 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		return
 	if not active or player.ui_blocked: return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if not event.pressed:
+			drag_active = false
+		elif get_viewport().gui_get_hovered_control() == null:
+			drag_active = true
+			get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed:
 		if event.keycode in [KEY_Q, KEY_R]:
 			yaw += deg_to_rad(-15.0 if event.keycode == KEY_Q else 15.0)
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_ESCAPE:
+			_cancel()
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_ENTER:
+			confirm()
 			get_viewport().set_input_as_handled()
 		elif event.keycode in [KEY_E, KEY_I, KEY_V, KEY_C, KEY_SPACE]:
 			get_viewport().set_input_as_handled()
@@ -830,7 +951,11 @@ func _input(event: InputEvent) -> void:
 		if valid: confirm()
 
 func confirm() -> void:
-	if not active or not valid or overlaps_rover_circle(panel.global_position): return
+	if not active: return
+	# Recheck the final transform, support, collisions and access before spending.
+	route_checked_at = 0
+	_physics_process(0.0)
+	if not valid or not _plot_fits() or overlaps_rover_circle(panel.global_position): return
 	if NASABuildings.MODELS.has(selected_id):
 		_confirm_building()
 		return
@@ -856,6 +981,9 @@ func confirm() -> void:
 		_set_panel_output(preview_kwh)
 	else:
 		session.station_placements[selected_id] = panel.transform
+	if is_instance_valid(relocation_original):
+		relocation_original.free()
+		relocation_original = null
 	for mesh in meshes:
 		mesh.material_override = null
 		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
@@ -880,6 +1008,7 @@ func confirm() -> void:
 	_reset_selection()
 
 func _confirm_building() -> void:
+	if not active or not valid or not _plot_fits(): return
 	var state: Variant = session.dashboard_state
 	var started: bool = state.built_structures.has(selected_id) or state.construction_queue.any(func(job): return str(job.structure_id) == selected_id)
 	if not started:
@@ -956,9 +1085,14 @@ func _cancel() -> void:
 	output_card.hide()
 	valid = false
 	panel.hide()
-	if selected_id != "solar_array":
+	if selected_id != "solar_array" or is_instance_valid(relocation_original):
 		stations.erase(selected_id)
 		panel.queue_free()
+		if is_instance_valid(relocation_original):
+			add_child(relocation_original)
+			if selected_id == "solar_array": solar_panel = relocation_original
+			else: stations[selected_id] = relocation_original
+			relocation_original = null
 		_reset_selection()
 	_finish_build_pose()
 	label.text = "B · Build"
@@ -967,6 +1101,7 @@ func _cancel() -> void:
 		get_parent().refresh_feedback()
 
 func _finish_build_pose() -> void:
+	_close_placement_view()
 	player.placing_solar = false
 	_release_build_pose()
 	if pose != null:

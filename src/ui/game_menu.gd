@@ -116,6 +116,8 @@ func _input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo or event.keycode != KEY_ESCAPE:
 		return
 	var scene := get_tree().current_scene
+	var builder := scene.get_node_or_null("SolarPlacement") if scene != null else null
+	if builder != null and builder.active: return # Placement owns Escape to cancel.
 	var eggs := scene.get_node_or_null("EasterEggs") if scene != null else null
 	if eggs != null and eggs.revealing:
 		eggs.handle_event(event)
