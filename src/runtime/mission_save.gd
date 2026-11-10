@@ -58,7 +58,8 @@ static func decode(data: Variant) -> Dictionary:
 	var approved: Variant = data.get("approved_plan", {})
 	if not draft is Dictionary or not approved is Dictionary: return {}
 	var planner := Planner.new()
-	if not draft.is_empty() and (not planner.shape_valid(draft) or draft.site_id != data.site_id): return {}
+	# A draft made for older planning data is discarded; it never blocks the save.
+	if not draft.is_empty() and (not planner.shape_valid(draft) or draft.site_id != data.site_id): draft = {}
 	if not approved.is_empty():
 		var plan_ok: bool = planner.shape_valid(approved.get("plan")) and approved.plan.site_id == data.site_id and approved.get("completed") == true and approved.get("delivery_status") == "pending"
 		var signature := planner.data_signature(data.site_id)
@@ -112,6 +113,10 @@ static func decode(data: Variant) -> Dictionary:
 				state.set(key, value.duplicate(true) if value is Dictionary else value)
 		if state.site_id != data.site_id or state.sol < 0 or state.mission_length_sols < 1:
 			return {}
+		if not data.state.has("clock_start_seconds"):
+			# Saves from before the shared calendar: derive the start from the saved clock,
+			# so their power days line up with their sky (to within the current day).
+			state.clock_start_seconds = maxf(0.0, orbital_clock.elapsed_seconds - state.sol * preload("res://src/world/orbital_model.gd").DAY)
 		if state.clock_start_seconds < 0.0 or state.clock_start_seconds > preload("res://src/world/orbital_model.gd").MAX_ELAPSED:
 			return {}
 		# Canonical roster migration keeps earned resources and historical readings.

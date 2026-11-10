@@ -56,5 +56,18 @@ func run() -> void:
 	check(is_equal_approx(session.orbital_clock.elapsed_seconds, start + 5000.0), "Loading keeps the saved world clock")
 	check(is_equal_approx(session.dashboard_state.clock_start_seconds, start), "Loading keeps the mission's start day")
 
+	# 3: a save from before the shared calendar gets its start day from its saved clock.
+	var legacy := Save.capture(session)
+	legacy.state.erase("clock_start_seconds")
+	var migrated := Save.decode(legacy)
+	check(not migrated.is_empty() and absf(migrated.state.clock_start_seconds - start) < 86400.0, "Older saves line their power days up with their sky")
+
+	# 2: planning data that no longer matches is dropped; the save still loads.
+	session.begin_planning()
+	data = Save.capture(session)
+	data.planning_draft.zone_id = "zone_removed_from_the_data"
+	var decoded := Save.decode(data)
+	check(not decoded.is_empty() and decoded.planning_draft.is_empty(), "A stale planning draft is dropped, not the whole save")
+
 	print("AUDIT FIXES: %d failures" % failures)
 	quit(failures)

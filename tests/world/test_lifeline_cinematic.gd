@@ -19,6 +19,7 @@ func run():
 	var controller := world.get_node("RoverTraining")
 	var driver := world.get_node("RoverHull")
 	controller.set_physics_process(false)
+	controller.data.missing = true # Lifeline is open: outpost fieldwork leaves Maya alone.
 	driver.set_physics_process(false)
 	controller._arrival()
 	check(controller.cinematic_bars[0].visible and controller.cinematic_bars[1].visible, "Letterbox bars appear for arrival")
