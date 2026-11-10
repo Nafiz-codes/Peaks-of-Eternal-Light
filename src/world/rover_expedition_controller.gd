@@ -790,12 +790,16 @@ func _publish() -> void:
 			if data.stabilized:
 				objective = "Escort the astronaut on foot to extraction."
 				details = "Oxygen: stable · Radio: connected\nKeep within 12 m; stop if they fall behind."
+			details += "\nLow ambient light in the ridge's shadow. Headlights improve visibility."
+			prompt = ("L: headlights for a clearer view.\n" if not lights.visible else "L: headlights ON.\n") + prompt
 		if data.mission < 2:
 			var id := _nearest(data.mission == 1)
 			if id != "": details += "\nNext science site: %.0f m · bearing %.0f°" % [driver.position.distance_to(targets[id].position),rad_to_deg(atan2(targets[id].position.x-driver.position.x,targets[id].position.z-driver.position.z))]
 		if Rules.ready_to_return(data):
 			objective = "Return to extraction" if data.mission < 2 else "Escort the astronaut to extraction"
 			details += "\nExtraction: %.0f m · bearing %.0f°" % [driver.position.distance_to(extraction.position),rad_to_deg(atan2(extraction.position.x-driver.position.x,extraction.position.z-driver.position.z))]
+		if data.mission == 2 and not lights.visible:
+			objective = "Low light — L improves visibility.\n" + objective
 		prompt += "\nEnter: suspend expedition and recover rover."
 	if bound_state.rover_health <= 0: prompt = "MISSION FAILED — Rover destroyed. Retry the mission."
 	var extract_nearby := false
