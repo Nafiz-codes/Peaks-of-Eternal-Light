@@ -18,7 +18,8 @@ func _process(_delta: float) -> void:
 	var damaged: Dictionary = {} if state == null else state.damaged_structures
 	# Structures are rebuilt when moved, so a marker can lose its parent at any time.
 	for id in points.keys():
-		if not damaged.has(id) or not is_instance_valid(points[id]): _unmark(id)
+		# Also re-mark when the marked structure is replaced (e.g. the free panel removed).
+		if not damaged.has(id) or not is_instance_valid(points[id]) or points[id].get_parent() != _structure(str(id)): _unmark(id)
 	for id in damaged:
 		if points.has(id): continue
 		var target := _structure(str(id))
@@ -33,7 +34,10 @@ func _process(_delta: float) -> void:
 func _structure(id: String) -> Node3D:
 	if id == "solar_panel":
 		var placement := world.get_node_or_null("SolarPlacement")
-		return placement.solar_panel if placement != null and placement.placed else null
+		if placement == null: return null
+		# The damage covers every panel; mark the free one, or a bought one if it is gone.
+		if placement.placed: return placement.solar_panel
+		return placement.extra_panels[0] if not placement.extra_panels.is_empty() else null
 	return world.construction_view.completed.get(id)
 
 func _mark(id: String, target: Node3D) -> Area3D:

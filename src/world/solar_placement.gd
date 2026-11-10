@@ -15,6 +15,9 @@ var player: Node3D
 var session: Node
 var build_menu: PanelContainer
 var placed := false
+var extra_panels: Array[Node3D] = [] # Bought panels, in the order of session.extra_panels.
+var adding_panel := false # Placing another panel after the free first one.
+const Save = preload("res://src/runtime/mission_save.gd")
 var settling := false
 var active := false
 var valid := false
@@ -73,22 +76,10 @@ var preview_exposure := 1.0
 func _ready() -> void:
 	session = get_node("/root/MissionSession")
 	player = get_parent().get_node("Outpost/Astronaut")
-	panel = Node3D.new()
-	panel.name = "PlacedSolarPanel"
+	panel = _make_panel("PlacedSolarPanel")
 	solar_panel = panel
-	add_child(panel)
-	var model := (MODELS.solar_array as PackedScene).instantiate() as Node3D
-	panel.add_child(model)
-	preload("res://src/world/imported_asset_fit.gd").fit(model, 3.0)
 	for node in panel.find_children("*", "MeshInstance3D", true, false):
 		meshes.append(node)
-	# Use actual mesh vertices to put the feet at local y=0, not padded bounds.
-	var lowest := INF
-	for mesh in meshes:
-		for vertex in mesh.mesh.get_faces():
-			var point: Vector3 = panel.global_transform.affine_inverse() * mesh.global_transform * vertex
-			lowest = minf(lowest, point.y)
-	if is_finite(lowest): model.position.y -= lowest
 	face_normal = _solar_face_normal()
 	placed = session.solar_placement.has("transform")
 	if placed:
@@ -139,6 +130,12 @@ func _ready() -> void:
 	highlight.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	highlight.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	highlight.albedo_color = Color(1.0, 0.12, 0.08, 0.45)
+	for entry in session.extra_panels:
+		var bought := _make_panel("BoughtSolarPanel")
+		bought.transform = entry.transform
+		for mesh in bought.find_children("*", "MeshInstance3D", true, false):
+			mesh.create_trimesh_collision()
+		extra_panels.append(bought)
 	default_homes = get_parent().get_node("CrewFieldwork").homes.duplicate()
 	for id in session.station_placements:
 		var station := _new_station(id)
@@ -146,6 +143,22 @@ func _ready() -> void:
 		for mesh in station.find_children("*", "MeshInstance3D", true, false):
 			mesh.create_trimesh_collision()
 		_apply_station_home(id, station.global_transform, true)
+
+## A solar panel model with its feet at local y=0 (from the mesh vertices, not padded bounds).
+func _make_panel(title: String) -> Node3D:
+	var node := Node3D.new()
+	node.name = title
+	add_child(node)
+	var model := (MODELS.solar_array as PackedScene).instantiate() as Node3D
+	node.add_child(model)
+	preload("res://src/world/imported_asset_fit.gd").fit(model, 3.0)
+	var lowest := INF
+	for mesh in node.find_children("*", "MeshInstance3D", true, false):
+		for vertex in mesh.mesh.get_faces():
+			var point: Vector3 = node.global_transform.affine_inverse() * mesh.global_transform * vertex
+			lowest = minf(lowest, point.y)
+	if is_finite(lowest): model.position.y -= lowest
+	return node
 
 func _new_station(id: String) -> Node3D:
 	var station := (MODELS[id] as PackedScene).instantiate() as Node3D
@@ -156,7 +169,12 @@ func _new_station(id: String) -> Node3D:
 
 func _select(id: String) -> void:
 	if active: _cancel()
-	if id == "solar_array" and placed or session.station_placements.has(id): return
+	if session.station_placements.has(id): return
+	# After the free first panel, more panels can be bought while there is room.
+	adding_panel = id == "solar_array" and placed
+	if adding_panel and (session.dashboard_state == null or extra_panels.size() >= Save.MAX_EXTRA_PANELS):
+		adding_panel = false
+		return
 	selected_id = id
 	build_error_until = 0
 	if NASABuildings.MODELS.has(id):
@@ -166,7 +184,7 @@ func _select(id: String) -> void:
 		panel = NASABuildings.make(id, false)
 		add_child(panel)
 	else:
-		panel = solar_panel if id == "solar_array" else _new_station(id)
+		panel = (_make_panel("BoughtSolarPanel") if adding_panel else solar_panel) if id == "solar_array" else _new_station(id)
 	meshes.clear()
 	for mesh in panel.find_children("*", "MeshInstance3D", true, false):
 		meshes.append(mesh)
@@ -228,7 +246,7 @@ func _apply_station_home(id: String, xform: Transform3D, restoring := false) -> 
 
 func _open_menu() -> void:
 	# Rebuild only after a change, so newly placed structures leave the marked ground.
-	var layout := hash([session.solar_placement, session.station_placements, session.building_placements])
+	var layout := hash([session.solar_placement, session.extra_panels, session.station_placements, session.building_placements])
 	if layout != area_layout and is_instance_valid(area_ring):
 		remove_child(area_ring)
 		area_ring.queue_free()
@@ -247,7 +265,7 @@ func _close_menu_and(action := Callable()) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if action.is_valid(): action.call()
 
-## Rebuilt on open so costs, availability and the stock of materials are current.
+## Rebuilt on open so costs, availability and the outpost's reserves are current.
 func _refresh_menu() -> void:
 	# Keep the 3D thumbnails: only the cards around them are rebuilt.
 	for holder in previews.values():
@@ -264,17 +282,27 @@ func _refresh_menu() -> void:
 		station_index += 1
 	for structure in catalog:
 		var id := str(structure.get("structure_id", ""))
-		var cost: Dictionary = structure.get("build_cost", {})
-		var materials := float(cost.get("materials", 0.0))
-		var affordable: bool = state == null or state.materials >= materials
+		# Live price when a mission runs (a regolith stockpile halves the shelter's crew cost).
+		var cost: Dictionary = structure.get("build_cost", {}) if state == null or id in Station.DEFINITIONS else session.dashboard_simulator.build_cost(state, id)
+		var shortfall: String = "" if state == null or id in Station.DEFINITIONS else session.dashboard_simulator.cost_shortfall(state, id)
+		var affordable: bool = shortfall.is_empty()
 		var status := ""
 		var available := false
-		var cost_text := "Materials %d · Energy %d kWh" % [materials, int(cost.get("power", 0))]
+		var cost_text := "%d kWh · %d L water\n%.1f kg oxygen · %.1f kg food" % [int(cost.get("power", 0)), int(cost.get("water", 0)), float(cost.get("oxygen", 0)), float(cost.get("food", 0))]
 		if id == "solar_array":
-			# The first panel is free so the outpost can be powered straight away.
-			available = not placed
-			cost_text = "Free · first panel"
-			status = "Placed" if placed else "Click to place"
+			# The first panel is free so the outpost can be powered straight away;
+			# more panels cost power and the crew's water, oxygen and food.
+			if not placed:
+				available = true
+				cost_text = "Free · first panel"
+				status = "Click to place"
+			elif state == null:
+				status = "Start the mission first"
+			elif extra_panels.size() >= Save.MAX_EXTRA_PANELS:
+				status = "No room for more panels"
+			else:
+				available = affordable
+				status = "Click to place another" if affordable else "Not enough " + shortfall
 		elif Station.DEFINITIONS.has(id):
 			available = not session.station_placements.has(id)
 			cost_text = "Free · one per NPC"
@@ -292,7 +320,7 @@ func _refresh_menu() -> void:
 				elif not placed:
 					status = "Preview · place solar first"
 				elif not affordable:
-					status = "Preview · need materials"
+					status = "Preview · need " + shortfall
 				elif state.power_kwh < float(cost.get("power", 0)):
 					status = "Preview · need power"
 				elif not session.can_advance():
@@ -307,7 +335,7 @@ func _refresh_menu() -> void:
 			status = "Start the mission first"
 		else:
 			available = affordable
-			status = "Queue construction" if affordable else "Not enough materials"
+			status = "Queue construction" if affordable else "Not enough " + shortfall
 		var card := Button.new()
 		card.custom_minimum_size = Vector2(200, 214)
 		card.disabled = not available
@@ -592,7 +620,7 @@ func _build_output_card() -> void:
 	body.add_theme_constant_override("separation", 7)
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	output_card.add_child(body)
-	for key in ["title", "exposure", "exposure_bar", "facing", "facing_bar", "site", "site_bar", "energy", "water", "materials", "note"]:
+	for key in ["title", "exposure", "exposure_bar", "facing", "facing_bar", "site", "site_bar", "energy", "water", "note"]:
 		if key.ends_with("_bar"):
 			var bar := ProgressBar.new()
 			bar.step = 0.0
@@ -615,7 +643,6 @@ func _build_output_card() -> void:
 			output_lines[key] = line
 	output_lines.title.text = "Solar panel · output here"
 	output_lines.water.text = "Water  +0 L per sol"
-	output_lines.materials.text = "Materials  +0 per sol"
 	output_lines.note.text = "Fixed daily output for this spot: %.1f kWh full-sun rating (NASA 1361 W/m² sunlight × NASA 30%% cell efficiency × 4.62 m² × 24 h) × mission sunlight on the panel's face at its current angle × share not shaded by terrain or structures at this spot." % PANEL_RATED_KWH_PER_SOL
 	output_card.hide()
 
@@ -714,6 +741,7 @@ func _structure_at(collider: Object) -> Node3D:
 	var node := collider as Node
 	while node != null and node != get_parent():
 		if node == solar_panel: return solar_panel if placed and not settling else null
+		if node is Node3D and extra_panels.has(node): return node if not settling else null
 		if node.has_meta("crew_station_id") and session.station_placements.has(str(node.get_meta("crew_station_id"))):
 			return node if not settling else null
 		if node.has_meta("structure_id") and str(node.name).begins_with("Completed_"): return node
@@ -731,6 +759,7 @@ func _set_target(next: Node3D) -> void:
 
 func _target_name() -> String:
 	if target.has_meta("crew_station_id"): return str(Station.DEFINITIONS[str(target.get_meta("crew_station_id"))].name)
+	if extra_panels.has(target): return "this solar panel (cost refunded)"
 	return "the solar panel (free)" if target == solar_panel else str(target.get_meta("structure_id")).replace("_", " ") + " (cost refunded)"
 
 func _start_destroy() -> void:
@@ -744,11 +773,6 @@ func _stop_destroy() -> void:
 	player.placing_solar = false
 	label.text = "B · Build"
 
-func _set_panel_output(kwh: float) -> void:
-	if session.dashboard_state == null: return # Applied when the mission starts.
-	session.dashboard_state.placed_panel_kwh_per_sol = kwh
-	session.capture_sol_checkpoint()
-	session.state_changed.emit()
 
 func _destroy_target() -> void:
 	var doomed := target
@@ -770,11 +794,19 @@ func _destroy_target() -> void:
 		label.text = DESTROY_HINT + "\nStation removed · available in B menu"
 		_reset_selection()
 		return
+	if extra_panels.has(doomed):
+		var index := extra_panels.find(doomed)
+		var refund: Dictionary = session.sell_solar_panel(index)
+		extra_panels.remove_at(index)
+		doomed.queue_free()
+		label.text = DESTROY_HINT + "\nSolar panel removed · " + _refund_text(refund)
+		return
 	if doomed == solar_panel:
 		_reset_selection()
 		session.solar_placement = {}
-		if session.dashboard_state != null: session.dashboard_state.damaged_structures.erase("solar_panel")
-		_set_panel_output(0.0)
+		# The storm damage covers all panels; it clears only when none are left.
+		if session.dashboard_state != null and extra_panels.is_empty(): session.dashboard_state.damaged_structures.erase("solar_panel")
+		session.sync_panel_output()
 		placed = false
 		for mesh in meshes:
 			for body in mesh.get_children():
@@ -786,9 +818,12 @@ func _destroy_target() -> void:
 		return
 	var result: Dictionary = session.demolish_structure(str(doomed.get_meta("structure_id")))
 	if result.get("ok", false):
-		label.text = DESTROY_HINT + "\nRefunded %d materials · %d kWh" % [result.materials_refund, result.power_refund]
+		label.text = DESTROY_HINT + "\n" + _refund_text(result.refund)
 	else:
 		label.text = DESTROY_HINT + "\nCannot destroy: " + str(result.get("error", "")).replace("_", " ")
+
+func _refund_text(refund: Dictionary) -> String:
+	return "Refunded %d kWh · %d L water · %.1f kg oxygen · %.1f kg food" % [refund.get("power", 0.0), refund.get("water", 0.0), refund.get("oxygen", 0.0), refund.get("food", 0.0)]
 
 func _input(event: InputEvent) -> void:
 	if get_tree().paused or player.seated or settling: return
@@ -852,15 +887,25 @@ func confirm() -> void:
 		# Score the exact final transform; the card's shade check may be up to 150 ms old.
 		preview_exposure = mission_exposure(panel.global_transform)
 		preview_kwh = panel_output_kwh(facing_yield((panel.global_basis * face_normal).normalized()), preview_exposure)
-		session.solar_placement = {"transform": panel.transform, "kwh_per_sol": preview_kwh}
-		_set_panel_output(preview_kwh)
+		if adding_panel:
+			var shortfall: String = session.buy_solar_panel(panel.transform, preview_kwh)
+			if not shortfall.is_empty():
+				active = true
+				_show_area(true)
+				label.text = "Cannot place another panel: not enough " + shortfall
+				build_error_until = Time.get_ticks_msec() + 3500
+				return
+			extra_panels.append(panel)
+		else:
+			session.solar_placement = {"transform": panel.transform, "kwh_per_sol": preview_kwh}
+			session.sync_panel_output()
 	else:
 		session.station_placements[selected_id] = panel.transform
 	for mesh in meshes:
 		mesh.material_override = null
 		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	_finish_build_pose()
-	if selected_id == "solar_array": placed = true
+	if selected_id == "solar_array" and not adding_panel: placed = true
 	settling = true
 	label.text = "Deploying " + _display_name() + "..."
 	# Reserve solid ground space immediately so walking during the drop cannot
@@ -956,7 +1001,7 @@ func _cancel() -> void:
 	output_card.hide()
 	valid = false
 	panel.hide()
-	if selected_id != "solar_array":
+	if selected_id != "solar_array" or adding_panel:
 		stations.erase(selected_id)
 		panel.queue_free()
 		_reset_selection()
@@ -976,6 +1021,7 @@ func _finish_build_pose() -> void:
 	player._update_animation(player.moving)
 
 func _reset_selection() -> void:
+	adding_panel = false
 	selected_id = "solar_array"
 	panel = solar_panel
 	meshes.clear()

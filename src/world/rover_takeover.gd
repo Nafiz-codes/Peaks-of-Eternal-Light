@@ -46,6 +46,7 @@ func _ready() -> void:
 func begin() -> void:
 	if running: return
 	running = true
+	Engine.time_scale = 1.0 # The startup film and its 12 s timeout run in real time.
 	video_done = false
 	audio_done = false
 	camera_handed_off = false

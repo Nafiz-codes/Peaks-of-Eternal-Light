@@ -46,9 +46,13 @@ static func make(id: String, ghost: bool) -> Node3D:
    child.scale *= BUILDING_SCALE
    child.position *= BUILDING_SCALE
  bounds = mesh_bounds(root)
+ # Models that mark their own ground level (y=0) rest there, with anything below sunk
+ # into the terrain; the rest rest on their measured bottom.
+ var buried := model.position.y - bounds.position.y if model.has_meta("ground_at_origin") else 0.0
  for child in root.get_children():
-  child.position -= Vector3(bounds.get_center().x, bounds.position.y, bounds.get_center().z)
- root.set_meta("hull_size", bounds.size)
+  child.position -= Vector3(bounds.get_center().x, bounds.position.y + buried, bounds.get_center().z)
+ # The hull covers only what stands above ground.
+ root.set_meta("hull_size", Vector3(bounds.size.x, bounds.size.y - buried, bounds.size.z))
  if ghost:
   var material := StandardMaterial3D.new()
   material.albedo_color = Color(0.36, 0.72, 1.0, 0.28)

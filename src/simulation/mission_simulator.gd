@@ -18,7 +18,6 @@ const INITIAL_POWER_KWH := 290.0
 const INITIAL_WATER_L := 500.0
 const INITIAL_OXYGEN_KG := 56.25
 const INITIAL_FOOD_KG := 37.5
-const INITIAL_MATERIALS := 180.0
 const BATTERY_CAPACITY_KWH := 300.0
 
 ## NASA NESC Table 8.4-2: unshielded lunar-surface GCR effective dose during
@@ -40,9 +39,19 @@ const SOLAR_ARRAY_GENERATION_KWH_PER_SOL := 18.0
 ## Gameplay value: share of sunlight left during the dust storm (visuals use the same value).
 const DUST_STORM_LIGHT_MULTIPLIER := 0.5
 const HISTORY_DAYS := 60
+## Building costs, as cost key -> state field. Water, oxygen and food are what the crew
+## use while building (Resources/construction.json explains the values).
+const COST_RESOURCES := {"power": "power_kwh", "water": "water_l", "oxygen": "oxygen_kg", "food": "food_kg"}
+const BUILD_RESERVE_DAYS := 3.0 # Never build so much that supplies drop below this.
 ## Gameplay values: a damaged structure keeps this share of its output until repaired,
 ## and the dust storm can damage these. "solar_panel" is the hand-placed panel.
 const DAMAGED_OUTPUT_SHARE := 0.4
+## Gameplay values for the radiation wave, per crew member left outside the radiation
+## habitat: medical treatment uses supplies, the dose rises, and the crew work slower.
+const RADIATION_TREATMENT := {"water_l": 15.0, "oxygen_kg": 2.0, "food_kg": 1.5}
+const RADIATION_DOSE_MSV := 0.8
+const RADIATION_SLOWDOWN := 0.15 # Output lost per exposed crew member while they recover.
+const RADIATION_RECOVERY_SOLS := 2
 const STORM_DAMAGE_TARGETS := ["solar_panel", "water_extractor", "greenhouse", "shielding_wall", "solar_array"]
 
 var sites: Array[Dictionary] = []
@@ -85,13 +94,13 @@ func begin_mission(selected_site_id: String, mission_length: int = 7) -> Variant
 	state.water_l = INITIAL_WATER_L
 	state.oxygen_kg = INITIAL_OXYGEN_KG
 	state.food_kg = INITIAL_FOOD_KG
-	state.materials = INITIAL_MATERIALS
 	state.crew_productivity = _crew_productivity_baseline()
 	state.terrain_shielding_factor = _terrain_shielding_factor(_find_site(selected_site_id))
 	state.life_support_status = _life_support_status(state, 0.0, 0.0, 0.0)
 	state.mission_outcome = _evaluate_mission_outcome(state)
 	_update_report_data(state)
 	state.history.append(state.snapshot())
+	record_milestone(state, "Landing")
 	return state
 
 
@@ -196,18 +205,50 @@ func queue_construction(state: Variant, structure_id: String) -> Dictionary:
 	var structure := _find_structure(structure_id)
 	if structure.is_empty():
 		return {"ok": false, "error": "unknown_structure"}
-	var cost: Dictionary = structure.get("build_cost", {})
-	var materials_cost := maxf(0.0, float(cost.get("materials", 0.0)) - _structure_material_discount(state, structure_id))
-	var power_cost := float(cost.get("power", 0.0))
-	if state.materials < materials_cost:
-		return {"ok": false, "error": "insufficient_materials"}
-	if state.power_kwh < power_cost:
-		return {"ok": false, "error": "insufficient_power"}
-	state.materials -= materials_cost
-	state.power_kwh -= power_cost
+	var shortfall := cost_shortfall(state, structure_id)
+	if not shortfall.is_empty():
+		return {"ok": false, "error": "insufficient_" + shortfall}
+	var paid := build_cost(state, structure_id)
+	_spend(state, paid, -1.0)
 	state.construction_queue.append({"structure_id": structure_id, "remaining_work": float(structure.get("build_time_sols", 1)), "started_sol": state.sol})
 	_publish_action_state(state)
-	return {"ok": true, "structure_id": structure_id, "materials_cost": materials_cost, "power_cost": power_cost}
+	return {"ok": true, "structure_id": structure_id, "cost": paid}
+
+
+## What building it costs now: power, plus the water, oxygen and food the crew use
+## while building it. A regolith stockpile halves the shielding habitat's crew cost.
+func build_cost(state: Variant, structure_id: String) -> Dictionary:
+	var authored: Dictionary = _find_structure(structure_id).get("build_cost", {})
+	var crew_share := 0.5 if structure_id == "shielding_wall" and state != null and state.shielding_wall_material_discount > 0.0 else 1.0
+	var cost := {}
+	for key in COST_RESOURCES:
+		cost[key] = float(authored.get(key, 0.0)) * (1.0 if key == "power" else crew_share)
+	return cost
+
+
+## The first resource the outpost cannot spare for this structure ("" when affordable).
+## Water, oxygen and food must still last the crew BUILD_RESERVE_DAYS afterwards.
+func cost_shortfall(state: Variant, structure_id: String) -> String:
+	if state == null:
+		return "mission"
+	var cost := build_cost(state, structure_id)
+	var draw := {"water": maxf(0.0, -state.water_balance_l), "oxygen": state.oxygen_consumed_kg, "food": state.food_consumed_kg}
+	if state.sol == 0: # No day has run yet: use the crew's planned daily use.
+		var life := _calculate_life_support(state)
+		draw = {"water": maxf(0.0, -life.water_balance_l), "oxygen": life.oxygen_consumed_kg, "food": life.food_consumed_kg}
+	for key in COST_RESOURCES:
+		var have: float = state.get(COST_RESOURCES[key])
+		var keep: float = 0.0 if key == "power" else draw[key] * BUILD_RESERVE_DAYS
+		if have - float(cost[key]) < keep - 0.0001:
+			return key
+	return ""
+
+
+func _spend(state: Variant, cost: Dictionary, sign: float) -> void:
+	for key in COST_RESOURCES:
+		var field: String = COST_RESOURCES[key]
+		state.set(field, maxf(0.0, float(state.get(field)) + sign * float(cost.get(key, 0.0))))
+	state.power_kwh = minf(state.power_kwh, _battery_capacity(state))
 
 
 ## The storm interlude cuts sunlight for the current sol; the next Run Sol pays for it once.
@@ -226,6 +267,86 @@ func apply_dust_storm(state: Variant) -> bool:
 	})
 	_publish_action_state(state)
 	return true
+
+
+## What keeps the base from being ready to grow into a permanent base: any life-support
+## reserve below "nominal" (three days of supply), or under three days of baseline power.
+func base_shortfalls(state: Variant) -> Array:
+	var shortfalls: Array = []
+	for key in ["power", "water", "oxygen", "food"]:
+		if key == "power":
+			if state.power_kwh < _calculate_power(state, _find_site(state.site_id)).consumed_kwh * 3.0: shortfalls.append(key)
+		elif state.life_support_status.get(key, "") != "nominal":
+			shortfalls.append(key)
+	return shortfalls
+
+
+## Maya's end-of-mission review: with no shortfalls the mission succeeds.
+func complete_mission(state: Variant) -> Array:
+	# Already confirmed (e.g. a save made during Maya's verdict): nothing is short.
+	if state != null and state.mission_outcome.get("status", "") == "success":
+		return []
+	if state == null or state.mission_outcome.get("status", "") != "in_progress":
+		return ["mission"]
+	var shortfalls := base_shortfalls(state)
+	if shortfalls.is_empty():
+		state.mission_outcome.status = "success"
+		record_milestone(state, "Mission review")
+		_publish_action_state(state)
+	return shortfalls
+
+
+## Reserves at a story milestone; each label is recorded once (replays add nothing).
+func record_milestone(state: Variant, label: String) -> void:
+	if state == null:
+		return
+	for entry in state.milestones:
+		if entry.get("label", "") == label:
+			return
+	state.milestones.append({"label": label, "power_kwh": state.power_kwh, "water_l": state.water_l, "oxygen_kg": state.oxygen_kg, "food_kg": state.food_kg})
+
+
+## The radiation wave hits: exposed crew need treatment and work slower for two days.
+func apply_radiation_wave(state: Variant, exposed: int) -> void:
+	if state == null:
+		return
+	exposed = clampi(exposed, 0, 3)
+	state.water_l = maxf(0.0, state.water_l - RADIATION_TREATMENT.water_l * exposed)
+	state.oxygen_kg = maxf(0.0, state.oxygen_kg - RADIATION_TREATMENT.oxygen_kg * exposed)
+	state.food_kg = maxf(0.0, state.food_kg - RADIATION_TREATMENT.food_kg * exposed)
+	state.radiation_msv += RADIATION_DOSE_MSV * exposed
+	state.radiation_this_sol_msv += RADIATION_DOSE_MSV * exposed
+	if exposed > 0:
+		var share := 1.0 - RADIATION_SLOWDOWN * exposed
+		state.active_events.append({
+			"event_id": "radiation_sickness",
+			# output_multiplier already scales base solar power as well as the extractor and greenhouse.
+			"effects": {"output_multiplier": share, "water_recovery_multiplier": share, "duration_sols": RADIATION_RECOVERY_SOLS},
+			"remaining_sols": RADIATION_RECOVERY_SOLS,
+			"started_sol": state.sol,
+			"text": "Radiation sickness: %d crew member(s) recovering; the base produces %d%% less." % [exposed, roundi(RADIATION_SLOWDOWN * exposed * 100.0)]
+		})
+	_publish_action_state(state)
+
+
+## After the ending, "Continue playing" reopens the base for free play.
+func resume_after_success(state: Variant) -> bool:
+	if state == null or state.mission_outcome.get("status", "") != "success":
+		return false
+	state.mission_outcome.status = "in_progress"
+	_publish_action_state(state)
+	return true
+
+
+## Debug builds only (outpost DEV tools): top up every reserve.
+func developer_add_resources(state: Variant) -> void:
+	if state == null:
+		return
+	state.power_kwh = minf(_battery_capacity(state), state.power_kwh + 150.0)
+	state.water_l += 150.0
+	state.oxygen_kg += 20.0
+	state.food_kg += 15.0
+	_publish_action_state(state)
 
 
 ## After the dust storm: one to three of the outpost's working structures are damaged.
@@ -281,18 +402,40 @@ func demolish_structure(state: Variant, structure_id: String) -> Dictionary:
 		return {"ok": false, "error": "mission_not_ready"}
 	if not state.built_structures.has(structure_id):
 		return {"ok": false, "error": "structure_not_built"}
-	# Full refund of the authored build cost; energy cannot exceed battery capacity.
-	# shortcut: uses the current shielding discount, so a wall bought before the discount
+	# Full refund of the build cost, as requested for destroying; energy cannot exceed
+	# battery capacity.
+	# shortcut: uses the current regolith discount, so a habitat bought before the discount
 	# refunds less than was paid; record the paid cost per structure if that matters.
-	var cost: Dictionary = _find_structure(structure_id).get("build_cost", {})
-	var materials_refund := maxf(0.0, float(cost.get("materials", 0.0)) - _structure_material_discount(state, structure_id))
-	var power_refund := float(cost.get("power", 0.0))
+	var refund := build_cost(state, structure_id)
 	state.built_structures.erase(structure_id)
 	state.damaged_structures.erase(structure_id)
-	state.materials += materials_refund
-	state.power_kwh = minf(state.power_kwh + power_refund, _battery_capacity(state))
+	_spend(state, refund, 1.0)
 	_publish_action_state(state)
-	return {"ok": true, "structure_id": structure_id, "materials_refund": materials_refund, "power_refund": power_refund}
+	return {"ok": true, "structure_id": structure_id, "refund": refund}
+
+
+## An extra hand-placed solar panel (the first is free): pays the Solar Panel cost and
+## adds its rated output. Returns "" or the resource that is short.
+func buy_solar_panel(state: Variant, kwh_per_sol: float) -> String:
+	if state == null or state.mission_outcome.get("status", "") != "in_progress":
+		return "mission"
+	var shortfall := cost_shortfall(state, "solar_array")
+	if not shortfall.is_empty():
+		return shortfall
+	_spend(state, build_cost(state, "solar_array"), -1.0)
+	state.placed_panel_kwh_per_sol += maxf(0.0, kwh_per_sol)
+	_publish_action_state(state)
+	return ""
+
+
+func sell_solar_panel(state: Variant, kwh_per_sol: float) -> Dictionary:
+	if state == null:
+		return {}
+	var refund := build_cost(state, "solar_array")
+	_spend(state, refund, 1.0)
+	state.placed_panel_kwh_per_sol = maxf(0.0, state.placed_panel_kwh_per_sol - kwh_per_sol)
+	_publish_action_state(state)
+	return refund
 
 
 func dispatch_rover(state: Variant, action_id: String, distance_km: float) -> Dictionary:
@@ -406,8 +549,9 @@ func _event_roll_succeeds(event_id: String, rng: RandomNumberGenerator) -> bool:
 
 
 func _apply_event_effects(state: Variant, event_id: String, effects: Dictionary) -> void:
-	if effects.has("materials"):
-		state.materials = maxf(0.0, state.materials + _numeric_effect(effects.materials))
+	for key in ["water_l", "oxygen_kg", "food_kg"]:
+		if effects.has(key):
+			state.set(key, maxf(0.0, float(state.get(key)) + _numeric_effect(effects[key])))
 	if effects.has("crew_stress"):
 		var stress_change := _numeric_effect(effects.crew_stress)
 		if stress_change > 0.0 and state.built_structures.has("habitat_module"):
@@ -498,12 +642,6 @@ func _advance_construction(state: Variant) -> void:
 			state.construction_queue[index] = job
 
 
-func _structure_material_discount(state: Variant, structure_id: String) -> float:
-	if structure_id != "shielding_wall":
-		return 0.0
-	return maxf(0.0, state.shielding_wall_material_discount)
-
-
 func _choose_undamaged_structure(state: Variant, event_id: String, requested: String) -> String:
 	var candidates: Array[String] = []
 	for structure_id in state.built_structures:
@@ -541,8 +679,8 @@ func _update_report_data(state: Variant) -> void:
 		"mission_length_sols": state.mission_length_sols,
 		"failure_reason": depletion_reason,
 		"failure_sol": state.mission_outcome.get("failure_sol", 0),
-		"initial_reserves": {"power_kwh": initial.get("power_kwh", 0.0), "water_l": initial.get("water_l", 0.0), "oxygen_kg": initial.get("oxygen_kg", 0.0), "food_kg": initial.get("food_kg", 0.0), "materials": initial.get("materials", 0.0)},
-		"final_reserves": {"power_kwh": state.power_kwh, "water_l": state.water_l, "oxygen_kg": state.oxygen_kg, "food_kg": state.food_kg, "materials": state.materials},
+		"initial_reserves": {"power_kwh": initial.get("power_kwh", 0.0), "water_l": initial.get("water_l", 0.0), "oxygen_kg": initial.get("oxygen_kg", 0.0), "food_kg": initial.get("food_kg", 0.0)},
+		"final_reserves": {"power_kwh": state.power_kwh, "water_l": state.water_l, "oxygen_kg": state.oxygen_kg, "food_kg": state.food_kg},
 		"events_resolved": state.resolved_events.size(),
 		"event_history": state.resolved_events.duplicate(true),
 		"radiation_total_msv": state.radiation_msv,
@@ -566,8 +704,14 @@ func _evaluate_mission_outcome(state: Variant) -> Dictionary:
 	var failure_sol := int(existing_outcome.get("failure_sol", 0))
 	if not failure_reason.is_empty() and failure_sol == 0:
 		failure_sol = state.sol
+	# Success is granted once, by complete_mission, and kept unless the crew later fails.
+	var status := "in_progress"
+	if not failure_reason.is_empty():
+		status = "failure"
+	elif existing_outcome.get("status", "") == "success":
+		status = "success"
 	return {
-		"status": "failure" if not failure_reason.is_empty() else "in_progress",
+		"status": status,
 		"failure_reason": failure_reason,
 		"failure_sol": failure_sol,
 		"primary_objective": "Explore the Moon and support the crew."

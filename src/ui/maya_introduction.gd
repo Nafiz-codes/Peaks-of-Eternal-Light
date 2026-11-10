@@ -7,9 +7,18 @@ const INTRODUCTIONS := {
  "food_storage": {"speaker": "Sam Okafor", "text": "And I'm Sam Okafor, robotics and habitat engineer. Give me the equipment, and I'll help turn it into a functioning base."},
  "maya_closing": {"speaker": "Dr. Maya Chen", "text": "We all have our specialties, Commander. But you'll be making the final decisions."},
  "storm_damage": {"speaker": "Dr. Maya Chen", "text": "Commander, the dust storm damaged some of our structures. Walk up to a marked one and press E to repair it, or talk to me if you decide to leave them. Unrepaired, they will give us far less."},
+ "radiation_alert": {"speaker": "Dr. Maya Chen", "text": "Commander, a solar radiation wave is about to hit the base! Talk to each of us, me included, and order us into the radiation shielding habitat before it arrives."},
+ "radiation_no_shelter": {"speaker": "Dr. Maya Chen", "text": "Commander, a solar radiation wave is about to hit the base, and we have no radiation shielding habitat to hide in. Brace yourselves: the crew will need treatment afterwards."},
+ "radiation_order_crew_briefing": {"speaker": "Dr. Maya Chen", "text": "Understood, Commander. Heading into the shelter now."},
+ "radiation_order_water_recycler": {"speaker": "Dr. Alex Rivera", "text": "On my way to the radiation habitat, Commander."},
+ "radiation_order_food_storage": {"speaker": "Sam Okafor", "text": "Securing my tools and heading for the shelter, Commander."},
+ "mission_review": {"speaker": "Dr. Maya Chen", "text": "Commander, the days we were scheduled to run this base are complete. Now we check whether we've done enough for it to be the stepping stone for humanity's first Moon base. Running the resource check now."},
+ "mission_ready": {"speaker": "Dr. Maya Chen", "text": "Power, water, oxygen and food are all in good shape. It's confirmed, Commander: this outpost is ready to become humanity's first Moon base."},
+ "mission_short": {"speaker": "Dr. Maya Chen", "text": "Not yet, Commander."},
  "storm_lost_contact": {"speaker": "Dr. Maya Chen", "text": "Commander, we've lost contact with Alex. He went out to check a reading before the storm and hasn't reported back. Take the rover to his last known location and bring him home."}
 }
 var dialogue_id := "crew_briefing"
+var text_override := "" # Replaces the line's text when set (for lines built at runtime).
 var player: Node
 var content: VBoxContainer
 var previous_blocked := false
@@ -43,7 +52,7 @@ func _ready() -> void:
 	var font := SystemFont.new()
 	font.font_names = PackedStringArray(["Segoe UI", "Noto Sans", "Arial"])
 	var speech: Dictionary = INTRODUCTIONS[dialogue_id]
-	var spoken_text: String = speech.text.replace("Commander", get_node("/root/MissionSession").commander_address())
+	var spoken_text: String = (speech.text if text_override.is_empty() else text_override).replace("Commander", get_node("/root/MissionSession").commander_address())
 	for entry in [[speech.speaker, Color("ffd36a"), 22], [spoken_text, Color.WHITE, 20]]:
 		var label := Label.new()
 		label.text = entry[0]

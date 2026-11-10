@@ -228,7 +228,7 @@ func _home() -> void:
 		cards.add_theme_constant_override("h_separation", 12)
 		cards.add_theme_constant_override("v_separation", 8)
 		body.add_child(cards)
-		for text_ in ["Energy  %.2f kWh" % state.power_kwh, "Water  %.2f L" % state.water_l, "Oxygen  %.2f kg" % state.oxygen_kg, "Food  %.2f kg" % state.food_kg, "Dose  %.3f mSv (modeled)" % state.radiation_msv, "Materials  %.1f" % state.materials]:
+		for text_ in ["Energy  %.2f kWh" % state.power_kwh, "Water  %.2f L" % state.water_l, "Oxygen  %.2f kg" % state.oxygen_kg, "Food  %.2f kg" % state.food_kg]:
 			UI.panel(cards).add_child(UI.label(text_, 16))
 		body.add_child(UI.label("%d pending decisions  ·  %d active effects" % [state.pending_events.size(), state.active_events.size()], 16, UI.AMBER))
 		for effect in state.active_events:

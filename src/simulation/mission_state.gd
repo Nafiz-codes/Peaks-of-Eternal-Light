@@ -24,7 +24,6 @@ var life_support_status: Dictionary = {}
 var radiation_msv: float = 0.0
 var radiation_this_sol_msv: float = 0.0
 var terrain_shielding_factor: float = 0.0
-var materials: float = 0.0
 var shielding_wall_material_discount: float = 0.0
 var active_events: Array[Dictionary] = []
 var pending_events: Array[Dictionary] = []
@@ -53,6 +52,9 @@ var volatile_prospect_status: String = "none"
 var event_warning_disabled: bool = false
 var report_data: Dictionary = {}
 var history: Array[Dictionary] = []
+## Reserves at each mission milestone (landing, each rover operation, the review), for
+## the ending's mission-by-mission statistics: [{label, power_kwh, water_l, oxygen_kg, food_kg}].
+var milestones: Array[Dictionary] = []
 var consecutive_power_depleted_sols: int = 0
 var mission_outcome: Dictionary = {}
 
@@ -79,7 +81,6 @@ func snapshot() -> Dictionary:
 		"radiation_msv": radiation_msv,
 		"radiation_this_sol_msv": radiation_this_sol_msv,
 		"terrain_shielding_factor": terrain_shielding_factor,
-		"materials": materials,
 		"shielding_wall_material_discount": shielding_wall_material_discount,
 		"active_events": active_events.duplicate(true),
 		"pending_events": pending_events.duplicate(true),

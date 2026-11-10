@@ -30,9 +30,9 @@ func _run() -> void:
 	# Test a valid short mission to exercise the success UI independently of balance.
 	session.dashboard_state = session.dashboard_simulator.begin_mission("ridge_a", 1)
 	session.state_changed.emit()
-	session.advance_mission()
+	check(session.complete_mission().is_empty(), "A well-supplied base passes Maya's review.")
 	await process_frame
-	check(session.dashboard_state.mission_outcome.status == "success", "Short mission succeeds through the simulator.")
+	check(session.dashboard_state.mission_outcome.status == "success", "The mission review marks success through the simulator.")
 	check(current_scene.get_node("MissionHUD").run_button.disabled, "Success disables turn controls.")
 	session.open_dashboard(current_scene.scene_file_path)
 	await scene_changed

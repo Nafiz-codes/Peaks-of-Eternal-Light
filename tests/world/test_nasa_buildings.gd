@@ -9,7 +9,7 @@ func run():
  var session = root.get_node("MissionSession")
  session.select_landing_site("ridge_a")
  session.start_selected_mission()
- session.dashboard_state.materials = 1000
+ session.dashboard_state.food_kg = 1000.0
  var world = load("res://scenes/lunar_outpost_3d.tscn").instantiate()
  root.add_child(world)
  current_scene = world
@@ -31,7 +31,7 @@ func run():
  world.add_child(camera)
  camera.current = true
  for entry in [["Habitat Extension", "habitat_module"], ["Comms Relay", "comms_relay"], ["Water Extractor", "water_extractor"], ["Greenhouse Module", "greenhouse"], ["Radiation Shielding Habitat", "shielding_wall"]]:
-  session.dashboard_state.materials = 0
+  session.dashboard_state.food_kg = 0.5 # Under 3 days of food: nothing is affordable.
   placement._open_menu()
   var card: Button
   for item in placement.grid.get_children():
@@ -41,10 +41,10 @@ func run():
   check(card.find_children("*", "SubViewport", true, false).size() == 1, "NASA thumbnail exists")
   card.pressed.emit()
   check(placement.active and placement.selected_id == entry[1], "Card opens mouse placement")
-  var before: float = session.dashboard_state.materials
+  var before: float = session.dashboard_state.food_kg
   placement._cancel()
-  check(session.dashboard_state.materials == before and not player.placing_solar, "Cancel is free and restores movement")
-  session.dashboard_state.materials = 1000
+  check(session.dashboard_state.food_kg == before and not player.placing_solar, "Cancel is free and restores movement")
+  session.dashboard_state.food_kg = 1000.0
   placement._select(entry[1])
   var found := false
   for z in [-9,-4,1,6,10]:
@@ -67,13 +67,13 @@ func run():
   placement.confirm()
   check(session.building_placements.get(entry[1]) == expected, "Exact position and rotation retained")
   check(not placement.active and not player.placing_solar, "Confirmation restores normal movement")
-  var paid: float = session.dashboard_state.materials
+  var paid: float = session.dashboard_state.food_kg
   placement._select(entry[1])
   check(placement.active, "Built item can be relocated")
   placement.panel.global_transform = expected
   placement.valid = true
   placement.confirm()
-  check(session.dashboard_state.materials == paid, "Relocation does not charge twice")
+  check(session.dashboard_state.food_kg == paid, "Relocation does not charge twice")
  check(session.dashboard_state.construction_queue.is_empty() and session.dashboard_state.built_structures.size() >= 5, "Placed buildings are built at once, like the solar panel")
  var Save = load("res://src/runtime/mission_save.gd")
  var saved: Dictionary = Save.capture(session)
@@ -107,7 +107,9 @@ func run():
   check(completed.global_transform == session.building_placements[id], "Completion uses chosen location and rotation")
   var model = completed.get_node("NASAModel")
   var bounds: AABB = factory.mesh_bounds(model)
-  check(absf(bounds.position.y) < 0.001, "NASA model base rests on ground")
+  var hull: Vector3 = model.get_meta("hull_size")
+  check(bounds.position.y < 0.001 and absf(bounds.end.y - hull.y) < 0.001, "NASA model rests on the ground; only footings are below it")
+  if id == "shielding_wall": check(bounds.position.y < -0.3, "Shelter skirt reaches below ground so it never floats")
   check(absf(bounds.get_center().x) < 0.001 and absf(bounds.get_center().z) < 0.001, "Entire installation is centered for placement")
   check(model.find_child("Foundation", true, false) != null, "Completed installation includes its foundation")
   var astronaut_height: float = world.ASTRONAUT_HEIGHT
@@ -128,7 +130,7 @@ func run():
    check(bounds.size.y > astronaut_height * 3.6 and bounds.size.y < astronaut_height * 4.2, "Relay mast is realistically taller than the astronaut")
    check(model.find_child("RadioCabinet", true, false) != null and model.find_child("MastBrace", true, false) != null, "Relay includes radio equipment and structural bracing")
   var shape = completed.find_children("*", "CollisionShape3D", true, false)[0]
-  check(shape.shape.size.is_equal_approx(bounds.size), "Collision matches full NASA model dimensions")
+  check(shape.shape.size.is_equal_approx(hull), "Collision matches the above-ground NASA model dimensions")
  placement._open_menu()
  for scroll in placement.build_menu.find_children("*", "ScrollContainer", true, false): scroll.scroll_vertical = 1000
  await create_timer(0.5).timeout

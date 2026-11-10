@@ -19,16 +19,16 @@ func _run() -> void:
 
 	var solar := simulator.queue_construction(state, "solar_array")
 	check(solar.ok, "A structure can be queued when its authored costs are affordable.")
-	check(is_equal_approx(state.materials, 145.0) and is_equal_approx(state.power_kwh, 282.0), "Construction pays the authored material and power cost once.")
+	check(is_equal_approx(state.power_kwh, 282.0) and is_equal_approx(state.water_l, 496.0) and is_equal_approx(state.oxygen_kg, 55.45) and is_equal_approx(state.food_kg, 37.0), "Construction pays its power and the crew's water, oxygen and food once.")
 	simulator.advance_sol(state)
 	check(not state.built_structures.has("solar_array"), "A two-sol authored build does not complete in one sol.")
 	simulator.advance_sol(state)
 	check(state.built_structures.has("solar_array"), "Construction completes using aggregate crew productivity.")
 	check(is_equal_approx(state.power_generated_kwh, 41.5), "A completed solar array adds its authored 18 kWh potential generation before illumination.")
 	check(not simulator.queue_construction(state, "solar_array").ok, "Completed structures cannot be queued twice.")
-	var materials_before: float = state.materials
+	var water_before: float = state.water_l
 	check(simulator.demolish_structure(state, "solar_array").ok and not state.built_structures.has("solar_array"), "A built structure can be deleted.")
-	check(is_equal_approx(state.materials, materials_before + 35.0), "Deleting refunds the materials used to build it.")
+	check(is_equal_approx(state.water_l, water_before + 4.0), "Deleting refunds what was used to build it.")
 	check(simulator.demolish_structure(state, "solar_array").error == "structure_not_built", "Only built structures can be deleted.")
 	check(simulator.queue_construction(state, "solar_array").ok, "A deleted structure can be rebuilt.")
 	var clear_sky: Object = simulator.begin_mission("ridge_a", 20)

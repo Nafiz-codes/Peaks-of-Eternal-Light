@@ -299,7 +299,7 @@ func show_dashboard() -> void:
 		activity.add_child(review)
 	if state.sol > 0:
 		activity.add_child(UI.label("Last Earth day: energy generated %.2f kWh / consumed %.2f kWh / balance %+.2f kWh" % [state.power_generated_kwh, state.power_consumed_kwh, state.power_balance_kwh], 15))
-		activity.add_child(UI.label("Water consumed %.2f L / recovered %.2f L · Radiation +%.3f mSv" % [state.water_consumed_l, state.water_recovered_l, state.radiation_this_sol_msv], 15))
+		activity.add_child(UI.label("Water consumed %.2f L / recovered %.2f L" % [state.water_consumed_l, state.water_recovered_l], 15))
 	if state.consecutive_power_depleted_sols > 0:
 		activity.add_child(UI.label("! Battery depleted for %d consecutive Earth day(s)." % state.consecutive_power_depleted_sols, 16, UI.AMBER))
 	UI.disclosure(activity, "Active effects and decision record", preload("res://src/ui/mission_activity.gd").describe(state, simulator.events))
@@ -314,7 +314,7 @@ func _add_readings(parent: Node) -> void:
 	readings.add_theme_constant_override("h_separation", 10)
 	readings.add_theme_constant_override("v_separation", 10)
 	parent.add_child(readings)
-	var values := [["Energy reserve", state.power_kwh, "kWh", ""], ["Water", state.water_l, "L", state.life_support_status.get("water", "Unavailable")], ["Oxygen", state.oxygen_kg, "kg", state.life_support_status.get("oxygen", "Unavailable")], ["Food", state.food_kg, "kg", state.life_support_status.get("food", "Unavailable")], ["Accumulated dose", state.radiation_msv, "mSv", ""], ["Materials", state.materials, "game units", ""]]
+	var values := [["Energy reserve", state.power_kwh, "kWh", ""], ["Water", state.water_l, "L", state.life_support_status.get("water", "Unavailable")], ["Oxygen", state.oxygen_kg, "kg", state.life_support_status.get("oxygen", "Unavailable")], ["Food", state.food_kg, "kg", state.life_support_status.get("food", "Unavailable")]]
 	for entry in values:
 		var card := UI.panel(readings)
 		card.add_child(UI.label(str(entry[0]), 14, UI.MUTED))
@@ -404,7 +404,7 @@ func show_report() -> void:
 		report.add_child(UI.label(_report_guidance(outcome), 15, UI.MUTED))
 		var metrics: Dictionary = state.report_data
 		report.add_child(UI.label("Resource accounting: %d Earth days" % int(metrics.get("sols_survived", 0)), 16))
-		report.add_child(UI.label("Events resolved: %d / Total modeled dose: %.2f mSv / Prospect: %s" % [int(metrics.get("events_resolved", 0)), float(metrics.get("radiation_total_msv", 0.0)), str(metrics.get("volatile_prospect_status", "none"))], 15))
+		report.add_child(UI.label("Events resolved: %d / Prospect: %s" % [int(metrics.get("events_resolved", 0)), str(metrics.get("volatile_prospect_status", "none"))], 15))
 		_add_readings(column)
 		var record := UI.panel(column)
 		var history := preload("res://src/ui/resource_history.gd").new()
@@ -444,6 +444,7 @@ func reset_mission() -> void:
 		session.set("dashboard_last_tick", {})
 		session.sol_checkpoint = {}
 		session.crew_read_reports = {}
+		session.extra_panels = []
 	show_sites()
 
 func _model_notes() -> String:
@@ -471,7 +472,7 @@ func _add_previews() -> void:
 func _resize() -> void:
 	var width := get_viewport_rect().size.x
 	if is_instance_valid(readings):
-		readings.columns = 6 if width >= 1220 else (3 if width >= 700 else 2)
+		readings.columns = 4 if width >= 900 else 2
 	if is_instance_valid(sites_grid):
 		sites_grid.columns = 2 if width >= 900 else 1
 	if is_instance_valid(dashboard_grid):

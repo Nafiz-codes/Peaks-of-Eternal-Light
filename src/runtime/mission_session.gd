@@ -9,6 +9,8 @@ var commander_draft: Dictionary = {}
 var maya_intro_complete := false
 var crew_introductions: Dictionary = {}
 var solar_placement: Dictionary = {}
+## Solar panels bought after the free first one: [{transform, kwh_per_sol}, ...].
+var extra_panels: Array = []
 var station_placements: Dictionary = {}
 var building_placements: Dictionary = {}
 var planning_draft: Dictionary = {}
@@ -55,6 +57,7 @@ func confirm_new_commander(appearance: String, player_name: String) -> bool:
 	maya_intro_complete = false
 	crew_introductions = {}
 	solar_placement = {}
+	extra_panels = []
 	station_placements = {}
 	building_placements = {}
 	planning_draft = {}
@@ -169,6 +172,7 @@ func reset_current_mission() -> Error:
 	outpost_pose = {}
 	sol_checkpoint = {}
 	action_busy = false
+	extra_panels = [] # Bought panels belong to the mission being restarted.
 	return start_selected_mission()
 
 
@@ -187,7 +191,7 @@ func start_selected_mission() -> Error:
 		return ERR_INVALID_PARAMETER
 	dashboard_simulator = simulator
 	dashboard_state = simulator.begin_mission(selected_site_id)
-	dashboard_state.placed_panel_kwh_per_sol = float(solar_placement.get("kwh_per_sol", 0.0))
+	dashboard_state.placed_panel_kwh_per_sol = panel_output_total()
 	for site in simulator.sites:
 		if str(site.site_id) == selected_site_id:
 			orbital_clock.elapsed_seconds = preload("res://src/simulation/polar_solar.gd").bright_start(site)
@@ -266,6 +270,82 @@ func apply_storm_damage() -> Array:
 	return damaged
 
 
+## "Continue playing" after the ending: the base reopens and Surface Survey can be replayed.
+func continue_after_ending() -> bool:
+	if dashboard_state == null or not dashboard_simulator.resume_after_success(dashboard_state):
+		return false
+	dashboard_state.rover_expedition["free_play"] = true
+	capture_sol_checkpoint()
+	return true
+
+
+func developer_add_resources() -> void:
+	if dashboard_state == null:
+		return
+	dashboard_simulator.developer_add_resources(dashboard_state)
+	capture_sol_checkpoint()
+	state_changed.emit()
+
+
+func apply_radiation_wave(exposed: int) -> void:
+	if dashboard_state == null:
+		return
+	dashboard_simulator.apply_radiation_wave(dashboard_state, exposed)
+	capture_sol_checkpoint()
+	state_changed.emit()
+
+
+## Daily energy of every hand-placed solar panel together.
+func panel_output_total() -> float:
+	var total := float(solar_placement.get("kwh_per_sol", 0.0))
+	for entry in extra_panels: total += float(entry.get("kwh_per_sol", 0.0))
+	return total
+
+
+func sync_panel_output() -> void:
+	if dashboard_state == null: return # Applied when the mission starts.
+	dashboard_state.placed_panel_kwh_per_sol = panel_output_total()
+	capture_sol_checkpoint()
+	state_changed.emit()
+
+
+## Another solar panel: pays its cost and records it together. Returns "" or what is short.
+func buy_solar_panel(xform: Transform3D, kwh_per_sol: float) -> String:
+	if dashboard_state == null: return "mission"
+	if extra_panels.size() >= Save.MAX_EXTRA_PANELS: return "space"
+	var shortfall: String = dashboard_simulator.buy_solar_panel(dashboard_state, kwh_per_sol)
+	if shortfall.is_empty():
+		extra_panels.append({"transform": xform, "kwh_per_sol": kwh_per_sol})
+		capture_sol_checkpoint()
+		state_changed.emit()
+	return shortfall
+
+
+func sell_solar_panel(index: int) -> Dictionary:
+	if dashboard_state == null or index < 0 or index >= extra_panels.size(): return {}
+	var refund: Dictionary = dashboard_simulator.sell_solar_panel(dashboard_state, float(extra_panels[index].kwh_per_sol))
+	extra_panels.remove_at(index)
+	capture_sol_checkpoint()
+	state_changed.emit()
+	return refund
+
+
+func record_milestone(label: String) -> void:
+	if dashboard_state == null:
+		return
+	dashboard_simulator.record_milestone(dashboard_state, label)
+
+
+## Returns what is short (empty when the mission succeeded).
+func complete_mission() -> Array:
+	if dashboard_state == null:
+		return ["mission"]
+	var shortfalls: Array = dashboard_simulator.complete_mission(dashboard_state)
+	capture_sol_checkpoint()
+	state_changed.emit()
+	return shortfalls
+
+
 func repair_structure(structure_id: String) -> bool:
 	if dashboard_state == null or not dashboard_simulator.repair_structure(dashboard_state, structure_id):
 		return false
@@ -308,6 +388,7 @@ func select_landing_site(site_id: String) -> void:
 		maya_intro_complete = false
 		crew_introductions = {}
 		solar_placement = {}
+		extra_panels = []
 		station_placements = {}
 		building_placements = {}
 		planning_draft = {}

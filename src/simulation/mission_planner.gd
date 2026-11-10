@@ -113,7 +113,9 @@ func evaluate(p: Variant) -> Dictionary:
 	var transport := route(p,units)
 	var cable_m := float(zone.radius) + 3.0 + (10.0 if p.solar_placement == "extended" else 0.0)
 	var cable_efficiency := 1.0 - cable_m * float(config.cable_loss_per_m)
-	var construction_materials: float = float(zone.materials) + p.cargo.array * float(simulator._find_structure("solar_array").build_cost.materials) + (8.0 if p.solar_placement == "extended" else 0.0)
+	# Planning-only cargo: material packs prepare the zone and mount arrays (35 per array,
+	# the former in-game array cost, so plan evaluation is unchanged).
+	var construction_materials: float = float(zone.materials) + p.cargo.array * 35.0 + (8.0 if p.solar_placement == "extended" else 0.0)
 	var construction_energy: float = p.cargo.array * float(simulator._find_structure("solar_array").build_cost.power)
 	var state: Variant = simulator.begin_mission(p.site_id)
 	var baseline: Dictionary = simulator._calculate_power(state,site(p.site_id))

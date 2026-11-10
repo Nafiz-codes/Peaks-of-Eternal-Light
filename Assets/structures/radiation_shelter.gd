@@ -9,8 +9,13 @@ const MOUND_HEIGHT := 2.3
 # Module bearings (radians) and length; each is centred where it meets the mound wall.
 const MODULES := [0.45, 2.55, 4.55]
 const MODULE_LENGTH := 2.8
+## Regolith skirt below y=0 that sinks into uneven ground so the mound never floats.
+const SKIRT := 0.5
 
 func _init() -> void:
+	# y=0 here is ground level. Bounding boxes of the rotated modules dip below it,
+	# so NASABuildings.make must not rest the model on its measured bottom.
+	set_meta("ground_at_origin", true)
 	var regolith := _mat("6d6a66", 0.0, 1.0)
 	var disturbed := _mat("55524f", 0.0, 1.0)
 	var shell := _mat("d6d9d6", 0.25, 0.5)
@@ -22,7 +27,7 @@ func _init() -> void:
 	window.emission = Color("ffc878")
 	window.emission_energy_multiplier = 1.2
 
-	_cylinder("Foundation", MOUND_RADIUS + 0.7, MOUND_RADIUS + 0.9, 0.06, Vector3(0, 0.03, 0), disturbed)
+	_cylinder("Foundation", MOUND_RADIUS + 0.7, MOUND_RADIUS + 0.9, 0.06 + SKIRT, Vector3(0, 0.06 - (0.06 + SKIRT) * 0.5, 0), disturbed)
 	_add("RegolithMound", _mound_mesh(), Vector3.ZERO, regolith)
 
 	# Crown hatch: the access ring set into the top of the mound.
@@ -74,7 +79,8 @@ func _module(bearing: float, shell: Material, rib: Material, gold: Material, dar
 	var ramp := _box("AccessRamp", Vector3(1.1, 0.06, 1.0), end + out * 0.75 + Vector3(0, -0.92, 0), rib)
 	ramp.basis = Basis(Vector3.UP, bearing) * Basis(Vector3.RIGHT, 0.12)
 
-## Squashed hemisphere with gentle noise lumps; the lower half folds flat into the base.
+## Squashed hemisphere with gentle noise lumps; the lower half becomes a shallow skirt
+## below ground, so the mound meets sloping terrain without a gap.
 func _mound_mesh() -> ArrayMesh:
 	var sphere := SphereMesh.new()
 	sphere.radial_segments = 48
@@ -90,7 +96,7 @@ func _mound_mesh() -> ArrayMesh:
 	for index in indices:
 		var unit := points[index] / 0.5
 		var swell := 1.0 + 0.07 * noise.get_noise_3dv(unit)
-		var point := Vector3(unit.x * MOUND_RADIUS, maxf(unit.y, 0.0) * MOUND_HEIGHT, unit.z * MOUND_RADIUS) * swell
+		var point := Vector3(unit.x * MOUND_RADIUS, unit.y * (MOUND_HEIGHT if unit.y > 0.0 else SKIRT), unit.z * MOUND_RADIUS) * swell
 		# Bulldozed flat on top so the hatch ring seats on it.
 		point.y = minf(point.y, MOUND_HEIGHT - 0.1)
 		surface.add_vertex(point)

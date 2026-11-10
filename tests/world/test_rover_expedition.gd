@@ -85,6 +85,9 @@ func run():
 	driver.camera.global_transform = camera_pose
 	for mission in range(3):
 		await advance_to(Rules.SOLS[mission])
+		if mission == 1:
+			# The radiation wave has its own test; open Frozen Horizon directly.
+			controller.data["radiation"] = "done"
 		if mission == 2:
 			# The storm and Maya's briefings have their own tests; open Lifeline directly.
 			controller.data["dust_storm_complete"] = true

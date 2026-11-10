@@ -219,7 +219,7 @@
       "effects": {
         "shielding_wall_material_discount": 20
       },
-      "text": "A rover survey identifies a nearby regolith deposit suitable for shielding fill. Hauling it now could make radiation protection cheaper later.",
+      "text": "A rover survey identifies a nearby regolith deposit suitable for shielding fill. Hauling it now would halve the crew's water, oxygen and food cost of building the radiation shielding habitat.",
       "choices": [
         {
           "choice_id": "stockpile_regolith",
@@ -257,10 +257,10 @@
         },
         {
           "choice_id": "run_high_draw_task",
-          "text": "Use the surplus for deferred operations",
+          "text": "Use the surplus to run the water processor",
           "effects": {
-            "materials": "+8",
-            "crew_stress": "+0.02"
+            "crew_stress": "+0.02",
+            "water_l": "+8"
           }
         }
       ]
@@ -425,22 +425,48 @@
       "event_id": "rover_sample_cache",
       "category": "discovery",
       "trigger_condition": "volatile_prospect_status: investigated AND rover_action: prospecting",
-      "effects": { "materials": "+6" },
+      "effects": {},
       "text": "The rover returns a compact sample cache from the investigated prospect. Its contents are useful for planning, but do not confirm recoverable water.",
       "choices": [
-        { "choice_id": "catalog_samples", "text": "Catalogue the samples for a future extraction decision", "effects": { "volatile_prospect_status": "extraction_candidate" } },
-        { "choice_id": "store_samples", "text": "Store the samples and continue operations", "effects": { "crew_stress": "+0.01" } }
+        {
+          "choice_id": "catalog_samples",
+          "text": "Catalogue the samples for a future extraction decision",
+          "effects": {
+            "volatile_prospect_status": "extraction_candidate"
+          }
+        },
+        {
+          "choice_id": "store_samples",
+          "text": "Store the samples and continue operations",
+          "effects": {
+            "crew_stress": "+0.01"
+          }
+        }
       ]
     },
     {
       "event_id": "crew_recovery_window",
       "category": "crew",
       "trigger_condition": "crew_stress_avg >= 0.5 AND sol >= 3",
-      "effects": { "crew_stress": "-0.06" },
+      "effects": {
+        "crew_stress": "-0.06"
+      },
       "text": "A quiet operations window gives the crew time to reset routines before fatigue becomes a larger problem.",
       "choices": [
-        { "choice_id": "protect_rest_window", "text": "Protect the recovery window", "effects": { "crew_stress": "-0.12" } },
-        { "choice_id": "keep_working", "text": "Keep the current work schedule", "effects": { "crew_stress": "+0.02" } }
+        {
+          "choice_id": "protect_rest_window",
+          "text": "Protect the recovery window",
+          "effects": {
+            "crew_stress": "-0.12"
+          }
+        },
+        {
+          "choice_id": "keep_working",
+          "text": "Keep the current work schedule",
+          "effects": {
+            "crew_stress": "+0.02"
+          }
+        }
       ]
     },
     {
@@ -448,9 +474,11 @@
       "category": "opportunity",
       "trigger_condition": "sol == 5",
       "effects": {
-        "materials": "+30"
+        "water_l": "+40",
+        "oxygen_kg": "+6",
+        "food_kg": "+5"
       },
-      "text": "A scheduled resupply delivery arrives, adding to your materials stockpile.",
+      "text": "A scheduled resupply delivery arrives with water, oxygen and food.",
       "choices": null
     }
   ]

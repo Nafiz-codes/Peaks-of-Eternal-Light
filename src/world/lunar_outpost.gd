@@ -73,6 +73,7 @@ func _ready() -> void:
 	add_child(preload("res://src/world/easter_eggs.gd").new())
 	add_child(preload("res://src/world/dust_storm.gd").new())
 	add_child(preload("res://src/world/structure_repairs.gd").new())
+	add_child(preload("res://src/world/radiation_storm.gd").new())
 	session.state_changed.connect(refresh_feedback)
 	refresh_feedback()
 	var solar := preload("res://src/world/solar_placement.gd").new()
@@ -489,6 +490,7 @@ func _on_player_interaction(interaction_id: String) -> void:
 		return
 	# After the dust storm Maya reports the damage, then the lost astronaut.
 	var expedition: Dictionary = get_node("RoverTraining").data
+	if _radiation_interaction(interaction_id, expedition): return
 	var aftermath := Expedition.aftermath(expedition)
 	if interaction_id == "crew_briefing":
 		if not session.maya_intro_complete:
@@ -500,6 +502,8 @@ func _on_player_interaction(interaction_id: String) -> void:
 		elif aftermath == "repairs":
 			_ask_skip_repairs()
 			return
+		elif _review_ready(session, expedition):
+			introduction = "mission_review"
 		elif session.crew_introductions.get("water_recycler", false) and session.crew_introductions.get("food_storage", false) and not session.crew_introductions.get("maya_closing", false):
 			introduction = "maya_closing"
 	elif interaction_id in ["water_recycler", "food_storage"] and not session.crew_introductions.get(interaction_id, false):
@@ -521,6 +525,9 @@ func _on_player_interaction(interaction_id: String) -> void:
 			if introduction == "crew_briefing":
 				session.maya_intro_complete = true
 				if not fieldwork.data.is_empty(): fieldwork.data.crew.crew_briefing.auto_attempted = true
+			elif introduction == "mission_review":
+				_mission_verdict(expedition)
+				return
 			elif introduction == "storm_lost_contact":
 				# Lifeline opens now; the rover controller moves Alex to his last known position.
 				expedition["aftermath"] = "done"
@@ -541,6 +548,69 @@ func _on_player_interaction(interaction_id: String) -> void:
 	# Inspect authoritative readings; stations never modify resource values.
 	get_node("MissionHUD").inspect_station(interaction_id)
 
+
+## Radiation wave: Maya's warning, then the Commander's order to each crew member.
+## Returns true when the interaction belonged to the radiation event.
+func _radiation_interaction(interaction_id: String, expedition: Dictionary) -> bool:
+	var stage := Expedition.radiation(expedition)
+	var storm := get_node("RadiationStorm")
+	var line := ""
+	if stage == "alert" and interaction_id == "crew_briefing":
+		line = "radiation_alert" if storm.shelter_built() else "radiation_no_shelter"
+	elif stage == "orders" and interaction_id in Expedition.RADIATION_CREW and not expedition.get("radiation_told", []).has(interaction_id):
+		line = "radiation_order_" + interaction_id
+	if line.is_empty(): return false
+	var actor := get_node("Outpost/" + interaction_id) as Node3D
+	if get_node("Outpost/Astronaut").global_position.distance_to(actor.global_position) > 2.5: return true
+	maya_dialogue_active = true
+	dialogue_speaker = interaction_id
+	get_node("CrewFieldwork")._update_visual(interaction_id, false)
+	var dialogue := preload("res://src/ui/maya_introduction.gd").new()
+	dialogue.dialogue_id = line
+	dialogue.finished.connect(func():
+		maya_dialogue_active = false
+		dialogue_speaker = ""
+		if line == "radiation_alert":
+			storm.begin_orders()
+		elif line == "radiation_no_shelter":
+			storm.start_wave() # Nowhere to shelter: everyone is exposed.
+		else:
+			storm.order_into_shelter(interaction_id))
+	add_child(dialogue)
+	return true
+
+## Maya reviews the mission once after Lifeline; after a shortfall she reviews again only
+## when the reserves are back up, otherwise her normal crew radio opens.
+func _review_ready(session: Node, expedition: Dictionary) -> bool:
+	var state: Variant = session.dashboard_state
+	if state == null or state.mission_outcome.get("status", "") == "failure":
+		return false
+	match Expedition.debrief(expedition):
+		"pending": return true
+		"retry": return state.mission_outcome.get("status", "") == "success" or session.dashboard_simulator.base_shortfalls(state).is_empty()
+	return false
+
+## After Maya's review line: check the reserves, then she gives the verdict.
+## Confirmed ends the game with the ending film; short lets the Commander try again.
+func _mission_verdict(expedition: Dictionary) -> void:
+	var session := get_node("/root/MissionSession")
+	var shortfalls: Array = session.complete_mission()
+	var dialogue := preload("res://src/ui/maya_introduction.gd").new()
+	if shortfalls.is_empty():
+		dialogue.dialogue_id = "mission_ready"
+	else:
+		dialogue.dialogue_id = "mission_short"
+		dialogue.text_override = "Not yet, Commander. We're short on %s. Build those reserves back up and talk to me again." % " and ".join(shortfalls)
+	dialogue.finished.connect(func():
+		maya_dialogue_active = false
+		dialogue_speaker = ""
+		expedition["debrief"] = "done" if shortfalls.is_empty() else "retry"
+		session.capture_sol_checkpoint()
+		session.state_changed.emit()
+		if shortfalls.is_empty():
+			session.remember_pose() # "Continue playing" returns the Commander here.
+			get_tree().change_scene_to_file("res://scenes/mission_ending.tscn"))
+	add_child(dialogue)
 
 ## The Commander may leave the storm damage: Maya then moves on to the lost-contact report.
 func _ask_skip_repairs() -> void:
@@ -563,6 +633,9 @@ func _ask_skip_repairs() -> void:
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE if skip_repairs_dialog.visible else Input.MOUSE_MODE_CAPTURED))
 		add_child(skip_repairs_dialog)
 	if not player.ui_blocked: skip_repairs_dialog.popup_centered()
+
+func _exit_tree() -> void:
+	Engine.time_scale = 1.0 # The DEV speed-up never outlives the outpost.
 
 func _add_site_readout() -> void:
 	var site_id := "ridge_a"

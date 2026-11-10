@@ -38,9 +38,9 @@ static func build(id: String, state: Variant, catalog: Array = []) -> Dictionary
 			"food_storage":
 				report.update = "We have %.2f kg of food. The crew consumed %.2f kg last Earth day. Food status: %s." % [state.food_kg, state.food_consumed_kg, state.life_support_status.get("food", "unavailable")]
 			"crew_briefing":
-				report.update = "We have %d crew, %.2f kg of oxygen (%s), and average crew stress of %.2f. Accumulated modeled radiation dose is %.3f mSv. There are %d decisions awaiting your orders." % [state.crew_size, state.oxygen_kg, state.life_support_status.get("oxygen", "unavailable"), state.crew_stress_avg, state.radiation_msv, state.pending_events.size()]
+				report.update = "We have %d crew, %.2f kg of oxygen (%s), and average crew stress of %.2f. There are %d decisions awaiting your orders." % [state.crew_size, state.oxygen_kg, state.life_support_status.get("oxygen", "unavailable"), state.crew_stress_avg, state.pending_events.size()]
 		if id == "food_storage":
-			report.update += "\nPower: %.2f kWh; water: %.2f L; oxygen: %.2f kg; crew stress: %.2f; modeled radiation: %.3f mSv." % [state.power_kwh, state.water_l, state.oxygen_kg, state.crew_stress_avg, state.radiation_msv]
+			report.update += "\nPower: %.2f kWh; water: %.2f L; oxygen: %.2f kg; crew stress: %.2f." % [state.power_kwh, state.water_l, state.oxygen_kg, state.crew_stress_avg]
 		if state.sol == 0:
 			report.update += " This is our initial inventory; no Earth day has run yet."
 		if report.terminal:

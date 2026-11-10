@@ -11,7 +11,8 @@ static func assigned(d: Dictionary, _sol: int = 0) -> int:
 	if d.mission >= 0: return d.mission
 	for i in range(3):
 		if not d.completed.has(i): return i
-	return -1
+	# After the ending the Commander may keep playing: Surface Survey can be flown again.
+	return 0 if d.get("free_play", false) else -1
 ## What follows the dust storm, before Lifeline opens: "briefing" (Maya reports the
 ## damage), "repairs" (the Commander fixes or leaves it), "alert" (Maya reports the lost
 ## astronaut), then "done". Empty when the storm is not the latest thing that happened.
@@ -20,6 +21,24 @@ static func aftermath(d: Dictionary) -> String:
 	if not completed.has(1) or completed.has(2) or int(d.get("mission", -1)) == 2 or not bool(d.get("dust_storm_complete", false)):
 		return ""
 	return str(d.get("aftermath", "briefing"))
+## The crew the Commander must order into the radiation habitat.
+const RADIATION_CREW := ["crew_briefing", "water_recycler", "food_storage"]
+## The solar radiation wave between Surface Survey and Frozen Horizon: "alert" (Maya
+## warns the Commander), "orders" (order each crew member into the radiation habitat
+## before the countdown ends), "wave" (it hits the base) and "done".
+static func radiation(d: Dictionary) -> String:
+	var completed: Array = d.get("completed", [])
+	if not completed.has(0) or completed.has(1) or int(d.get("mission", -1)) == 1:
+		return ""
+	return str(d.get("radiation", "alert"))
+## Crew inside the radiation habitat (hidden from the outpost) until the wave passes.
+static func sheltered(d: Dictionary) -> Array:
+	return d.get("radiation_told", []) if radiation(d) in ["orders", "wave"] else []
+## After Lifeline Maya reviews the mission: "pending" (she comes to the Commander),
+## "retry" (reserves fell short; ask her again) or "done" (confirmed, game finished).
+static func debrief(d: Dictionary) -> String:
+	if not d.get("completed", []).has(2): return ""
+	return str(d.get("debrief", "pending"))
 static func migrate(training: Dictionary) -> Dictionary:
 	var d := fresh()
 	if training.is_empty(): return d
@@ -46,6 +65,15 @@ static func valid_save(d: Variant) -> bool:
 	if d.has("damage_warning_acknowledged") and not d.damage_warning_acknowledged is bool: return false
 	if d.has("dust_storm_complete") and not d.dust_storm_complete is bool: return false
 	if d.has("aftermath") and d.aftermath not in ["briefing", "repairs", "alert", "done"]: return false
+	if d.has("debrief") and d.debrief not in ["pending", "retry", "done"]: return false
+	if d.has("free_play") and not d.free_play is bool: return false
+	if d.has("radiation") and d.radiation not in ["alert", "orders", "wave", "done"]: return false
+	if d.has("radiation_told"):
+		if not d.radiation_told is Array: return false
+		for id in d.radiation_told:
+			if id not in RADIATION_CREW: return false
+	if d.has("radiation_elapsed"):
+		if not d.radiation_elapsed is float or not is_finite(d.radiation_elapsed) or d.radiation_elapsed < 0.0 or d.radiation_elapsed > 600.0: return false
 	if d.has("dust_storm_elapsed"):
 		if not d.dust_storm_elapsed is float or not is_finite(d.dust_storm_elapsed) or d.dust_storm_elapsed < 0.0 or d.dust_storm_elapsed > 15.0: return false
 	var defaults := fresh()

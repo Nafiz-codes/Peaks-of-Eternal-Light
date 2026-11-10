@@ -2,7 +2,7 @@ extends VBoxContainer
 
 ## One resource per chart avoids mixing unlike units. Text rows remain available.
 const UI = preload("res://src/ui/ui_style.gd")
-const FIELDS := {"power_kwh": ["Energy", "kWh"], "water_l": ["Water", "L"], "oxygen_kg": ["Oxygen", "kg"], "food_kg": ["Food", "kg"], "radiation_msv": ["Accumulated dose", "mSv"], "materials": ["Materials", "units"]}
+const FIELDS := {"power_kwh": ["Energy", "kWh"], "water_l": ["Water", "L"], "oxygen_kg": ["Oxygen", "kg"], "food_kg": ["Food", "kg"]}
 var records: Array = []
 var selected_field := "power_kwh"
 var chart: Control

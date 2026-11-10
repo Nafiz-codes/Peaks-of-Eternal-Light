@@ -78,7 +78,7 @@ func _verify() -> void:
 					if actual_snapshot.get(key) != reference_snapshot.get(key):
 						print("State mismatch %s / %s: UI=%s reference=%s" % [site.site_id, key, actual_snapshot.get(key), reference_snapshot.get(key)])
 			check(actual_snapshot == reference_snapshot, "UI must preserve authoritative state for " + str(site.site_id))
-			var expected := [reference.power_kwh, reference.water_l, reference.oxygen_kg, reference.food_kg, reference.radiation_msv, reference.materials]
+			var expected := [reference.power_kwh, reference.water_l, reference.oxygen_kg, reference.food_kg]
 			for index in range(expected.size()):
 				var displayed: Array[Node] = app.readings.get_child(index).find_children("*", "Label", true, false)
 				check(displayed[1].text == "%.2f" % float(expected[index]), "Visible resource reading must update from the returned state")

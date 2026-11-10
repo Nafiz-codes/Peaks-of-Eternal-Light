@@ -77,16 +77,17 @@ func run() -> void:
 	placement._refresh_menu()
 	await process_frame
 	check(placement.grid.get_child_count() == 9, "Every catalog structure has a grid card.")
-	check(enabled_ids(placement) == ["Solar Array", "Maya · Operations", "Alex · Science", "Sam · Engineering"], "Paid buildings require a started mission.")
+	check(enabled_ids(placement) == ["Solar Panel", "Maya · Operations", "Alex · Science", "Sam · Engineering"], "Paid buildings require a started mission.")
 	check(placement.grid.get_child(0).get_child(0).get_child(0).get_child_count() == 1, "The solar panel card shows its model preview.")
-	check(placement.grid.get_child(4).get_child(0).get_child(0).get_child_count() == 0, "Structures without a model keep a blank picture.")
+	for card in placement.grid.get_children():
+		check(card.get_child(0).get_child(0).get_child_count() == 1, "Every structure card shows its model preview.")
 	check(session.start_selected_mission() == OK, "Mission starts.")
 	placement._refresh_menu()
-	check(enabled_ids(placement) == ["Solar Array", "Maya · Operations", "Alex · Science", "Sam · Engineering", "Habitat Extension", "Comms Relay"], "NASA previews are accessible before solar placement in a started mission.")
+	check(enabled_ids(placement) == ["Solar Panel", "Maya · Operations", "Alex · Science", "Sam · Engineering", "Water Extractor", "Greenhouse Module", "Radiation Shielding Habitat", "Habitat Extension", "Comms Relay"], "NASA previews are accessible before solar placement in a started mission.")
 	placement.placed = true
 	placement._refresh_menu()
 	await process_frame
-	check(enabled_ids(placement).size() == 8 and not "Solar Array" in enabled_ids(placement), "Placing the panel unlocks the other structures.")
+	check(enabled_ids(placement).size() == 9 and "Solar Panel" in enabled_ids(placement), "Placing the panel unlocks the other structures, and more panels can be bought.")
 	var Save = preload("res://src/runtime/mission_save.gd")
 	session.dashboard_state.placed_panel_kwh_per_sol = 12.3
 	session.solar_placement = {"transform": Transform3D.IDENTITY, "kwh_per_sol": 12.3}
@@ -101,11 +102,12 @@ func run() -> void:
 	check(Save.decode(edited).is_empty(), "Saves with negative panel output are rejected.")
 	session.dashboard_state.placed_panel_kwh_per_sol = 0.0
 	session.solar_placement = {}
-	session.dashboard_state.materials = 60.0
+	# Food for under 3 days after building: food-hungry builds are unaffordable.
+	session.dashboard_state.food_kg = 8.0
 	placement._refresh_menu()
 	await process_frame
-	check(enabled_ids(placement) == ["Maya · Operations", "Alex · Science", "Sam · Engineering", "Water Extractor", "Greenhouse Module", "Radiation Shielding Habitat", "Habitat Extension", "Comms Relay"], "NASA previews stay accessible even with insufficient materials.")
-	check(placement.grid.get_child(5).modulate.a < 1.0, "Unaffordable cards are visibly grayed.")
+	check(enabled_ids(placement) == ["Solar Panel", "Maya · Operations", "Alex · Science", "Sam · Engineering", "Water Extractor", "Greenhouse Module", "Radiation Shielding Habitat", "Habitat Extension", "Comms Relay"], "NASA previews stay accessible even when the crew cannot spare the supplies.")
+	check("need food" in placement.grid.get_child(5).get_child(0).get_child(3).text, "Unaffordable buildings say which supply is short.")
 	session.dashboard_state.built_structures["comms_relay"] = 0
 	world.refresh_feedback()
 	var relay: Node3D = world.find_child("Completed_comms_relay", true, false)
@@ -114,7 +116,15 @@ func run() -> void:
 	placement._set_target(relay)
 	check(relay.find_children("*", "MeshInstance3D", true, false)[0].material_overlay == placement.highlight, "The targeted structure glows red.")
 	placement._destroy_target()
-	check(not session.dashboard_state.built_structures.has("comms_relay") and is_equal_approx(session.dashboard_state.materials, 85.0), "Destroying refunds its materials.")
+	check(not session.dashboard_state.built_structures.has("comms_relay") and is_equal_approx(session.dashboard_state.food_kg, 8.4), "Destroying refunds the crew's water, oxygen and food.")
+	# Extra solar panels: cost after the free first one, and full refund when removed.
+	session.dashboard_state.food_kg = 30.0
+	var power_before: float = session.dashboard_state.power_kwh
+	check(session.buy_solar_panel(Transform3D(Basis.IDENTITY, lander + Vector3(9, 0, 9)), 20.0).is_empty(), "Another panel can be bought.")
+	check(session.extra_panels.size() == 1 and is_equal_approx(session.dashboard_state.placed_panel_kwh_per_sol, 20.0) and is_equal_approx(session.dashboard_state.power_kwh, power_before - 8.0), "A bought panel pays its cost and adds its own output.")
+	var with_panel: Dictionary = Save.decode(Save.capture(session))
+	check(not with_panel.is_empty() and with_panel.extra_panels.size() == 1, "Bought panels survive saving and loading.")
+	check(not session.sell_solar_panel(0).is_empty() and session.extra_panels.is_empty() and is_zero_approx(session.dashboard_state.placed_panel_kwh_per_sol), "Removing a bought panel refunds it and its output.")
 	placement._stop_destroy()
 	world.queue_free()
 	await physics_frame

@@ -40,7 +40,9 @@ func _process(_delta: float) -> void:
 	marker.hide()
 	var rover_active: bool = expeditions.driver.active
 	title.size.x = 360 if rover_active else 410
-	detail.position = Vector2(22, maxf(76, title.position.y + title.size.y + 8)) if rover_active else Vector2(52, 60)
+	# Long objectives wrap onto a second line; keep the instruction below them.
+	var title_bottom: float = title.position.y + maxf(title.size.y, title.get_minimum_size().y)
+	detail.position = Vector2(22, maxf(76, title_bottom + 8)) if rover_active else Vector2(52, maxf(60, title_bottom + 6))
 	detail.size.x = 360
 	var state = session.dashboard_state
 	# Read only the authoritative campaign and expedition objectives.
@@ -59,9 +61,26 @@ func _process(_delta: float) -> void:
 	elif preload("res://src/world/dust_storm.gd").pending(expeditions.data):
 		objective = "Dust storm"
 		instruction = "Visibility reduced and solar power halved for the rest of this Earth day. Wait for the dust to clear."
+	elif expeditions.Rules.radiation(expeditions.data) == "alert":
+		objective = "Radiation alert"
+		instruction = "Talk with Maya: press E when she is nearby."
+		destination = world.get_node("Outpost/crew_briefing").global_position
+	elif expeditions.Rules.radiation(expeditions.data) == "orders":
+		var storm: Node = world.get_node("RadiationStorm")
+		objective = "Get the crew to shelter"
+		instruction = "Order each crew member into the radiation habitat (press E): %d / 3 · wave in %d s" % [expeditions.data.get("radiation_told", []).size(), storm.seconds_left()]
+		destination = storm.next_crew_position(player.global_position)
+	elif expeditions.Rules.radiation(expeditions.data) == "wave":
+		objective = "Radiation wave"
+		var exposed: int = 3 - (expeditions.data.get("radiation_told", []).size() if world.get_node("RadiationStorm").shelter_built() else 0)
+		instruction = "Solar particles are hitting the base. %s Wait for the wave to pass." % ("All crew are sheltered." if exposed == 0 else "%d crew exposed: they need treatment and will work slower." % exposed)
 	elif not session.maya_intro_complete:
 		objective = "Talk with Maya"
 		instruction = "Press E when Maya is nearby."
+		destination = world.get_node("Outpost/crew_briefing").global_position
+	elif expeditions.Rules.debrief(expeditions.data) in ["pending", "retry"]:
+		objective = "Mission review"
+		instruction = "Talk with Maya: press E when she is nearby." if expeditions.Rules.debrief(expeditions.data) == "pending" else "Build up power, water, oxygen and food, then talk with Maya again."
 		destination = world.get_node("Outpost/crew_briefing").global_position
 	elif expeditions.Rules.aftermath(expeditions.data) in ["briefing", "alert"]:
 		objective = "Talk with Maya"

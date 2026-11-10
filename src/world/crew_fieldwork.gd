@@ -158,10 +158,13 @@ func _physics_process(delta: float) -> void:
 			_update_visual(id, false)
 			continue
 		# Maya walks up to the Commander for her introduction and her storm briefings.
-		if id == "crew_briefing" and (not session.maya_intro_complete or Expedition.aftermath(state.rover_expedition) in ["briefing", "alert"]):
+		if id == "crew_briefing" and (not session.maya_intro_complete or Expedition.aftermath(state.rover_expedition) in ["briefing", "alert"] or Expedition.debrief(state.rover_expedition) == "pending" or Expedition.radiation(state.rover_expedition) == "alert"):
 			_approach_commander(delta)
 			continue
 		if id == LOST_CREW and state.rover_expedition.get("missing", false):
+			continue
+		# Inside the radiation habitat until the wave passes; their work waits.
+		if Expedition.sheltered(state.rover_expedition).has(id):
 			continue
 		_tick(id, delta)
 	# Local instrument records only modeled health/uptime, never invented moonquakes.
@@ -296,9 +299,6 @@ func _prepare(id: String) -> bool:
 				return false
 			data.stock.repair_kit -= 1
 			c.kit = true
-		if state.materials < config.repair_materials:
-			_block(id, "Insufficient mission materials for this repair.")
-			return false
 	if c.phase != "Returning" and c.task in ["inspect", "repair"] and world.get_node("RoverHull").active:
 		_block(id, "Park the rover before approaching its equipment.")
 		return false
@@ -519,11 +519,10 @@ func _complete_step(id: String) -> void:
 			data.instrument.status = "operational"
 			_restore_instrument()
 	elif c.task == "repair" and c.step == 1:
-		if not c.kit or state.materials < config.repair_materials or data.power_priority != "maintenance":
+		if not c.kit or data.power_priority != "maintenance":
 			c.checkpoint = "Working"
-			_block(id, "Repair needs one kit, mission material and maintenance priority. Choose what to defer.")
+			_block(id, "Repair needs one kit and maintenance priority. Choose what to defer.")
 			return
-		state.materials -= config.repair_materials
 		c.kit = false
 		state.rover_health = minf(100.0, state.rover_health + config.repair_points)
 		world.get_node("RoverHull")._update_health()
@@ -802,10 +801,9 @@ func consume_manual_repair() -> bool:
 	var inventory: Dictionary = data.player_cargo if carried else data.stock
 	if not carried and not near_base:
 		return false
-	if inventory.repair_kit <= 0 or state.materials < config.repair_materials:
+	if inventory.repair_kit <= 0:
 		return false
 	inventory.repair_kit -= 1
-	state.materials -= config.repair_materials
 	changed.emit()
 	return true
 
@@ -871,7 +869,7 @@ func describe(id: String) -> String:
 		text += str(data.instrument.get("measurements", "Instrument packed. Choose a marked deployment site."))
 	elif id == "food_storage":
 		text += str(data.readiness.get("text", "No field inspection recorded yet."))
-		text += "\nKits at base: %d · materials %.1f · priority: %s" % [data.stock.repair_kit, state.materials, data.power_priority]
+		text += "\nKits at base: %d · priority: %s" % [data.stock.repair_kit, data.power_priority]
 	else:
 		for other in IDS:
 			var distance: float = actors[id].position.distance_to(actors[other].position)

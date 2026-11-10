@@ -116,11 +116,10 @@ func run() -> void:
 	session.dashboard_state.rover_health = 30.0
 	field.data.power_priority = "maintenance"
 	var kits: int = field.data.stock.repair_kit
-	var materials: float = session.dashboard_state.materials
 	check(field.assign("food_storage", "repair"), "Assign supported rover maintenance.")
 	check(not field.consume_manual_repair(), "Player cannot use a rover worksite reserved for maintenance.")
 	check(await tick_until("food_storage", "Available"), "Maintenance completes inspection, repair and verification.")
-	check(session.dashboard_state.rover_health == 70.0 and field.data.stock.repair_kit == kits - 1 and session.dashboard_state.materials == materials - field.config.repair_materials, "Repair consumes limited kit/material and restores configured health.")
+	check(session.dashboard_state.rover_health == 70.0 and field.data.stock.repair_kit == kits - 1, "Repair consumes a limited kit and restores configured health.")
 	check(not field.data.readiness.is_empty(), "Readiness inspection persists.")
 	check(field.assign("crew_briefing", "navigate", "sample_a"), "Assign coordinator route assessment.")
 	check(await tick_until("crew_briefing", "Available"), "Coordinator completes route / return-resource report.")

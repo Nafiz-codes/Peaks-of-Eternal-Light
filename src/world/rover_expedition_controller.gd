@@ -306,14 +306,20 @@ func locks_drive() -> bool:
 	return transitioning or busy_id != "" or dialogue > 0 or damage_blocked()
 
 func developer_jump_event(index: int) -> bool:
-	if not OS.is_debug_build() or index < 0 or index > 3: return false
+	if not OS.is_debug_build() or index < 0 or index > 5: return false
 	if get_tree().paused or transitioning or session.action_busy or driver.power_state == driver.Power.STARTING: return false
 	var access := get_parent().get_node("LanderAccess")
 	if access.busy or get_parent().maya_dialogue_active: return false
 	if session.start_selected_mission() != OK: return false
 	if session.dashboard_state.mission_outcome.status != "in_progress": return false
 	get_parent().get_node("DustStorm")._restore()
+	var radiation := get_parent().get_node_or_null("RadiationStorm")
+	if radiation != null: radiation._restore()
 	driver.stop_control()
+	if index == 4:
+		return _developer_mission_review(access)
+	if index == 5:
+		return _developer_radiation_wave(access)
 	var fresh: Dictionary = Rules.fresh()
 	var mission_index := 2 if index == 3 else index
 	for previous in range(mini(mission_index, 2)): fresh.completed.append(previous)
@@ -350,6 +356,42 @@ func developer_jump_event(index: int) -> bool:
 		driver._takeover_finished()
 	_refresh_targets()
 	feedback = "DEV: " + ("Dust storm" if index == 2 else Rules.TITLES[mission_index])
+	session.state_changed.emit()
+	session.capture_sol_checkpoint()
+	return true
+## DEV: every operation and story event done; Maya walks up for the mission review.
+func _developer_mission_review(access: Node) -> bool:
+	var done: Dictionary = Rules.fresh()
+	done.completed = [0, 1, 2]
+	done.phase = "completed"
+	done["dust_storm_complete"] = true
+	done["aftermath"] = "done"
+	done["radiation"] = "done"
+	return _developer_on_foot(access, done, "DEV: Mission review")
+
+## DEV: Surface Survey done; Maya walks up with the radiation wave warning.
+func _developer_radiation_wave(access: Node) -> bool:
+	var survey_done: Dictionary = Rules.fresh()
+	survey_done.completed = [0]
+	survey_done.phase = "completed"
+	return _developer_on_foot(access, survey_done, "DEV: Radiation wave")
+
+## Loads an expedition record with the Commander on foot outside the lander.
+func _developer_on_foot(access: Node, done: Dictionary, message: String) -> bool:
+	session.dashboard_state.pending_events.clear()
+	session.dashboard_state.rover_expedition = done
+	session.maya_intro_complete = true
+	session.crew_introductions = {"water_recycler": true, "food_storage": true, "maya_closing": true}
+	bound_state = null
+	_sync()
+	_place_rover(Vector3(32, ground_y(Vector3(32,0,20)),20))
+	access.inside = false
+	access.player.set_seated(false)
+	access.player.global_position = access.landing
+	access.player.set_first_person(false)
+	access.player._sync_camera_rig()
+	_refresh_targets()
+	feedback = message
 	session.state_changed.emit()
 	session.capture_sol_checkpoint()
 	return true
@@ -624,6 +666,8 @@ func _check_circle(delta: float) -> void:
 		if assignment < 0:
 			feedback = "NO ACTIVE ROVER EXPEDITION — Awaiting the next scheduled operation."
 			return
+		# A free-play replay of Surface Survey starts with fresh survey sites.
+		if data.mission < 0 and assignment == 0 and data.completed.has(0): data.surveys = []
 		data.mission = assignment
 		_transition(true)
 	else:
@@ -671,7 +715,9 @@ func _transition(outward: bool) -> void:
 		else:
 			_place_rover(Vector3(32,ground_y(Vector3(32,0,20)),20))
 		data.location = "outpost"
-		if not data.completed.has(data.mission): data.completed.append(data.mission)
+		if not data.completed.has(data.mission):
+			data.completed.append(data.mission)
+			session.record_milestone(Rules.TITLES[data.mission])
 		feedback = Rules.TITLES[data.mission].to_upper()+" COMPLETE"
 		if data.mission == 2: feedback += "\nMissing crew member recovered.\nAll four astronauts accounted for."
 		data.mission = -1
@@ -857,6 +903,8 @@ func _tone(frequency: float) -> void:
 func available_assignment() -> int:
 	if data.is_empty(): return -1
 	if preload("res://src/world/dust_storm.gd").pending(data): return -1
+	# Frozen Horizon waits for the radiation wave to pass.
+	if Rules.radiation(data) not in ["", "done"]: return -1
 	# Lifeline opens only after Maya's storm briefings (damage, then the lost astronaut).
 	if Rules.aftermath(data) not in ["", "done"]: return -1
 	if data.mission < 0 and data.completed.is_empty() and not session.construction_ready(): return -1

@@ -22,7 +22,7 @@ func _init() -> void:
 	var action_state: Object = simulator.call("begin_mission", "ridge_a", 4)
 	var queued_build: Dictionary = simulator.call("queue_construction", action_state, "solar_array")
 	_assert(queued_build.get("ok", false), "A valid construction action is accepted during an active mission.")
-	_assert(is_equal_approx(action_state.history[-1].power_kwh, action_state.power_kwh) and is_equal_approx(action_state.history[-1].materials, action_state.materials), "Construction costs are reflected in the current-sol history snapshot.")
+	_assert(is_equal_approx(action_state.history[-1].power_kwh, action_state.power_kwh) and is_equal_approx(action_state.history[-1].water_l, action_state.water_l), "Construction costs are reflected in the current-sol history snapshot.")
 	var action_history_before_rover: int = action_state.history.size()
 	var rover_action: Dictionary = simulator.call("dispatch_rover", action_state, "survey", 3.0)
 	_assert(rover_action.get("ok", false), "A valid rover action is accepted during an active mission.")

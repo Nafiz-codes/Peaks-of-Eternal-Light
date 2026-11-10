@@ -15,7 +15,9 @@ func show_operation_error(code: String) -> void:
 		"mission_not_ready": "Finish any pending decision, or start a new mission if this one has ended.",
 		"rover_range_exceeded": "No range remains for this trip. Close this panel and run the next Earth day before dispatching again.",
 		"insufficient_power": "Not enough energy for this operation.",
-		"insufficient_materials": "Not enough materials for this structure.",
+		"insufficient_water": "Building it would leave the crew under 3 days of water.",
+		"insufficient_oxygen": "Building it would leave the crew under 3 days of oxygen.",
+		"insufficient_food": "Building it would leave the crew under 3 days of food.",
 		"structure_already_started": "This structure is already queued or completed."
 	}
 	result_label.text = str(messages.get(code, "Operation could not be completed: " + code.replace("_", " ")))
@@ -64,12 +66,15 @@ func open_operations(kind: String, state: Variant, contract: Dictionary, invoker
 			var card := UI.panel(content)
 			card.add_child(UI.label(str(structure.get("name", id)), 19))
 			var cost: Dictionary = structure.get("build_cost", {})
-			card.add_child(UI.label("Materials: %s units · Energy: %s kWh · Build time: %s Earth days" % [cost.get("materials", "Unavailable"), cost.get("power", "Unavailable"), structure.get("build_time_sols", "Unavailable")], 14, UI.BLUE))
+			card.add_child(UI.label("Energy %s kWh · Water %s L · Oxygen %s kg · Food %s kg · Build time: %s Earth days" % [cost.get("power", "?"), cost.get("water", "?"), cost.get("oxygen", "?"), cost.get("food", "?"), structure.get("build_time_sols", "?")], 14, UI.BLUE))
 			card.add_child(UI.label(str(structure.get("effect", "Effect description unavailable.")), 14))
 			var built: bool = state != null and state.built_structures.has(id)
 			var queued: bool = false if state == null else state.construction_queue.any(func(job): return str(job.get("structure_id", "")) == id)
 			card.add_child(UI.label("Completed / recorded by simulation" if built else ("Construction in progress" if queued else "Ready to queue"), 14, UI.PURPLE))
-			if allow_operations:
+			if id == "solar_array":
+				# Solar panels are hand-placed, so each one's output depends on its spot.
+				card.add_child(UI.label("Place solar panels from the build menu (B).", 14, UI.AMBER))
+			elif allow_operations:
 				card.add_child(UI.button("Build completed" if built else ("Build in progress" if queued else "Queue construction"), func():
 					operation_requested.emit("build", id, 0.0), built or queued or state == null))
 			else:

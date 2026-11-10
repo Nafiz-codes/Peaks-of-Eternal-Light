@@ -54,10 +54,10 @@ func _run() -> void:
 	check(is_equal_approx(state.power_kwh, initial_power + 10.0), "Charge-reserves choice applies its authored battery bonus.")
 
 	state = simulator.begin_mission("ridge_a", 10)
-	var initial_materials: float = state.materials
+	var initial_water: float = state.water_l
 	initial_stress = state.crew_stress_avg
 	check(_resolve(simulator, state, "extended_illumination_window", "run_high_draw_task"), "High-draw choice resolves.")
-	check(is_equal_approx(state.materials, initial_materials + 8.0) and is_equal_approx(state.crew_stress_avg, initial_stress + 0.02), "High-draw choice applies authored materials and stress outcomes.")
+	check(is_equal_approx(state.water_l, initial_water + 8.0) and is_equal_approx(state.crew_stress_avg, initial_stress + 0.02), "High-draw choice runs the water processor and adds stress.")
 
 	state = simulator.begin_mission("ridge_a", 10)
 	initial_power = state.power_kwh
@@ -74,15 +74,15 @@ func _run() -> void:
 	check(state.volatile_prospect_status == "extraction_candidate", "Prospect-confirmation choice applies its authored status.")
 
 	state = simulator.begin_mission("ridge_a", 10)
-	initial_materials = state.materials
+	var before_resupply: Dictionary = state.snapshot()
 	check(_resolve(simulator, state, "resupply_window"), "Automatic resupply resolves.")
-	check(is_equal_approx(state.materials, initial_materials + 30.0), "Automatic resupply applies its authored materials grant.")
+	check(is_equal_approx(state.water_l, before_resupply.water_l + 40.0) and is_equal_approx(state.oxygen_kg, before_resupply.oxygen_kg + 6.0) and is_equal_approx(state.food_kg, before_resupply.food_kg + 5.0), "Automatic resupply delivers water, oxygen and food.")
 
 	state = simulator.begin_mission("ridge_a", 10)
 	check(_resolve(simulator, state, "regolith_stockpile", "stockpile_regolith"), "Regolith stockpile choice resolves.")
 	check(state.shielding_wall_material_discount == 20.0, "Regolith opportunity stores its shielding-wall discount.")
 	var wall_discount := simulator.queue_construction(state, "shielding_wall")
-	check(wall_discount.ok and wall_discount.materials_cost == 35.0, "The stored stockpile discount is applied to the later shielding-wall build.")
+	check(wall_discount.ok and is_equal_approx(wall_discount.cost.oxygen, 1.5) and is_equal_approx(wall_discount.cost.power, 10.0), "The stockpile halves the crew's cost of the shielding habitat, not its power.")
 	state = simulator.begin_mission("ridge_a", 10)
 	check(_resolve(simulator, state, "regolith_stockpile", "continue_survey"), "Continue-survey choice resolves.")
 	check(state.shielding_wall_material_discount == 0.0, "Declining to stockpile does not grant the default discount.")

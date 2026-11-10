@@ -12,14 +12,19 @@ func run():
  var storm = world.get_node("DustStorm")
  var driver = world.get_node("RoverHull")
  assert(hud.find_child("DeveloperGoToEvent", true, false) != null)
- assert(hud.find_child("DeveloperEventChoice", true, false).item_count == 4)
- for index in [0, 1, 2, 3, 2, 2]:
+ assert(hud.find_child("DeveloperEventChoice", true, false).item_count == 6)
+ assert(hud.find_child("DeveloperAddResources", true, false) != null and hud.find_child("DeveloperSpeed", true, false) != null)
+ for index in [0, 1, 2, 3, 2, 2, 4, 5]:
   hud._developer_jump(index)
   await physics_frame
   await process_frame
   assert(not hud.panel.visible)
   assert(not Save.decode(Save.capture(session)).is_empty())
-  if index == 2:
+  if index == 4:
+   assert(not driver.active and expedition.Rules.debrief(expedition.data) == "pending")
+  elif index == 5:
+   assert(not driver.active and expedition.Rules.radiation(expedition.data) == "alert" and expedition.available_assignment() == -1)
+  elif index == 2:
    assert(not driver.active)
    storm._process(2.0)
    assert(storm.active and storm.elapsed >= 2.0 and storm.elapsed < 3.0)
@@ -34,7 +39,15 @@ func run():
    assert(hud.panel.visible)
    driver._input(alt)
    assert(not hud.panel.visible)
- assert(not expedition.developer_jump_event(4))
+ assert(not expedition.developer_jump_event(6))
+ var water: float = session.dashboard_state.water_l
+ hud.find_child("DeveloperAddResources", true, false).pressed.emit()
+ assert(session.dashboard_state.water_l == water + 150.0)
+ var speed: Button = hud.find_child("DeveloperSpeed", true, false)
+ speed.pressed.emit()
+ assert(Engine.time_scale == 2.0)
+ for step in 3: speed.pressed.emit()
+ assert(Engine.time_scale == 1.0)
  expedition.transitioning = true
  assert(not expedition.developer_jump_event(0))
  expedition.transitioning = false

@@ -53,7 +53,7 @@ func _ready() -> void:
 	readings.add_theme_constant_override("h_separation", 12)
 	readings.add_theme_constant_override("v_separation", 6)
 	content.add_child(readings)
-	for key in ["Energy", "Water", "Oxygen", "Food", "Dose", "Materials"]:
+	for key in ["Energy", "Water", "Oxygen", "Food"]:
 		var label := UI.label(key, 15)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		readings.add_child(label)
@@ -68,13 +68,26 @@ func _ready() -> void:
 		actions.add_child(free_camera)
 		var event_choice := OptionButton.new()
 		event_choice.name = "DeveloperEventChoice"
-		for label in ["Sample collection", "Water ice", "Dust storm (15 seconds)", "Lifeline"]:
+		for label in ["Sample collection", "Water ice", "Dust storm (15 seconds)", "Lifeline", "Mission review (ending)", "Radiation wave"]:
 			event_choice.add_item(label)
 		actions.add_child(event_choice)
 		var jump := UI.button("DEV: Go to event", func(): _developer_jump(event_choice.selected))
 		jump.name = "DeveloperGoToEvent"
 		jump.tooltip_text = "Resets expedition objectives and pending decisions for testing. Replaces current progress and checkpoint."
 		actions.add_child(jump)
+		var supplies := UI.button("DEV: +Resources", func():
+			session.developer_add_resources()
+			notice.text = "DEV: +150 kWh, +150 L water, +20 kg oxygen, +15 kg food.")
+		supplies.name = "DeveloperAddResources"
+		actions.add_child(supplies)
+		var speed := UI.button("DEV: Speed 1×", Callable())
+		speed.name = "DeveloperSpeed"
+		speed.tooltip_text = "Runs the whole game faster: walking, crew work, the sky and daily accounting."
+		speed.pressed.connect(func():
+			var next: float = {1.0: 2.0, 2.0: 4.0, 4.0: 8.0}.get(Engine.time_scale, 1.0)
+			Engine.time_scale = next
+			speed.text = "DEV: Speed %d×" % int(next))
+		actions.add_child(speed)
 	event_button = UI.button("Review decision", open_pending_event)
 	actions.add_child(event_button)
 	report_button = UI.button("Dashboard / report", open_dashboard)
@@ -191,8 +204,6 @@ func refresh() -> void:
 	values.Water.text = "Water %.2f L · %s" % [state.water_l, state.life_support_status.get("water", "unavailable")]
 	values.Oxygen.text = "Oxygen %.2f kg · %s" % [state.oxygen_kg, state.life_support_status.get("oxygen", "unavailable")]
 	values.Food.text = "Food %.2f kg · %s" % [state.food_kg, state.life_support_status.get("food", "unavailable")]
-	values.Dose.text = "Dose %.3f mSv · modeled" % state.radiation_msv
-	values.Materials.text = "Materials %.1f units" % state.materials
 	run_button.text = "Rest / maintain base (24h)"
 	run_button.disabled = not session.can_advance() or _modal_visible()
 	event_button.disabled = terminal or state.pending_events.is_empty() or _modal_visible()
