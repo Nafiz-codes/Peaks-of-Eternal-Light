@@ -2,6 +2,7 @@ extends Node3D
 ## One physical rover and four canonical crew identities across connected locations.
 signal hud_changed(view: Dictionary)
 const Rules = preload("res://src/simulation/rover_expedition.gd")
+const DamageDialog = preload("res://src/ui/rover_damage_dialog.gd")
 ## The astronaut who loses contact in the dust storm and is rescued in Lifeline (Alex).
 const LOST_CREW := "water_recycler"
 const Terrain = preload("res://src/world/expedition_terrain.gd")
@@ -47,7 +48,7 @@ var transition_tween: Tween
 var motor: AudioStreamPlayer
 var cinematic_motion := false
 var escort_link := false
-var damage_dialog: ConfirmationDialog
+var damage_dialog: DamageDialog
 var damage_mode := ""
 
 func _ready() -> void:
@@ -157,10 +158,7 @@ func _ready() -> void:
 		var key := InputEventKey.new()
 		key.physical_keycode = KEY_F
 		InputMap.action_add_event("rover_scan",key)
-	damage_dialog = ConfirmationDialog.new()
-	damage_dialog.exclusive = true
-	damage_dialog.dialog_autowrap = true
-	damage_dialog.min_size = Vector2i(560, 220)
+	damage_dialog = preload("res://src/ui/rover_damage_dialog.gd").new()
 	damage_dialog.confirmed.connect(_damage_confirm)
 	damage_dialog.canceled.connect(_damage_abort)
 	add_child(damage_dialog)
@@ -541,13 +539,8 @@ func _check_damage() -> void:
 	arm.pose(0)
 	hud.extract_held = false
 	motor.volume_db = -80
-	damage_dialog.title = "MISSION FAILED" if failed else "ROVER DAMAGE WARNING"
-	damage_dialog.dialog_text = "The rover is fully damaged and cannot be retrieved or used. Retry the mission to start a new attempt. This attempt's objective progress will be reset." if failed else "Rover damage has reached 90%% or more (%d%% health remaining). If fully damaged, the rover cannot be retrieved or used and the mission will fail. Continue the mission, or abort and call back the rover while it can still return." % ceili(bound_state.rover_health)
-	damage_dialog.ok_button_text = "Retry mission" if failed else "Continue mission"
-	damage_dialog.cancel_button_text = "Abort and call back rover"
-	damage_dialog.get_cancel_button().visible = not failed
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	damage_dialog.popup_centered(Vector2i(560, 220))
+	damage_dialog.show_damage(failed, ceili(bound_state.rover_health))
 	session.capture_sol_checkpoint()
 
 func _damage_confirm() -> void:
