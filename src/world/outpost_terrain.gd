@@ -79,7 +79,9 @@ static func build_surroundings(site: Dictionary, material: Material) -> MeshInst
 		for point in perimeter:
 			var p: Vector2 = point * (radius / 60.0)
 			if str(site.get("terrain_model", "")) == "polar_lola":
-				ring.append(Vector3(p.x, PolarTerrain.height(str(site.site_id), p.x, p.y), p.y))
+				var height := PolarTerrain.height(str(site.site_id), p.x, p.y)
+				height = Plots.grade(p, height, plot_levels(site))
+				ring.append(Vector3(p.x, height, p.y))
 				continue
 			var height := 1.5 + noise.get_noise_2d(p.x, p.y) * amplitude
 			if str(site.get("terrain_model", "")) == "tycho_sldem2015":
