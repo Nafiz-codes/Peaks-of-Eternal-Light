@@ -97,7 +97,7 @@ static func decode(data: Variant) -> Dictionary:
 			var key: String = property.name
 			if not data.state.has(key) or typeof(data.state[key]) != property.type:
 				# Older version 1 saves omit newer fields; preserve their defaults.
-				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "rover_training", "rover_expedition", "placed_panel_kwh_per_sol", "clock_start_seconds"] and not data.state.has(key):
+				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "easter_eggs", "rover_training", "rover_expedition", "placed_panel_kwh_per_sol", "clock_start_seconds"] and not data.state.has(key):
 					continue
 				return {}
 			var value: Variant = data.state[key]
@@ -111,6 +111,16 @@ static func decode(data: Variant) -> Dictionary:
 				target.assign(value.duplicate(true))
 			else:
 				state.set(key, value.duplicate(true) if value is Dictionary else value)
+		if not state.easter_eggs.is_empty():
+			var egg_positions: Variant = state.easter_eggs.get("positions")
+			var egg_collected: Variant = state.easter_eggs.get("collected")
+			if not egg_positions is Array or egg_positions.size() != 4 or not egg_collected is Array: return {}
+			for point in egg_positions:
+				if not point is Vector3 or not point.is_finite() or absf(point.x - 4000.0) > 400 or absf(point.z) > 400 or absf(point.y) > 100: return {}
+			var seen_eggs := {}
+			for index in egg_collected:
+				if not index is int or index < 0 or index > 3 or seen_eggs.has(index): return {}
+				seen_eggs[index] = true
 		if state.site_id != data.site_id or state.sol < 0 or state.mission_length_sols < 1:
 			return {}
 		if not data.state.has("clock_start_seconds"):

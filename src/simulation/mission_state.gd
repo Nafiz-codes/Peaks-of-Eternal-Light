@@ -43,6 +43,7 @@ var rover_total_distance_km: float = 0.0
 var rover_pose: Dictionary = {}
 var rover_health: float = 100.0
 var fieldwork: Dictionary = {}
+var easter_eggs: Dictionary = {}
 var rover_training: Dictionary = {}
 var rover_expedition: Dictionary = {}
 var crew_stress_avg: float = 0.25

@@ -116,6 +116,11 @@ func _input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo or event.keycode != KEY_ESCAPE:
 		return
 	var scene := get_tree().current_scene
+	var eggs := scene.get_node_or_null("EasterEggs") if scene != null else null
+	if eggs != null and eggs.revealing:
+		eggs.handle_event(event)
+		get_viewport().set_input_as_handled()
+		return
 	if not opened and scene != null and scene.has_method("handle_navigation_cancel") and scene.handle_navigation_cancel():
 		get_viewport().set_input_as_handled()
 		return

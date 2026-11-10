@@ -70,6 +70,7 @@ func _ready() -> void:
 	var training := preload("res://src/world/rover_expedition_controller.gd").new()
 	training.name = "RoverTraining"
 	add_child(training)
+	add_child(preload("res://src/world/easter_eggs.gd").new())
 	add_child(preload("res://src/world/dust_storm.gd").new())
 	add_child(preload("res://src/world/structure_repairs.gd").new())
 	session.state_changed.connect(refresh_feedback)

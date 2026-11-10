@@ -234,6 +234,10 @@ func _settle_parked() -> void:
 		_sync_visual(1.0)
 
 func _input(event: InputEvent) -> void:
+	var eggs := world.get_node_or_null("EasterEggs")
+	if eggs != null and eggs.handle_event(event):
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.physical_keycode == KEY_SHIFT and event.location == KEY_LOCATION_LEFT:
 		boost_held = event.pressed
 	if event is InputEventMouseMotion and active and power_state == Power.READY and not get_tree().paused and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
