@@ -16,8 +16,7 @@ func run() -> void:
 	player.global_position = maya.global_position + Vector3(0, 0, 1.8)
 	world._on_player_interaction("crew_briefing")
 	var menu = world.get_node("MissionHUD").crew_dialogue
-	assert(menu.visible and not session.maya_intro_complete)
-	menu._choose(2)
+	assert(not menu.visible and not session.maya_intro_complete)
 	var dialogue = world.get_node("MayaIntroduction")
 	assert(world.maya_dialogue_active and dialogue.lines.size() == 3)
 	assert(dialogue.lines[0][1] == "smiling" and dialogue.lines[2][1] == "neutral")
@@ -25,6 +24,7 @@ func run() -> void:
 	dialogue.advance()
 	assert(not session.maya_intro_complete)
 	assert(dialogue.view.speech.text == "Where do I start?")
+	assert(not dialogue.view.portrait.visible)
 	dialogue.advance()
 	assert(not session.maya_intro_complete)
 	dialogue.advance()

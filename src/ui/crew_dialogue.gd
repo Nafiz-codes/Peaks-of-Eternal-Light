@@ -1,7 +1,7 @@
 extends Control
 const UI = preload("res://src/ui/ui_style.gd")
 const Report = preload("res://src/ui/crew_report.gd")
-const OPTIONS := [["Follow", "follow"], ["Regroup crew", "regroup"], ["Talk / status", "status"], ["Assist current step", "assist"], ["Return to base", "return"]]
+const OPTIONS := [["Talk / status", "status"], ["Follow", "follow"], ["Regroup crew", "regroup"], ["Assist current step", "assist"], ["Return to base", "return"]]
 signal action_requested(kind: String, event_id: String)
 signal report_read
 var specialist_id := ""
@@ -11,7 +11,7 @@ var fieldwork: Node
 var world: Node
 var view: Control
 var buttons: Array[Button] = []
-var selected := 2
+var selected := 0
 var saved_speaker := ""
 
 func _ready() -> void:
@@ -24,13 +24,13 @@ func _ready() -> void:
 	add_child(view)
 	for index in OPTIONS.size():
 		var button := UI.button("%d  %s" % [index + 1, OPTIONS[index][0]], _choose.bind(index))
-		button.custom_minimum_size.y = 38
-		button.add_theme_font_size_override("font_size", 16)
+		button.custom_minimum_size.y = 28
+		button.add_theme_font_size_override("font_size", 13)
 		for state in ["normal", "hover", "pressed", "focus"]:
 			var style := UI.style(Color(0.025, 0.06, 0.08, 0.85), Color("f3cc74") if state == "focus" else Color(0.55, 0.72, 0.75, 0.5))
-			style.set_corner_radius_all(20)
-			style.content_margin_top = 8
-			style.content_margin_bottom = 8
+			style.set_corner_radius_all(5)
+			style.content_margin_top = 4
+			style.content_margin_bottom = 4
 			button.add_theme_stylebox_override(state, style)
 		view.choices.add_child(button)
 		buttons.append(button)
@@ -49,10 +49,12 @@ func open_conversation(id: String) -> void:
 	saved_speaker = world.dialogue_speaker
 	world.dialogue_speaker = id
 	show()
+	view.choice_actor = world.get_node("Outpost/" + id)
 	view.begin(world)
-	view.present(id, "What do you need, Commander?", "smiling")
+	view._position_choices()
+	view.show_options_only()
 	view.hint.text = "Mouse wheel: choose · Enter / E: confirm · 1–5: select · Esc: leave"
-	_select(2)
+	_select(0)
 
 func open_status(id: String) -> void:
 	open_conversation(id)

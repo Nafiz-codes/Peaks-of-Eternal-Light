@@ -486,8 +486,10 @@ func _on_player_interaction(interaction_id: String, from_menu: bool = false) -> 
 	if maya_dialogue_active: return
 	if not from_menu and interaction_id in ["crew_briefing", "water_recycler", "food_storage"]:
 		if get_node("Outpost/Astronaut").global_position.distance_to(get_node("Outpost/" + interaction_id).global_position) > 2.5: return
-		get_node("MissionHUD").inspect_station(interaction_id)
-		return
+		var introduced: bool = session.maya_intro_complete if interaction_id == "crew_briefing" else session.crew_introductions.get(interaction_id, false)
+		if introduced:
+			get_node("MissionHUD").inspect_station(interaction_id)
+			return
 	var introduction := ""
 	if interaction_id.begins_with("repair:"):
 		get_node("StructureRepairs").start(interaction_id.trim_prefix("repair:"))
