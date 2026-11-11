@@ -3,6 +3,9 @@ extends RefCounted
 ## explicit gameplay adaptation; the horizon retains the sampled relief.
 static var patches: Dictionary = {}
 
+## Share of measured local relief kept near the outpost (1 = unchanged).
+const BUILD_AREA_RELIEF := {"plateau_d": 0.5}
+
 static func height(site_id: String, east: float, south: float) -> float:
 	if not patches.has(site_id):
 		patches[site_id] = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/polar/%s_terrain.json" % site_id))
@@ -16,7 +19,11 @@ static func height(site_id: String, east: float, south: float) -> float:
 	var first := lerpf(float(heights[index]), float(heights[index + 1]), x - ix)
 	var second := lerpf(float(heights[index + int(patch.size)]), float(heights[index + int(patch.size) + 1]), x - ix)
 	var sampled_height := lerpf(first, second, z - iz)
-	var local_relief := sampled_height * smoothstep(32.0, 60.0, Vector2(east, south).length())
+	var distance := Vector2(east, south).length()
+	var local_relief := sampled_height * smoothstep(32.0, 60.0, distance)
+	# Gameplay adaptation: a steep site's bumps are eased inside the build area so its
+	# structures have room, fading back to the measured relief by 160 m.
+	local_relief *= lerpf(float(BUILD_AREA_RELIEF.get(site_id, 1.0)), 1.0, smoothstep(60.0, 160.0, distance))
 	# Never fade the DEM to pad height: these high landing sites overlook deep
 	# basins, so that produced a square, hundreds-of-metres-high enclosing wall.
 	# Beyond the source patch, carry its edge elevation into a gently descending

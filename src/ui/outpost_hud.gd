@@ -85,6 +85,12 @@ func _ready() -> void:
 			notice.text = "DEV: -150 kWh, -150 L water, -20 kg oxygen, -15 kg food (not below zero).")
 		drain.name = "DeveloperRemoveResources"
 		actions.add_child(drain)
+		var skip := UI.button("DEV: Skip mission", func():
+			var expedition: Node = world.get_node("RoverTraining")
+			notice.text = expedition.feedback if expedition.developer_skip_mission() else "DEV: no rover operation to skip right now.")
+		skip.name = "DeveloperSkipMission"
+		skip.tooltip_text = "Completes the current (or next) rover operation instantly and parks the rover at the outpost."
+		actions.add_child(skip)
 		var speed := UI.button("DEV: Speed 1×", Callable())
 		speed.name = "DeveloperSpeed"
 		speed.tooltip_text = "Runs the whole game faster: walking, crew work, the sky and daily accounting."

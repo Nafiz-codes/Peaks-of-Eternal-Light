@@ -306,6 +306,36 @@ func developer_select_mission(index: int) -> bool:
 func locks_drive() -> bool:
 	return transitioning or busy_id != "" or dialogue > 0 or damage_blocked()
 
+## The current operation counts as done (milestone, and Frozen Horizon's ice prospect).
+func _record_completion() -> void:
+	if data.completed.has(data.mission): return
+	data.completed.append(data.mission)
+	session.record_milestone(Rules.TITLES[data.mission])
+	if data.mission == 1 and bound_state != null:
+		# The ice samples confirm the prospect: a Water Extractor can produce here.
+		bound_state.volatile_prospect_found = true
+		bound_state.volatile_prospect_status = "extraction_candidate"
+
+## DEV: finish the current rover operation (or the next one, even if the story has not
+## opened it yet) at once, with the rover parked back at the outpost.
+func developer_skip_mission() -> bool:
+	if not OS.is_debug_build() or data.is_empty() or transitioning or session.action_busy: return false
+	var skipped: int = int(data.mission) if int(data.mission) >= 0 else Rules.assigned(data)
+	if skipped < 0: return false
+	if driver.active: driver.stop_control()
+	data.mission = skipped
+	_record_completion()
+	data.mission = -1
+	data.location = "outpost"
+	data.phase = "completed"
+	_place_rover(Vector3(32, ground_y(Vector3(32,0,20)), 20))
+	_restore_crew()
+	_refresh_targets()
+	feedback = "DEV: skipped " + Rules.TITLES[skipped]
+	session.state_changed.emit()
+	session.capture_sol_checkpoint()
+	return true
+
 func developer_jump_event(index: int) -> bool:
 	if not OS.is_debug_build() or index < 0 or index > 5: return false
 	if get_tree().paused or transitioning or session.action_busy or driver.power_state == driver.Power.STARTING: return false
@@ -733,13 +763,7 @@ func _transition(outward: bool) -> void:
 		else:
 			_place_rover(Vector3(32,ground_y(Vector3(32,0,20)),20))
 		data.location = "outpost"
-		if not data.completed.has(data.mission):
-			data.completed.append(data.mission)
-			session.record_milestone(Rules.TITLES[data.mission])
-			if data.mission == 1 and bound_state != null:
-				# The ice samples confirm the prospect: a Water Extractor can produce here.
-				bound_state.volatile_prospect_found = true
-				bound_state.volatile_prospect_status = "extraction_candidate"
+		_record_completion()
 		feedback = Rules.TITLES[data.mission].to_upper()+" COMPLETE"
 		if data.mission == 2: feedback += "\nMissing crew member recovered.\nAll four astronauts accounted for."
 		data.mission = -1

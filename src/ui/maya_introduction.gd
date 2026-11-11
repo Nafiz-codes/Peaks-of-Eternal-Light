@@ -16,9 +16,15 @@ const INTRODUCTIONS := {
  "mission_short": {"speaker": "Dr. Maya Chen", "text": "Not yet, Commander."},
  "redirect_food_storage": {"speaker": "Dr. Maya Chen", "text": "Sam wanted a word with you, Commander. You'll find him at his work area."},
  "redirect_water_recycler": {"speaker": "Dr. Maya Chen", "text": "Alex has something to discuss with you, Commander. Go and find him."},
- "storm_lost_contact": {"speaker": "Dr. Maya Chen", "text": "Commander, we've lost contact with Alex. He went out to check a reading before the storm and hasn't reported back. Take the rover to his last known location and bring him home."}
 }
 const SEQUENCES := {
+	# Before the final operation: how little time is left, what is still short, then Alex.
+	"storm_lost_contact": [
+		["crew_briefing", "serious", "Commander, two things, and neither can wait. First: our mission window is almost over. After the next operation, I run the final resource check."],
+		["crew_briefing", "concerned", "{shortfall}"],
+		["player", "questioning", "And the second thing?"],
+		["crew_briefing", "concerned", "We've lost contact with Alex. He went out to check a reading before the storm and hasn't reported back. Take the rover to his last known location and bring him home."]
+	],
 	"maya_closing": [
 		["crew_briefing", "neutral", "We all have our specialties, Commander. But you'll be making the final decisions."],
 		["crew_briefing", "neutral", "Before we send anyone farther out, we need reliable power. Your first solar panel is free, so let's put it to good use. Choose a location with as little shadow as possible."],
@@ -125,6 +131,8 @@ func _ready() -> void:
 func _show_line() -> void:
 	var line: Array = lines[line_index]
 	var text := str(line[2]).replace("Commander", get_node("/root/MissionSession").commander_address())
+	if text.contains("{shortfall}"):
+		text = text.replace("{shortfall}", _shortfall_line())
 	if text.contains("{goals}"):
 		# The victory targets come from the simulator, so the line always matches the bars.
 		var goals: Dictionary = preload("res://src/simulation/mission_simulator.gd").MISSION_GOALS
@@ -134,6 +142,19 @@ func _show_line() -> void:
 	timer = create_tween()
 	timer.tween_interval(maxf(6.0, str(line[2]).length() * 0.065))
 	timer.tween_callback(advance)
+
+## What still stands between the base and the good ending, from the live reserves.
+func _shortfall_line() -> String:
+	var session := get_node("/root/MissionSession")
+	var state: Variant = session.dashboard_state
+	if state == null: return "Keep every reserve above its gold line."
+	var names := {"power": "power", "water": "water", "oxygen": "oxygen", "food": "food"}
+	var short: Array = []
+	for key in session.dashboard_simulator.base_shortfalls(state): short.append(names.get(key, key))
+	if short.is_empty():
+		return "Right now every reserve is above its gold line. Keep it that way: the crew uses them every day, and one bad stretch could still sink us."
+	var listed: String = short[0] if short.size() == 1 else ", ".join(short.slice(0, short.size() - 1)) + " and " + str(short[-1])
+	return "Right now we're short on %s. Every reserve has to reach its gold line by then, so build more greenhouses, extractors and solar panels while there's still time." % listed
 
 func advance() -> void:
 	if ending: return
