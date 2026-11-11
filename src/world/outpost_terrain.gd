@@ -34,7 +34,7 @@ static func build(site: Dictionary) -> MeshInstance3D:
 	surface.generate_normals()
 	var terrain := MeshInstance3D.new()
 	terrain.name = "LunarRegolith"
-	terrain.mesh = surface.commit()
+	terrain.mesh = _blend_boundary_normals(surface.commit(), site)
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://src/world/regolith.gdshader")
 	terrain.material_override = material
@@ -105,10 +105,33 @@ static func build_surroundings(site: Dictionary, material: Material) -> MeshInst
 	surface.generate_normals()
 	var terrain := MeshInstance3D.new()
 	terrain.name = "LunarHorizon"
-	terrain.mesh = surface.commit()
+	terrain.mesh = _blend_boundary_normals(surface.commit(), site)
 	terrain.material_override = material
 	_add_rocky_hills(terrain, rock_sites, seed_value, material)
 	return terrain
+
+# Both meshes use the same height-field normal at their shared edge. Fade back
+# to mesh normals nearby; only lighting changes, never vertices or collision.
+static func _blend_boundary_normals(mesh: ArrayMesh, site: Dictionary) -> ArrayMesh:
+	if str(site.get("terrain_model", "")) != "polar_lola":
+		return mesh
+	var arrays := mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var site_id := str(site.site_id)
+	for index in range(vertices.size()):
+		var p := vertices[index]
+		var edge_distance := absf(maxf(absf(p.x), absf(p.z)) - 60.0)
+		if edge_distance >= 20.0:
+			continue
+		var dx := PolarTerrain.height(site_id, p.x + 1.0, p.z) - PolarTerrain.height(site_id, p.x - 1.0, p.z)
+		var dz := PolarTerrain.height(site_id, p.x, p.z + 1.0) - PolarTerrain.height(site_id, p.x, p.z - 1.0)
+		var shared_normal := Vector3(-dx, 2.0, -dz).normalized()
+		normals[index] = normals[index].lerp(shared_normal, 1.0 - smoothstep(0.0, 20.0, edge_distance)).normalized()
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	var result := ArrayMesh.new()
+	result.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return result
 
 static func _add_rocky_hills(terrain: MeshInstance3D, sites: Array[Vector3], seed_value: int, material: Material) -> void:
 	var rng := RandomNumberGenerator.new()
