@@ -23,14 +23,16 @@ static func aftermath(d: Dictionary) -> String:
 	return str(d.get("aftermath", "briefing"))
 ## The crew the Commander must order into the radiation habitat.
 const RADIATION_CREW := ["crew_briefing", "water_recycler", "food_storage"]
-## The solar radiation wave between Surface Survey and Frozen Horizon: "alert" (Maya
-## warns the Commander), "orders" (order each crew member into the radiation habitat
-## before the countdown ends), "wave" (it hits the base) and "done".
+## The solar radiation wave between Surface Survey and Frozen Horizon: "prep" (Maya
+## recommends a Comms Relay and a shielding habitat), "incoming" (time to build them
+## before the wave), "alert" (Maya warns the Commander), "orders" (order each crew
+## member into the radiation habitat before the countdown ends), "wave" (it hits the
+## base) and "done".
 static func radiation(d: Dictionary) -> String:
 	var completed: Array = d.get("completed", [])
 	if not completed.has(0) or completed.has(1) or int(d.get("mission", -1)) == 1:
 		return ""
-	return str(d.get("radiation", "alert"))
+	return str(d.get("radiation", "prep"))
 ## Crew inside the radiation habitat (hidden from the outpost) until the wave passes.
 static func sheltered(d: Dictionary) -> Array:
 	return d.get("radiation_told", []) if radiation(d) in ["orders", "wave"] else []
@@ -67,7 +69,10 @@ static func valid_save(d: Variant) -> bool:
 	if d.has("aftermath") and d.aftermath not in ["briefing", "repairs", "alert", "done"]: return false
 	if d.has("debrief") and d.debrief not in ["pending", "retry", "done"]: return false
 	if d.has("free_play") and not d.free_play is bool: return false
-	if d.has("radiation") and d.radiation not in ["alert", "orders", "wave", "done"]: return false
+	if d.has("radiation") and d.radiation not in ["prep", "incoming", "alert", "orders", "wave", "done"]: return false
+	if d.has("radiation_prep_elapsed"):
+		if not d.radiation_prep_elapsed is float or not is_finite(d.radiation_prep_elapsed) or d.radiation_prep_elapsed < 0.0 or d.radiation_prep_elapsed > 600.0: return false
+	if d.has("storm_ready") and not d.storm_ready is bool: return false
 	if d.has("radiation_told"):
 		if not d.radiation_told is Array: return false
 		for id in d.radiation_told:

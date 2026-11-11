@@ -9,6 +9,7 @@ var expeditions: Node
 var expedition_view: Dictionary = {}
 var mission_font: SystemFont
 var hud: Node # MissionHUD; its key hints sit below the objective.
+const Story = preload("res://src/simulation/story.gd")
 
 func _ready() -> void:
 	name = "MissionTracker"
@@ -56,6 +57,7 @@ func _process(_delta: float) -> void:
 	var player: Node3D = world.get_node("Outpost/Astronaut")
 	var observer: Node3D = expeditions.driver if expeditions.driver.active else player
 	var running: bool = state.mission_outcome.get("status", "") == "in_progress"
+	var data: Dictionary = expeditions.data
 	if not running:
 		instruction = str(state.mission_outcome.get("status", "")).capitalize()
 	elif preload("res://src/world/dust_storm.gd").pending(expeditions.data):
@@ -78,34 +80,64 @@ func _process(_delta: float) -> void:
 		objective = "Talk with Maya"
 		instruction = "Press E when Maya is nearby."
 		destination = world.get_node("Outpost/crew_briefing").global_position
-	elif expeditions.Rules.debrief(expeditions.data) in ["pending", "retry"]:
-		objective = "Mission review"
-		instruction = "Talk with Maya: press E when she is nearby." if expeditions.Rules.debrief(expeditions.data) == "pending" else "Build up power, water, oxygen and food, then talk with Maya again."
-		destination = world.get_node("Outpost/crew_briefing").global_position
-	elif expeditions.Rules.aftermath(expeditions.data) in ["briefing", "alert"]:
+	elif not session.crew_introductions.get("food_storage", false) or not session.crew_introductions.get("water_recycler", false):
+		var unmet: String = "food_storage" if not session.crew_introductions.get("food_storage", false) else "water_recycler"
+		objective = "Meet your crew"
+		instruction = "Talk with %s: press E when they are nearby." % ("Sam" if unmet == "food_storage" else "Alex")
+		destination = world.get_node("Outpost/" + unmet).global_position
+	elif not Story.reached("maya_closing", session.crew_introductions, data):
 		objective = "Talk with Maya"
 		instruction = "Press E when Maya is nearby."
 		destination = world.get_node("Outpost/crew_briefing").global_position
-	elif expeditions.Rules.aftermath(expeditions.data) == "repairs":
-		var repairs: Node = world.get_node("StructureRepairs")
-		objective = "Repair the storm damage"
-		instruction = "%d damaged. Press E at a marked structure, or talk to Maya to leave them." % repairs.points.size()
-		destination = repairs.nearest(player.global_position)
-	elif not session.construction_ready() and expeditions.data.get("completed", []).is_empty() and expeditions.data.get("mission", -1) < 0:
-		var built := 0
-		for station in ["maya_station", "alex_station", "sam_station"]:
-			if session.station_placements.has(station): built += 1
-		objective = "Build the solar panel and 3 workstations"
-		instruction = "Solar panels: %d/8 · Workstations: %d/3\nPress B to open construction." % [int(session.solar_placement.has("transform")) + session.extra_panels.size(), built]
-	elif session.construction_ready() and expeditions.data.get("completed", []).is_empty() and expeditions.data.get("mission", -1) < 0 and not rover_active:
+	elif not session.construction_ready() and data.get("completed", []).is_empty() and data.get("mission", -1) < 0:
+		objective = "Build the solar panel and Maya's Operations station"
+		instruction = "BUILDING UNLOCKED — Solar Panel · Maya · Operations\nSolar panel: %s · Operations: %s · Press B to build." % ["placed" if session.solar_placement.has("transform") else "to place", "placed" if session.station_placements.has("maya_station") else "to place"]
+	elif session.construction_ready() and data.get("completed", []).is_empty() and data.get("mission", -1) < 0 and not rover_active:
 		if not session.crew_introductions.get("rover_briefing", false):
 			objective = "Speak with Maya"
-			instruction = "Press E near Maya, then choose Talk / Status."
+			instruction = "Press E near Maya."
 			destination = world.get_node("Outpost/crew_briefing").global_position
 		else:
 			objective = "Go to the Lander and Drive the Rover"
 			instruction = "Press E at the hatch to enter, then press R to control the rover."
 			destination = world.get_node("LanderAccess").landing
+	elif expeditions.Rules.radiation(data) == "prep":
+		objective = "Talk with Maya"
+		instruction = "Maya wants to talk about the next danger: press E when she is nearby."
+		destination = world.get_node("Outpost/crew_briefing").global_position
+	elif expeditions.Rules.radiation(data) == "incoming":
+		var storm: Node = world.get_node("RadiationStorm")
+		objective = "Prepare the outpost for solar radiation"
+		instruction = "NEW BUILDINGS — Comms Relay · Radiation Shielding Habitat (optional). Press B to build."
+		instruction += ("\nComms Relay warning: radiation wave in %d s" % storm.incoming_seconds_left()) if storm.comms_built() else "\nNo Comms Relay: the wave will arrive without early warning."
+	elif Story.pending_beat("food_storage", session.crew_introductions, data) != "":
+		objective = "Talk with Sam"
+		instruction = "Press E when Sam is nearby."
+		destination = world.get_node("Outpost/food_storage").global_position
+	elif Story.pending_beat("water_recycler", session.crew_introductions, data) != "":
+		objective = "Talk with Alex"
+		instruction = "Press E when Alex is nearby."
+		destination = world.get_node("Outpost/water_recycler").global_position
+	elif data.get("completed", []).has(0) and not data.get("completed", []).has(1) and data.get("mission", -1) < 0 and not session.station_placements.has("sam_station") and not rover_active:
+		objective = "Build Sam's Engineering station"
+		instruction = "BUILDING UNLOCKED — Sam · Engineering\nBuild it to prepare for the next expedition. Press B."
+	elif data.get("completed", []).has(1) and not data.get("dust_storm_complete", false) and not data.get("storm_ready", false):
+		objective = "Build Alex's Science station and establish water extraction"
+		instruction = "NEW BUILDINGS — Alex · Science · Water Extractor (water and oxygen) · Greenhouse Module (food and oxygen). Press B."
+	elif expeditions.Rules.debrief(data) in ["pending", "retry"]:
+		objective = "Mission review"
+		instruction = "Talk with Maya: press E when she is nearby." if expeditions.Rules.debrief(data) == "pending" else "Raise every reserve to its goal line on the resource bars, then talk with Maya again. More greenhouses, extractors and solar panels help."
+		instruction += "\nNEW BUILDING — Habitat Extension."
+		destination = world.get_node("Outpost/crew_briefing").global_position
+	elif expeditions.Rules.aftermath(data) in ["briefing", "alert"]:
+		objective = "Talk with Maya"
+		instruction = "Press E when Maya is nearby."
+		destination = world.get_node("Outpost/crew_briefing").global_position
+	elif expeditions.Rules.aftermath(data) == "repairs":
+		var repairs: Node = world.get_node("StructureRepairs")
+		objective = "Repair the storm damage"
+		instruction = "%d damaged. Press E at a marked structure, or talk to Maya to leave them." % repairs.points.size()
+		destination = repairs.nearest(player.global_position)
 	elif not expeditions.data.is_empty():
 		var assignment: int = expeditions.available_assignment()
 		if assignment >= 0:

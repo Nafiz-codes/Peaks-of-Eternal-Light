@@ -14,10 +14,29 @@ const PolarSolar = preload("res://src/simulation/polar_solar.gd")
 
 # Five-person provisioning: retain the previous ten-sol reserve margin while
 # accounting for the player (12 kWh/sol extra baseline, 25% more consumables).
-const INITIAL_POWER_KWH := 290.0
-const INITIAL_WATER_L := 500.0
-const INITIAL_OXYGEN_KG := 56.25
-const INITIAL_FOOD_KG := 37.5
+## Enough to build the essentials, not to coast: the crew draws on these continuously.
+const INITIAL_POWER_KWH := 200.0
+const INITIAL_WATER_L := 450.0
+const INITIAL_OXYGEN_KG := 50.0
+const INITIAL_FOOD_KG := 40.0
+## Maya's review passes when every reserve reaches its goal (the line on the HUD bars).
+const MISSION_GOALS := {"power_kwh": 260.0, "water_l": 470.0, "oxygen_kg": 24.0, "food_kg": 18.0}
+## Real play seconds for one modeled day of crew draw and production.
+const DAY_SECONDS := 240.0
+## Extra copies allowed of each repeatable producer (the first copy is not counted).
+const MAX_STRUCTURE_COPIES := 5
+const REPEATABLE_STRUCTURES := ["water_extractor", "greenhouse"]
+## Extractor ice also feeds electrolysis; greenhouse plants release oxygen as they grow
+## (about 1.07 kg of O2 per kg of dry biomass from photosynthesis).
+const EXTRACTOR_WATER_L := 16.0
+const EXTRACTOR_OXYGEN_KG := 1.0
+const GREENHOUSE_FOOD_KG := 1.2
+const GREENHOUSE_OXYGEN_KG := 1.3
+## What one copy of each producer adds per day, for the build menu (solar is per spot).
+const STRUCTURE_OUTPUT := {
+	"water_extractor": {"water_l": EXTRACTOR_WATER_L, "oxygen_kg": EXTRACTOR_OXYGEN_KG},
+	"greenhouse": {"food_kg": GREENHOUSE_FOOD_KG, "oxygen_kg": GREENHOUSE_OXYGEN_KG},
+}
 const BATTERY_CAPACITY_KWH := 300.0
 
 ## NASA NESC Table 8.4-2: unshielded lunar-surface GCR effective dose during
@@ -107,33 +126,40 @@ func begin_mission(selected_site_id: String, mission_length: int = 7) -> Variant
 func advance_sol(state: Variant) -> Dictionary:
 	assert(state != null, "A MissionState is required.")
 	assert(state.pending_events.is_empty(), "Resolve pending event decisions before advancing the mission.")
+	# Whatever part of today already ran in real time is not charged again.
+	var remaining := maxf(0.0, 1.0 - state.day_progress)
+	state.day_progress = maxf(0.0, state.day_progress - 1.0)
+	return _close_day(state, remaining)
 
 
+## Continuous play: the crew's draw and the base's production for `seconds` of play.
+## Returns true once a whole day has run, so the caller can close it (close_day).
+func tick_time(state: Variant, seconds: float) -> bool:
+	if state == null or seconds <= 0.0 or not is_finite(seconds) or state.mission_outcome.get("status", "") != "in_progress":
+		return false
+	var fraction := seconds / DAY_SECONDS
+	_apply_balances(state, _find_site(state.site_id), fraction)
+	state.day_progress += fraction
+	state.mission_outcome = _evaluate_mission_outcome(state)
+	return state.day_progress >= 1.0
+
+
+## The day's bookkeeping (calendar, construction, events, history) after tick_time has
+## already charged its resources.
+func close_day(state: Variant) -> Dictionary:
+	state.day_progress = maxf(0.0, state.day_progress - 1.0)
+	return _close_day(state, 0.0)
+
+
+func _close_day(state: Variant, fraction: float) -> Dictionary:
 	state.sol += 1
 	state.rover_distance_this_sol_km = 0.0
 	_advance_construction(state)
 	var site: Dictionary = _find_site(state.site_id)
-	var power_tick: Dictionary = _calculate_power(state, site)
-	state.power_generated_kwh = power_tick.generated_kwh
-	state.power_consumed_kwh = power_tick.consumed_kwh
-	state.power_balance_kwh = power_tick.balance_kwh
-	state.power_kwh = clampf(state.power_kwh + state.power_balance_kwh, 0.0, _battery_capacity(state))
-
-	state.terrain_shielding_factor = _terrain_shielding_factor(site)
-	var structural_dose_multiplier := lerpf(1.0, SHIELDING_WALL_DOSE_MULTIPLIER, _output_share(state, "shielding_wall")) if state.built_structures.has("shielding_wall") else 1.0
-	state.radiation_this_sol_msv = LUNAR_SURFACE_GCR_MSV_PER_SOL * (1.0 - state.terrain_shielding_factor) * structural_dose_multiplier
-	state.radiation_msv += state.radiation_this_sol_msv
-
-	var life_support_tick: Dictionary = _calculate_life_support(state)
-	state.water_consumed_l = life_support_tick.water_consumed_l
-	state.water_recovered_l = life_support_tick.water_recovered_l
-	state.water_balance_l = life_support_tick.water_balance_l
-	state.water_l = maxf(0.0, state.water_l + state.water_balance_l)
-	state.oxygen_consumed_kg = life_support_tick.oxygen_consumed_kg
-	state.oxygen_kg = maxf(0.0, state.oxygen_kg - state.oxygen_consumed_kg)
-	state.food_consumed_kg = life_support_tick.food_consumed_kg
-	state.food_kg = maxf(0.0, state.food_kg - state.food_consumed_kg)
-	state.life_support_status = _life_support_status(state, -state.water_balance_l, state.oxygen_consumed_kg, state.food_consumed_kg)
+	var ticks := _apply_balances(state, site, fraction)
+	var power_tick: Dictionary = ticks.power
+	var life_support_tick: Dictionary = ticks.life_support
+	var structural_dose_multiplier: float = ticks.dose_multiplier
 	state.consecutive_power_depleted_sols = state.consecutive_power_depleted_sols + 1 if state.power_kwh <= 0.0 else 0
 	_evaluate_event_triggers(state)
 	_expire_effects(state)
@@ -232,10 +258,10 @@ func cost_shortfall(state: Variant, structure_id: String) -> String:
 	if state == null:
 		return "mission"
 	var cost := build_cost(state, structure_id)
-	var draw := {"water": maxf(0.0, -state.water_balance_l), "oxygen": state.oxygen_consumed_kg, "food": state.food_consumed_kg}
+	var draw := {"water": maxf(0.0, -state.water_balance_l), "oxygen": maxf(0.0, state.oxygen_consumed_kg), "food": maxf(0.0, state.food_consumed_kg)}
 	if state.sol == 0: # No day has run yet: use the crew's planned daily use.
 		var life := _calculate_life_support(state)
-		draw = {"water": maxf(0.0, -life.water_balance_l), "oxygen": life.oxygen_consumed_kg, "food": life.food_consumed_kg}
+		draw = {"water": maxf(0.0, -life.water_balance_l), "oxygen": maxf(0.0, life.oxygen_consumed_kg), "food": maxf(0.0, life.food_consumed_kg)}
 	for key in COST_RESOURCES:
 		var have: float = state.get(COST_RESOURCES[key])
 		var keep: float = 0.0 if key == "power" else draw[key] * BUILD_RESERVE_DAYS
@@ -269,14 +295,12 @@ func apply_dust_storm(state: Variant) -> bool:
 	return true
 
 
-## What keeps the base from being ready to grow into a permanent base: any life-support
-## reserve below "nominal" (three days of supply), or under three days of baseline power.
+## What keeps the base from being ready to grow into a permanent base: any reserve
+## below its MISSION_GOALS line.
 func base_shortfalls(state: Variant) -> Array:
 	var shortfalls: Array = []
-	for key in ["power", "water", "oxygen", "food"]:
-		if key == "power":
-			if state.power_kwh < _calculate_power(state, _find_site(state.site_id)).consumed_kwh * 3.0: shortfalls.append(key)
-		elif state.life_support_status.get(key, "") != "nominal":
+	for key in COST_RESOURCES:
+		if float(state.get(COST_RESOURCES[key])) < float(MISSION_GOALS[COST_RESOURCES[key]]):
 			shortfalls.append(key)
 	return shortfalls
 
@@ -383,6 +407,41 @@ func _output_share(state: Variant, structure_id: String) -> float:
 	return DAMAGED_OUTPUT_SHARE if state.damaged_structures.has(structure_id) else 1.0
 
 
+## Built copies of a producer, each at the structure's storm-damage share (0 when unbuilt).
+func _producing_copies(state: Variant, structure_id: String) -> float:
+	if not state.built_structures.has(structure_id):
+		return 0.0
+	return (1.0 + float(state.structure_copies.get(structure_id, 0))) * _output_share(state, structure_id)
+
+
+## Another copy of a repeatable producer, placed by the Commander. Returns "" or what is short.
+func buy_structure_copy(state: Variant, structure_id: String) -> String:
+	if state == null or state.mission_outcome.get("status", "") != "in_progress":
+		return "mission"
+	if structure_id not in REPEATABLE_STRUCTURES or not state.built_structures.has(structure_id):
+		return "structure"
+	if int(state.structure_copies.get(structure_id, 0)) >= MAX_STRUCTURE_COPIES:
+		return "space"
+	var shortfall := cost_shortfall(state, structure_id)
+	if not shortfall.is_empty():
+		return shortfall
+	_spend(state, build_cost(state, structure_id), -1.0)
+	state.structure_copies[structure_id] = int(state.structure_copies.get(structure_id, 0)) + 1
+	_publish_action_state(state)
+	return ""
+
+
+func sell_structure_copy(state: Variant, structure_id: String) -> Dictionary:
+	if state == null or int(state.structure_copies.get(structure_id, 0)) <= 0:
+		return {}
+	var refund := build_cost(state, structure_id)
+	_spend(state, refund, 1.0)
+	state.structure_copies[structure_id] = int(state.structure_copies[structure_id]) - 1
+	if state.structure_copies[structure_id] == 0: state.structure_copies.erase(structure_id)
+	_publish_action_state(state)
+	return refund
+
+
 ## Placed buildings finish on confirmation, like the solar panel; costs are already paid.
 func complete_construction(state: Variant, structure_id: String) -> bool:
 	if state == null:
@@ -403,6 +462,8 @@ func demolish_structure(state: Variant, structure_id: String) -> Dictionary:
 		return {"ok": false, "error": "mission_not_ready"}
 	if not state.built_structures.has(structure_id):
 		return {"ok": false, "error": "structure_not_built"}
+	if int(state.structure_copies.get(structure_id, 0)) > 0:
+		return {"ok": false, "error": "copies_remain"}
 	# Full refund of the build cost, as requested for destroying; energy cannot exceed
 	# battery capacity.
 	# shortcut: uses the current regolith discount, so a habitat bought before the discount
@@ -724,6 +785,30 @@ func _solar_day(state: Variant) -> float:
 	return state.clock_start_seconds / PolarSolar.Orbit.DAY + maxi(0, state.sol - 1)
 
 
+## Daily rates for the current base, applied by `fraction` of a day (1.0 = a whole day).
+func _apply_balances(state: Variant, site: Dictionary, fraction: float) -> Dictionary:
+	var power_tick: Dictionary = _calculate_power(state, site)
+	state.power_generated_kwh = power_tick.generated_kwh
+	state.power_consumed_kwh = power_tick.consumed_kwh
+	state.power_balance_kwh = power_tick.balance_kwh
+	state.power_kwh = clampf(state.power_kwh + state.power_balance_kwh * fraction, 0.0, _battery_capacity(state))
+	state.terrain_shielding_factor = _terrain_shielding_factor(site)
+	var structural_dose_multiplier := lerpf(1.0, SHIELDING_WALL_DOSE_MULTIPLIER, _output_share(state, "shielding_wall")) if state.built_structures.has("shielding_wall") else 1.0
+	state.radiation_this_sol_msv = LUNAR_SURFACE_GCR_MSV_PER_SOL * (1.0 - state.terrain_shielding_factor) * structural_dose_multiplier
+	state.radiation_msv += state.radiation_this_sol_msv * fraction
+	var life_support_tick: Dictionary = _calculate_life_support(state)
+	state.water_consumed_l = life_support_tick.water_consumed_l
+	state.water_recovered_l = life_support_tick.water_recovered_l
+	state.water_balance_l = life_support_tick.water_balance_l
+	state.water_l = maxf(0.0, state.water_l + state.water_balance_l * fraction)
+	state.oxygen_consumed_kg = life_support_tick.oxygen_consumed_kg
+	state.oxygen_kg = maxf(0.0, state.oxygen_kg - state.oxygen_consumed_kg * fraction)
+	state.food_consumed_kg = life_support_tick.food_consumed_kg
+	state.food_kg = maxf(0.0, state.food_kg - state.food_consumed_kg * fraction)
+	state.life_support_status = _life_support_status(state, -state.water_balance_l, state.oxygen_consumed_kg, state.food_consumed_kg)
+	return {"power": power_tick, "life_support": life_support_tick, "dose_multiplier": structural_dose_multiplier}
+
+
 func _calculate_power(state: Variant, site: Dictionary) -> Dictionary:
 	var illumination_fraction := PolarSolar.daily_fraction(site, _solar_day(state))
 	var solar_yield := PolarSolar.daily_fraction(site, _solar_day(state), true)
@@ -747,6 +832,16 @@ func _calculate_power(state: Variant, site: Dictionary) -> Dictionary:
 	}
 
 
+## The whole crew's gross daily use of each reserve (before recycling or producers).
+func crew_daily_use(crew_count: int = 4) -> Dictionary:
+	return {
+		"power_kwh": _field_value(bvad_constants, "power_baseline_kw_per_person") * crew_count * 24.0,
+		"water_l": crew_count * (_field_value(bvad_constants, "potable_water_consumption_l_per_person_per_day") + _field_value(bvad_constants, "hygiene_water_consumption_l_per_person_per_day")),
+		"oxygen_kg": crew_count * _field_value(bvad_constants, "o2_consumption_kg_per_person_per_day"),
+		"food_kg": crew_count * _field_value(bvad_constants, "food_consumption_kg_dry_per_person_per_day"),
+	}
+
+
 func _calculate_life_support(state: Variant) -> Dictionary:
 	var crew_count := float(state.crew_size)
 	var water_consumed_l := crew_count * (
@@ -755,11 +850,15 @@ func _calculate_life_support(state: Variant) -> Dictionary:
 	)
 	var recycling_efficiency := clampf(_field_value(bvad_constants, "water_recycling_efficiency_pct") / 100.0, 0.0, 1.0)
 	var structure_output_multiplier := _active_effect_multiplier_for(state.active_events, "output_multiplier")
-	var extractor_output := 16.0 * structure_output_multiplier * _output_share(state, "water_extractor") if state.built_structures.has("water_extractor") and state.volatile_prospect_status == "extraction_candidate" else 0.0
+	var extractors := _producing_copies(state, "water_extractor") if state.volatile_prospect_status == "extraction_candidate" else 0.0
+	var extractor_output := EXTRACTOR_WATER_L * structure_output_multiplier * extractors
 	var water_recovered_l := water_consumed_l * recycling_efficiency * _active_effect_multiplier_for(state.active_events, "water_recovery_multiplier") + extractor_output
-	var oxygen_consumed_kg := crew_count * _field_value(bvad_constants, "o2_consumption_kg_per_person_per_day")
-	var greenhouse_output := 1.2 * structure_output_multiplier * _active_effect_multiplier_for(state.active_events, "food_production_multiplier") * _output_share(state, "greenhouse") if state.built_structures.has("greenhouse") else 0.0
-	var food_consumed_kg := maxf(0.0, crew_count * _field_value(bvad_constants, "food_consumption_kg_dry_per_person_per_day") - greenhouse_output)
+	var greenhouses := _producing_copies(state, "greenhouse")
+	var oxygen_produced_kg := (EXTRACTOR_OXYGEN_KG * extractors + GREENHOUSE_OXYGEN_KG * greenhouses) * structure_output_multiplier
+	# Net draw: negative once producers out-supply the crew, so reserves can rebuild.
+	var oxygen_consumed_kg := crew_count * _field_value(bvad_constants, "o2_consumption_kg_per_person_per_day") - oxygen_produced_kg
+	var greenhouse_output := GREENHOUSE_FOOD_KG * structure_output_multiplier * _active_effect_multiplier_for(state.active_events, "food_production_multiplier") * greenhouses
+	var food_consumed_kg := crew_count * _field_value(bvad_constants, "food_consumption_kg_dry_per_person_per_day") - greenhouse_output
 	return {
 		"water_consumed_l": water_consumed_l,
 		"water_recovered_l": water_recovered_l,

@@ -24,7 +24,7 @@
         "oxygen": 2.0,
         "food": 1.2
       },
-      "effect": "Gameplay effect: after a rover prospect has been investigated, adds up to 16 L of water recovery per sol. Output must be separately tuned and must not be calculated directly from LEND hydrogen readings.",
+      "effect": "Gameplay effect: once a rover prospect has been investigated, it melts the ice into water and splits some of it into oxygen by electrolysis. Build more copies to add more.",
       "build_time_sols": 3
     },
     {
@@ -36,7 +36,7 @@
         "oxygen": 2.0,
         "food": 1.2
       },
-      "effect": "Gameplay effect: produces 1.2 kg dry food per sol. It has no separate power or water draw in the current simulation. Intended to offset, but not completely erase, the four-person food draw.",
+      "effect": "Gameplay effect: grows dry food, and its plants release oxygen as they grow. Build more copies to add more. It needs no extra power or water.",
       "build_time_sols": 3
     },
     {
@@ -72,7 +72,7 @@
         "oxygen": 0.6,
         "food": 0.4
       },
-      "effect": "Gameplay effect: unlocks one-sol advance warning for solar-particle events, allowing a shelter choice before the radiation effect is applied.",
+      "effect": "Gameplay effect: gives early warning of solar-particle events: the radiation wave countdown is shown and the crew get an extra minute to reach shelter.",
       "build_time_sols": 1
     }
   ],

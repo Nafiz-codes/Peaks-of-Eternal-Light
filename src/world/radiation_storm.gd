@@ -6,6 +6,8 @@ extends Node3D
 const Rules = preload("res://src/simulation/rover_expedition.gd")
 const UI = preload("res://src/ui/ui_style.gd")
 const ORDERS_SECONDS := 75.0 # Time to reach every crew member (paused during dialogue).
+const PREP_SECONDS := 150.0 # After Maya's advice: time to build before the wave is detected.
+const COMMS_EXTRA_SECONDS := 60.0 # A Comms Relay's early warning adds this to the orders.
 const WAVE_SECONDS := 15.0
 const FRONT_PERIOD := 5.0 # One particle front sweeps over the base every 5 s.
 ## Solar-flare colours: hot yellow-white fronts burning to orange-red at their edges.
@@ -95,8 +97,28 @@ func shelter_built() -> bool:
 	var state: Variant = session.dashboard_state
 	return state != null and state.built_structures.has("shielding_wall")
 
+func comms_built() -> bool:
+	var state: Variant = session.dashboard_state
+	return state != null and state.built_structures.has("comms_relay")
+
+func orders_seconds() -> float:
+	return ORDERS_SECONDS + (COMMS_EXTRA_SECONDS if comms_built() else 0.0)
+
 func seconds_left() -> int:
-	return ceili(maxf(0.0, ORDERS_SECONDS - float(expeditions.data.get("radiation_elapsed", 0.0))))
+	return ceili(maxf(0.0, orders_seconds() - float(expeditions.data.get("radiation_elapsed", 0.0))))
+
+## Seconds until the wave is detected (the Comms Relay shows this early warning).
+func incoming_seconds_left() -> int:
+	return ceili(maxf(0.0, PREP_SECONDS - float(expeditions.data.get("radiation_prep_elapsed", 0.0))))
+
+## After Maya's preparation advice the Commander has PREP_SECONDS to build.
+func begin_incoming() -> void:
+	var data: Dictionary = expeditions.data
+	if Rules.radiation(data) != "prep": return
+	data["radiation"] = "incoming"
+	data["radiation_prep_elapsed"] = 0.0
+	session.capture_sol_checkpoint()
+	session.state_changed.emit()
 
 ## Nearest crew member still to be ordered into the habitat (null when none).
 func next_crew_position(from: Vector3) -> Variant:
@@ -143,11 +165,19 @@ func _process(delta: float) -> void:
 	if active and (data != bound_data or stage != "wave"):
 		_restore()
 	if get_tree().paused or session.dashboard_state == null: return
+	if stage == "incoming":
+		if world.maya_dialogue_active: return
+		data["radiation_prep_elapsed"] = float(data.get("radiation_prep_elapsed", 0.0)) + delta
+		if float(data.radiation_prep_elapsed) >= PREP_SECONDS:
+			data["radiation"] = "alert" # Maya now comes to warn the Commander.
+			session.capture_sol_checkpoint()
+			session.state_changed.emit()
+		return
 	if stage == "orders":
 		# The countdown waits while someone is talking.
 		if world.maya_dialogue_active: return
 		data["radiation_elapsed"] = float(data.get("radiation_elapsed", 0.0)) + delta
-		if float(data.radiation_elapsed) >= ORDERS_SECONDS: start_wave()
+		if float(data.radiation_elapsed) >= orders_seconds(): start_wave()
 		return
 	if stage != "wave": return
 	if not active:

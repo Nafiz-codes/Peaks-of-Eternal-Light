@@ -5,6 +5,7 @@ const Rules = preload("res://src/simulation/rover_expedition.gd")
 const DamageDialog = preload("res://src/ui/rover_damage_dialog.gd")
 ## The astronaut who loses contact in the dust storm and is rescued in Lifeline (Alex).
 const LOST_CREW := "water_recycler"
+const Story = preload("res://src/simulation/story.gd")
 const Terrain = preload("res://src/world/expedition_terrain.gd")
 const Target = preload("res://src/world/rover_scan_target.gd")
 const Circle = preload("res://src/world/expedition_circle.gd")
@@ -333,7 +334,8 @@ func developer_jump_event(index: int) -> bool:
 	session.dashboard_state.pending_events.clear()
 	session.dashboard_state.rover_expedition = fresh
 	session.maya_intro_complete = true
-	session.crew_introductions = {"water_recycler": true, "food_storage": true, "maya_closing": true}
+	session.crew_introductions = _developer_flags(["maya_radiation_prep", "sam_engineering"] + (["alex_science"] if index >= 2 else []))
+	if index >= 2: fresh["storm_ready"] = true
 	bound_state = null
 	_sync()
 	if index == 2:
@@ -367,6 +369,8 @@ func _developer_mission_review(access: Node) -> bool:
 	done["dust_storm_complete"] = true
 	done["aftermath"] = "done"
 	done["radiation"] = "done"
+	done["storm_ready"] = true
+	session.crew_introductions = _developer_flags(["maya_radiation_prep", "sam_engineering", "alex_science", "crew_habitation"])
 	return _developer_on_foot(access, done, "DEV: Mission review")
 
 ## DEV: Surface Survey done; Maya walks up with the radiation wave warning.
@@ -374,14 +378,21 @@ func _developer_radiation_wave(access: Node) -> bool:
 	var survey_done: Dictionary = Rules.fresh()
 	survey_done.completed = [0]
 	survey_done.phase = "completed"
+	survey_done["radiation"] = "alert" # Skip the preparation talk and build window.
+	session.crew_introductions = _developer_flags(["maya_radiation_prep"])
 	return _developer_on_foot(access, survey_done, "DEV: Radiation wave")
+
+## Story flags for a DEV jump: introductions and the first build, plus `later` beats.
+func _developer_flags(later: Array) -> Dictionary:
+	var flags := {"water_recycler": true, "food_storage": true, "maya_closing": true, "rover_briefing": true}
+	for flag in later: flags[flag] = true
+	return flags
 
 ## Loads an expedition record with the Commander on foot outside the lander.
 func _developer_on_foot(access: Node, done: Dictionary, message: String) -> bool:
 	session.dashboard_state.pending_events.clear()
 	session.dashboard_state.rover_expedition = done
 	session.maya_intro_complete = true
-	session.crew_introductions = {"water_recycler": true, "food_storage": true, "maya_closing": true}
 	bound_state = null
 	_sync()
 	_place_rover(Vector3(32, ground_y(Vector3(32,0,20)),20))
@@ -456,6 +467,9 @@ func _physics_process(delta: float) -> void:
 	_sync()
 	_update_circle_visibility()
 	if data.is_empty(): return
+	# The dust storm follows once Alex's Science station is up after Frozen Horizon.
+	if data.get("completed", []).has(1) and not data.get("storm_ready", false) and session.station_placements.has("alex_station") and Story.reached("alex_science", session.crew_introductions, data):
+		data["storm_ready"] = true
 	_check_damage()
 	if damage_blocked():
 		_publish()
@@ -725,6 +739,10 @@ func _transition(outward: bool) -> void:
 		if not data.completed.has(data.mission):
 			data.completed.append(data.mission)
 			session.record_milestone(Rules.TITLES[data.mission])
+			if data.mission == 1 and bound_state != null:
+				# The ice samples confirm the prospect: a Water Extractor can produce here.
+				bound_state.volatile_prospect_found = true
+				bound_state.volatile_prospect_status = "extraction_candidate"
 		feedback = Rules.TITLES[data.mission].to_upper()+" COMPLETE"
 		if data.mission == 2: feedback += "\nMissing crew member recovered.\nAll four astronauts accounted for."
 		data.mission = -1
@@ -918,4 +936,7 @@ func available_assignment() -> int:
 	# Lifeline opens only after Maya's storm briefings (damage, then the lost astronaut).
 	if Rules.aftermath(data) not in ["", "done"]: return -1
 	if data.mission < 0 and data.completed.is_empty() and not session.construction_ready(): return -1
-	return Rules.assigned(data)
+	var next := Rules.assigned(data)
+	# Frozen Horizon needs Sam's Engineering station to service the sampling arm.
+	if next == 1 and data.mission < 0 and not session.station_placements.has("sam_station"): return -1
+	return next

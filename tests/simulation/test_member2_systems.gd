@@ -19,7 +19,7 @@ func _run() -> void:
 
 	var solar := simulator.queue_construction(state, "solar_array")
 	check(solar.ok, "A structure can be queued when its authored costs are affordable.")
-	check(is_equal_approx(state.power_kwh, 282.0) and is_equal_approx(state.water_l, 496.0) and is_equal_approx(state.oxygen_kg, 55.45) and is_equal_approx(state.food_kg, 37.0), "Construction pays its power and the crew's water, oxygen and food once.")
+	check(is_equal_approx(state.power_kwh, MissionSimulator.INITIAL_POWER_KWH - 8.0) and is_equal_approx(state.water_l, MissionSimulator.INITIAL_WATER_L - 4.0) and is_equal_approx(state.oxygen_kg, MissionSimulator.INITIAL_OXYGEN_KG - 0.8) and is_equal_approx(state.food_kg, MissionSimulator.INITIAL_FOOD_KG - 0.5), "Construction pays its power and the crew's water, oxygen and food once.")
 	simulator.advance_sol(state)
 	check(not state.built_structures.has("solar_array"), "A two-sol authored build does not complete in one sol.")
 	simulator.advance_sol(state)

@@ -16,7 +16,12 @@ func run() -> void:
 	var data := Rules.fresh()
 	check(Rules.radiation(data) == "", "No wave before Surface Survey is complete")
 	data.completed = [0]
-	check(Rules.radiation(data) == "alert", "Maya's warning follows Surface Survey")
+	check(Rules.radiation(data) == "prep", "Maya's preparation talk follows Surface Survey")
+	for stage in ["incoming", "alert"]:
+		data["radiation"] = stage
+		check(Rules.valid_save(data), "Radiation stage %s saves" % stage)
+	data["radiation_prep_elapsed"] = 40.0
+	check(Rules.valid_save(data), "The build-time countdown saves")
 	data["radiation"] = "orders"
 	data["radiation_told"] = ["water_recycler"]
 	data["radiation_elapsed"] = 12.5

@@ -29,8 +29,9 @@ func _process(delta: float) -> void:
 func advance(delta: float) -> void:
 	if get_tree().paused or not is_finite(delta) or delta < 0.0:
 		return
+	# Crew draw and production run on play time; conversations hold the clock.
+	if not bool(world.get("maya_dialogue_active")): session.tick_play(delta)
 	var clock: Dictionary = session.orbital_clock
-	# Astronomy and daily resource accounting share elapsed Earth time.
 	if not clock.paused:
 		var previous: float = clock.elapsed_seconds
 		clock.elapsed_seconds = minf(Model.MAX_ELAPSED, clock.elapsed_seconds + delta * clock.time_scale)

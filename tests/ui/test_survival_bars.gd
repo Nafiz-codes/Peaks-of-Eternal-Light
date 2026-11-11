@@ -28,7 +28,8 @@ func run():
  hud._process(0)
  check(hud.bars.oxygen_kg.value == 0, "Empty reserve is shown empty")
  for key in hud.RESOURCES:
-  check(hud.captions[key].text == hud.RESOURCES[key][0], "Only resource names are displayed")
+  # Name, reserve, goal line and daily trend.
+  check(hud.captions[key].text.begins_with(hud.RESOURCES[key][0]) and hud.captions[key].text.contains("goal") and hud.captions[key].text.ends_with("/day"), "Captions show the reserve, its goal and its daily change")
  state.oxygen_kg = original
  state.consecutive_power_depleted_sols = 0
  hud._process(0)

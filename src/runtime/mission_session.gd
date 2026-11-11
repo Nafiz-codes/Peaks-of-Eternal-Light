@@ -13,6 +13,10 @@ var solar_placement: Dictionary = {}
 var extra_panels: Array = []
 var station_placements: Dictionary = {}
 var building_placements: Dictionary = {}
+## Extra copies of repeatable producers after the first: [{id, transform}, ...], matching
+## MissionState.structure_copies.
+var extra_buildings: Array = []
+const Story = preload("res://src/simulation/story.gd")
 var planning_draft: Dictionary = {}
 var approved_plan: Dictionary = {}
 signal mission_plan_approved(record: Dictionary)
@@ -58,6 +62,7 @@ func confirm_new_commander(appearance: String, player_name: String) -> bool:
 	crew_introductions = {}
 	solar_placement = {}
 	extra_panels = []
+	extra_buildings = []
 	station_placements = {}
 	building_placements = {}
 	planning_draft = {}
@@ -173,6 +178,7 @@ func reset_current_mission() -> Error:
 	sol_checkpoint = {}
 	action_busy = false
 	extra_panels = [] # Bought panels belong to the mission being restarted.
+	extra_buildings = []
 	return start_selected_mission()
 
 
@@ -202,8 +208,36 @@ func start_selected_mission() -> Error:
 	return OK
 
 
+## The first construction step: the free solar panel and Maya's Operations station.
 func construction_ready() -> bool:
-	return solar_placement.has("transform") and station_placements.has("maya_station") and station_placements.has("alex_station") and station_placements.has("sam_station")
+	return solar_placement.has("transform") and station_placements.has("maya_station")
+
+
+## Resources only start running down once the crew has built something to look after.
+func has_built_anything() -> bool:
+	return solar_placement.has("transform") or not station_placements.is_empty() or not building_placements.is_empty()
+
+
+func building_unlocked(id: String) -> bool:
+	if station_placements.has(id) or building_placements.has(id): return true # Already placed: may still move.
+	var expedition: Dictionary = {} if dashboard_state == null else dashboard_state.rover_expedition
+	return Story.unlocked(id, crew_introductions, expedition)
+
+
+## Continuous resource time: called every outpost frame with play time (dev speed-ups
+## included). Closes the day's bookkeeping when a whole day has run and nothing blocks it.
+func tick_play(seconds: float) -> void:
+	if dashboard_state == null or not has_built_anything(): return
+	if dashboard_simulator.tick_time(dashboard_state, seconds):
+		if can_advance() and dashboard_state.rover_expedition.get("location", "outpost") != "expedition":
+			action_busy = true
+			dashboard_last_tick = dashboard_simulator.close_day(dashboard_state)
+			capture_sol_checkpoint()
+			state_changed.emit()
+			call_deferred("_unlock_action")
+	if dashboard_state.mission_outcome.get("status", "") == "failure":
+		state_changed.emit()
+
 
 func elapsed_time_label() -> String:
 	var epoch := float(Time.get_unix_time_from_datetime_string(preload("res://src/world/orbital_model.gd").START_UTC))
@@ -330,6 +364,27 @@ func sell_solar_panel(index: int) -> Dictionary:
 	return refund
 
 
+## Another copy of a repeatable producer at `xform`. Returns "" or what is short.
+func buy_structure_copy(id: String, xform: Transform3D) -> String:
+	if dashboard_state == null: return "mission"
+	var shortfall: String = dashboard_simulator.buy_structure_copy(dashboard_state, id)
+	if shortfall.is_empty():
+		extra_buildings.append({"id": id, "transform": xform})
+		capture_sol_checkpoint()
+		state_changed.emit()
+	return shortfall
+
+
+func sell_structure_copy(index: int) -> Dictionary:
+	if dashboard_state == null or index < 0 or index >= extra_buildings.size(): return {}
+	var refund: Dictionary = dashboard_simulator.sell_structure_copy(dashboard_state, str(extra_buildings[index].id))
+	if refund.is_empty(): return {}
+	extra_buildings.remove_at(index)
+	capture_sol_checkpoint()
+	state_changed.emit()
+	return refund
+
+
 func record_milestone(label: String) -> void:
 	if dashboard_state == null:
 		return
@@ -389,6 +444,7 @@ func select_landing_site(site_id: String) -> void:
 		crew_introductions = {}
 		solar_placement = {}
 		extra_panels = []
+		extra_buildings = []
 		station_placements = {}
 		building_placements = {}
 		planning_draft = {}
@@ -432,10 +488,5 @@ func transition_sol(action: Callable) -> void:
 	sol_transition.play(action)
 
 
-func account_elapsed_time(seconds: float) -> void:
-	if dashboard_state == null or seconds <= 0.0: return
-	orbital_clock["resource_seconds"] = float(orbital_clock.get("resource_seconds", 0.0)) + seconds
-	# Defer accounting during expeditions and unresolved decisions, retaining elapsed time.
-	if float(orbital_clock.resource_seconds) >= 86400.0 and can_advance() and dashboard_state.rover_expedition.get("location", "outpost") != "expedition":
-		orbital_clock.resource_seconds -= 86400.0
-		advance_mission(false)
+func account_elapsed_time(_seconds: float) -> void:
+	pass # Resources follow play time (tick_play), not the astronomical clock.

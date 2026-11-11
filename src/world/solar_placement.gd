@@ -17,6 +17,13 @@ var build_menu: PanelContainer
 var placed := false
 var extra_panels: Array[Node3D] = [] # Bought panels, in the order of session.extra_panels.
 var adding_panel := false # Placing another panel after the free first one.
+var adding_copy := false # Placing another copy of a repeatable producer.
+var detail_panel: PanelContainer # Hovered build card: description and daily output bars.
+var detail_content: VBoxContainer
+const DETAIL_RESOURCES := [["power_kwh", "Power", "kWh"], ["water_l", "Water", "L"], ["oxygen_kg", "Oxygen", "kg"], ["food_kg", "Food", "kg"]]
+const DETAIL_COLORS := {"power_kwh": Color("f3cc74"), "water_l": Color("4fa3f7"), "oxygen_kg": Color("6fd6e8"), "food_kg": Color("8fd37a")}
+var extra_buildings: Array[Node3D] = [] # Copies, in the order of session.extra_buildings.
+const Simulator = preload("res://src/simulation/mission_simulator.gd")
 const Save = preload("res://src/runtime/mission_save.gd")
 var settling := false
 var active := false
@@ -126,6 +133,19 @@ func _ready() -> void:
 	scroll.add_child(grid)
 	menu_body.add_child(UI.label("Press C to delete structures", 15, UI.AMBER))
 	build_menu.hide()
+	# Same card style as the outpost selection screen's site details.
+	detail_panel = PanelContainer.new()
+	detail_panel.name = "BuildDetail"
+	detail_panel.position = Vector2(728, 145)
+	detail_panel.custom_minimum_size.x = 370
+	detail_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	detail_panel.add_theme_stylebox_override("panel", UI.style(Color("171c2b"), UI.BLUE))
+	hud.add_child(detail_panel)
+	detail_content = UI.box()
+	detail_content.add_theme_constant_override("separation", 6)
+	detail_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	detail_panel.add_child(detail_content)
+	detail_panel.hide()
 	highlight = StandardMaterial3D.new()
 	highlight.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	highlight.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -136,6 +156,8 @@ func _ready() -> void:
 		for mesh in bought.find_children("*", "MeshInstance3D", true, false):
 			mesh.create_trimesh_collision()
 		extra_panels.append(bought)
+	for entry in session.extra_buildings:
+		extra_buildings.append(_make_copy(str(entry.id), entry.transform))
 	default_homes = get_parent().get_node("CrewFieldwork").homes.duplicate()
 	for id in session.station_placements:
 		var station := _new_station(id)
@@ -160,6 +182,18 @@ func _make_panel(title: String) -> Node3D:
 	if is_finite(lowest): model.position.y -= lowest
 	return node
 
+## A placed extra copy of a repeatable producer (solid, destroyable for a refund).
+func _make_copy(id: String, xform: Transform3D) -> Node3D:
+	var node := Node3D.new()
+	node.name = "Copy_" + id
+	node.set_meta("structure_copy", id)
+	add_child(node)
+	node.global_transform = xform
+	node.add_child(NASABuildings.make(id, false))
+	for mesh in node.find_children("*", "MeshInstance3D", true, false):
+		mesh.create_trimesh_collision()
+	return node
+
 func _new_station(id: String) -> Node3D:
 	var station := (MODELS[id] as PackedScene).instantiate() as Node3D
 	station.set_meta("crew_station_id", id)
@@ -179,7 +213,9 @@ func _select(id: String) -> void:
 	build_error_until = 0
 	if NASABuildings.MODELS.has(id):
 		if session.dashboard_state == null: return
-		get_parent().construction_view.editing_id = id
+		# A built producer gets another copy; the first one stays where it is.
+		adding_copy = id in Simulator.REPEATABLE_STRUCTURES and session.dashboard_state.built_structures.has(id)
+		if not adding_copy: get_parent().construction_view.editing_id = id
 		get_parent().refresh_feedback()
 		panel = NASABuildings.make(id, false)
 		add_child(panel)
@@ -246,7 +282,7 @@ func _apply_station_home(id: String, xform: Transform3D, restoring := false) -> 
 
 func _open_menu() -> void:
 	# Rebuild only after a change, so newly placed structures leave the marked ground.
-	var layout := hash([session.solar_placement, session.extra_panels, session.station_placements, session.building_placements])
+	var layout := hash([session.solar_placement, session.extra_panels, session.station_placements, session.building_placements, session.extra_buildings])
 	if layout != area_layout and is_instance_valid(area_ring):
 		remove_child(area_ring)
 		area_ring.queue_free()
@@ -260,6 +296,7 @@ func _open_menu() -> void:
 
 func _close_menu_and(action := Callable()) -> void:
 	build_menu.hide()
+	detail_panel.hide()
 	_show_area(false)
 	player.ui_blocked = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -289,7 +326,12 @@ func _refresh_menu() -> void:
 		var status := ""
 		var available := false
 		var cost_text := "%d kWh · %d L water\n%.1f kg oxygen · %.1f kg food" % [int(cost.get("power", 0)), int(cost.get("water", 0)), float(cost.get("oxygen", 0)), float(cost.get("food", 0))]
-		if id == "solar_array":
+		var copies: int = 0 if state == null else int(state.structure_copies.get(id, 0))
+		if Station.DEFINITIONS.has(id): cost_text = "Free · one per NPC"
+		if not session.building_unlocked(id):
+			# The crew asks for each building as the mission needs it.
+			status = "Locked · the crew will ask for it"
+		elif id == "solar_array":
 			# The first panel is free so the outpost can be powered straight away;
 			# more panels cost power and the crew's water, oxygen and food.
 			if not placed:
@@ -307,6 +349,13 @@ func _refresh_menu() -> void:
 			available = not session.station_placements.has(id)
 			cost_text = "Free · one per NPC"
 			status = "Placed" if not available else "Click to place"
+		elif NASABuildings.MODELS.has(id) and id in Simulator.REPEATABLE_STRUCTURES and state != null and state.built_structures.has(id):
+			# More producers offset the crew's constant draw.
+			if copies >= Simulator.MAX_STRUCTURE_COPIES:
+				status = "Built · %d of %d (no room for more)" % [copies + 1, copies + 1]
+			else:
+				available = affordable
+				status = ("Built %d · click to place another" % (copies + 1)) if affordable else ("Built %d · need %s for another" % [copies + 1, shortfall])
 		elif NASABuildings.MODELS.has(id):
 			var started: bool = state != null and (state.built_structures.has(id) or state.construction_queue.any(func(job): return str(job.get("structure_id", "")) == id))
 			available = state != null
@@ -339,11 +388,11 @@ func _refresh_menu() -> void:
 		var card := Button.new()
 		card.custom_minimum_size = Vector2(200, 214)
 		card.disabled = not available
-		card.tooltip_text = str(structure.get("effect", ""))
+		card.mouse_entered.connect(_show_detail.bind(structure))
 		for entry in [["normal", Color("1d2436")], ["hover", Color("273150")], ["pressed", Color("30364c")], ["disabled", Color("141927")]]:
 			card.add_theme_stylebox_override(entry[0], UI.style(entry[1], UI.BLUE if entry[0] == "hover" else Color("3a4560")))
 		# Grayed out when it cannot be built now, whatever the reason.
-		card.modulate = Color.WHITE if available or status in ["Placed", "Built", "Under construction"] else Color(1, 1, 1, 0.42)
+		card.modulate = Color.WHITE if available or status in ["Placed", "Built", "Under construction"] or status.begins_with("Built") else Color(1, 1, 1, 0.42)
 		grid.add_child(card)
 		var body := UI.box()
 		body.add_theme_constant_override("separation", 6)
@@ -367,6 +416,96 @@ func _refresh_menu() -> void:
 				var result: Dictionary = session.queue_structure(id)
 				label.text = "B · Build    " + (str(structure.get("name", id)) + " queued" if result.get("ok", false) else "Cannot build: " + str(result.get("error", "")).replace("_", " "))
 				_refresh_menu())
+
+## The hovered building: what it does, then what one copy adds per day as bars measured
+## against the whole crew's daily use (as the site card shows sunlight and terrain).
+func _show_detail(structure: Dictionary) -> void:
+	for child in detail_content.get_children():
+		detail_content.remove_child(child)
+		child.queue_free()
+	var id := str(structure.get("structure_id", ""))
+	var title := UI.label(str(structure.get("name", id)), 20, UI.BLUE)
+	title.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
+	detail_content.add_child(title)
+	_detail_line(str(structure.get("effect", "")).trim_prefix("Gameplay effect: "), 14)
+	var output: Dictionary = Simulator.STRUCTURE_OUTPUT.get(id, {})
+	if id == "solar_array":
+		output = {"power_kwh": PANEL_RATED_KWH_PER_SOL * mean_site_yield()}
+	if output.is_empty():
+		_detail_line("Produces no resources each day.", 14, UI.MUTED)
+	else:
+		_detail_line("PRODUCTION" + (" · EACH COPY" if id in Simulator.REPEATABLE_STRUCTURES else ""), 13, UI.MUTED)
+		var use: Dictionary = session.dashboard_simulator.crew_daily_use() if session.dashboard_simulator != null else {}
+		for row in DETAIL_RESOURCES:
+			if output.has(row[0]): detail_content.add_child(_output_row(row, float(output[row[0]]), float(use.get(row[0], 0.0))))
+		if id == "solar_array":
+			_detail_line("At this site's average sunlight; the spot, angle and shade decide the exact amount.", 12, UI.MUTED)
+	detail_panel.show()
+	_fit_detail()
+
+## Wrapped labels only know their height after a layout pass; shrink to fit after it.
+func _fit_detail() -> void:
+	await get_tree().process_frame
+	if is_instance_valid(detail_panel): detail_panel.reset_size()
+
+## One resource the building makes: its HUD symbol, the daily amount, and how that
+## compares with what the whole crew uses each day.
+func _output_row(row: Array, amount: float, crew_use: float) -> PanelContainer:
+	var accent: Color = DETAIL_COLORS[row[0]]
+	var tile := PanelContainer.new()
+	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tile_style := UI.style(Color("1d2436"), accent.darkened(0.45))
+	tile_style.border_width_left = 3
+	tile_style.border_color = accent
+	tile_style.content_margin_top = 8
+	tile_style.content_margin_bottom = 8
+	tile_style.content_margin_left = 12
+	tile.add_theme_stylebox_override("panel", tile_style)
+	var line := HBoxContainer.new()
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	line.add_theme_constant_override("separation", 12)
+	tile.add_child(line)
+	var symbol := TextureRect.new()
+	symbol.texture = preload("res://src/ui/survival_meter.gd").icon_texture(row[0], accent)
+	symbol.custom_minimum_size = Vector2(32, 34)
+	symbol.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	symbol.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	symbol.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	line.add_child(symbol)
+	var words := VBoxContainer.new()
+	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	words.add_theme_constant_override("separation", 0)
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line.add_child(words)
+	var figure := Label.new()
+	figure.text = "+%s %s" % [("%.1f" % amount).trim_suffix(".0"), row[2]]
+	figure.add_theme_font_size_override("font_size", 22)
+	figure.add_theme_color_override("font_color", accent.lightened(0.25))
+	figure.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	words.add_child(figure)
+	var caption := Label.new()
+	caption.text = "%s per day" % row[1]
+	caption.add_theme_font_size_override("font_size", 13)
+	caption.add_theme_color_override("font_color", UI.MUTED)
+	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	words.add_child(caption)
+	if crew_use > 0.0:
+		var share := Label.new()
+		var ratio := amount / crew_use
+		share.text = ("%.1f×\ncrew use" % ratio) if ratio >= 1.0 else ("%d%%\nof crew use" % roundi(ratio * 100.0))
+		share.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		share.add_theme_font_size_override("font_size", 13)
+		share.add_theme_color_override("font_color", UI.TEXT if ratio >= 1.0 else UI.MUTED)
+		share.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		line.add_child(share)
+	return tile
+
+func _detail_line(text: String, font_size: int, color: Color = UI.TEXT) -> void:
+	var line := UI.label(text, font_size, color)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	line.custom_minimum_size.x = 346
+	detail_content.add_child(line)
 
 ## Studio shot of a real model; structures without one keep a blank frame.
 func _add_preview(frame: Control, scene: PackedScene, id := "") -> void:
@@ -642,7 +781,7 @@ func _build_output_card() -> void:
 			body.add_child(line)
 			output_lines[key] = line
 	output_lines.title.text = "Solar panel · output here"
-	output_lines.water.text = "Water  +0 L per sol"
+	output_lines.water.text = "Water  +0 L per day"
 	output_lines.note.text = "Fixed daily output for this spot: %.1f kWh full-sun rating (NASA 1361 W/m² sunlight × NASA 30%% cell efficiency × 4.62 m² × 24 h) × mission sunlight on the panel's face at its current angle × share not shaded by terrain or structures at this spot." % PANEL_RATED_KWH_PER_SOL
 	output_card.hide()
 
@@ -675,7 +814,7 @@ func _update_output_card() -> void:
 	var site_color := _set_bar("site_bar", mean_yield * 100.0)
 	output_lines.site.text = "Site sunlight (mission average)  %d%%" % roundi(mean_yield * 100.0)
 	output_lines.site.add_theme_color_override("font_color", site_color)
-	output_lines.energy.text = "Energy  +%.1f kWh per sol" % preview_kwh
+	output_lines.energy.text = "Energy  +%.1f kWh per day" % preview_kwh
 	output_card.show()
 	var bounds := get_viewport().get_visible_rect().size
 	output_card.size = output_card.get_combined_minimum_size()
@@ -742,6 +881,7 @@ func _structure_at(collider: Object) -> Node3D:
 	while node != null and node != get_parent():
 		if node == solar_panel: return solar_panel if placed and not settling else null
 		if node is Node3D and extra_panels.has(node): return node if not settling else null
+		if node is Node3D and extra_buildings.has(node): return node
 		if node.has_meta("crew_station_id") and session.station_placements.has(str(node.get_meta("crew_station_id"))):
 			return node if not settling else null
 		if node.has_meta("structure_id") and str(node.name).begins_with("Completed_"): return node
@@ -760,6 +900,7 @@ func _set_target(next: Node3D) -> void:
 func _target_name() -> String:
 	if target.has_meta("crew_station_id"): return str(Station.DEFINITIONS[str(target.get_meta("crew_station_id"))].name)
 	if extra_panels.has(target): return "this solar panel (cost refunded)"
+	if extra_buildings.has(target): return str(target.get_meta("structure_copy")).replace("_", " ") + " copy (cost refunded)"
 	return "the solar panel (free)" if target == solar_panel else str(target.get_meta("structure_id")).replace("_", " ") + " (cost refunded)"
 
 func _start_destroy() -> void:
@@ -793,6 +934,14 @@ func _destroy_target() -> void:
 		doomed.queue_free()
 		label.text = DESTROY_HINT + "\nStation removed · available in B menu"
 		_reset_selection()
+		return
+	if extra_buildings.has(doomed):
+		var copy_index := extra_buildings.find(doomed)
+		var copy_refund: Dictionary = session.sell_structure_copy(copy_index)
+		if copy_refund.is_empty(): return
+		extra_buildings.remove_at(copy_index)
+		doomed.queue_free()
+		label.text = DESTROY_HINT + "\nCopy removed · " + _refund_text(copy_refund)
 		return
 	if extra_panels.has(doomed):
 		var index := extra_panels.find(doomed)
@@ -926,6 +1075,18 @@ func confirm() -> void:
 
 func _confirm_building() -> void:
 	var state: Variant = session.dashboard_state
+	if adding_copy:
+		var copy_id := selected_id
+		var shortfall: String = session.buy_structure_copy(copy_id, panel.global_transform)
+		if not shortfall.is_empty():
+			label.text = "Cannot build another: not enough " + shortfall
+			build_error_until = Time.get_ticks_msec() + 3500
+			return
+		extra_buildings.append(_make_copy(copy_id, panel.global_transform))
+		var copy_title := _display_name()
+		_cancel()
+		label.text = copy_title + " built (%d total)" % (1 + int(state.structure_copies.get(copy_id, 0)))
+		return
 	var started: bool = state.built_structures.has(selected_id) or state.construction_queue.any(func(job): return str(job.structure_id) == selected_id)
 	if not started:
 		if not placed:
@@ -1022,6 +1183,7 @@ func _finish_build_pose() -> void:
 
 func _reset_selection() -> void:
 	adding_panel = false
+	adding_copy = false
 	selected_id = "solar_array"
 	panel = solar_panel
 	meshes.clear()

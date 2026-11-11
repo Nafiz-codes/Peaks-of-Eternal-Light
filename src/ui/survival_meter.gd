@@ -3,6 +3,9 @@ extends Range
 var kind := "power_kwh"
 const HUD_ACCENT = preload("res://src/ui/ui_style.gd").BLUE
 var tint := Color("65869c")
+## Reserve Maya needs for the good ending, drawn as a marker on the bar (< 0: none).
+var goal := -1.0
+const GOAL_COLOR := Color("f3cc74")
 var icon: ImageTexture
 
 const ICONS := {
@@ -15,18 +18,21 @@ const ICONS := {
 func _ready() -> void:
  mouse_filter = Control.MOUSE_FILTER_IGNORE
  step = 0.0
- var artwork: String = ICONS[kind]
+ icon = icon_texture(kind, HUD_ACCENT)
+ value_changed.connect(func(_value: float): queue_redraw())
+ resized.connect(queue_redraw)
+
+## The resource's HUD symbol in one colour (also used by the build menu).
+static func icon_texture(resource: String, color: Color) -> ImageTexture:
  var colors := RegEx.new()
  colors.compile("#[0-9a-fA-F]{6}")
- artwork = colors.sub(artwork, "#" + HUD_ACCENT.to_html(false), true)
+ var artwork: String = colors.sub(ICONS[resource], "#" + color.to_html(false), true)
  # Cutouts stay dark so the monochrome oxygen and droplet symbols read clearly.
  artwork = artwork.replace('"white"', '"#171c2b"')
  var source := '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="42" viewBox="0 0 40 42">' + artwork + '</svg>'
  var picture := Image.new()
- if picture.load_svg_from_string(source, 2.0) == OK:
-  icon = ImageTexture.create_from_image(picture)
- value_changed.connect(func(_value: float): queue_redraw())
- resized.connect(queue_redraw)
+ if picture.load_svg_from_string(source, 2.0) != OK: return null
+ return ImageTexture.create_from_image(picture)
 
 func polygon(points: Array, color: Color) -> void:
  draw_colored_polygon(PackedVector2Array(points), color)
@@ -63,5 +69,11 @@ func _draw() -> void:
   if ratio > 0:
    polygon([Vector2(x+9,17),Vector2(end-3,17),Vector2(end+3,25),Vector2(x+9,25),Vector2(x+5,21)],tint)
    draw_line(Vector2(x+10,18),Vector2(maxf(x+10,end-3),18),tint.lightened(0.10),2,true)
+ if goal >= 0.0:
+  # Same mapping as the fill, so the fill reaches the marker exactly at the goal.
+  var mark := lerpf(x + 9, right - 10, clampf(goal / maxf(max_value, 0.001), 0.0, 1.0))
+  var met := value >= goal
+  draw_line(Vector2(mark, 9), Vector2(mark, 34), Color.BLACK, 4.0)
+  draw_line(Vector2(mark, 9), Vector2(mark, 34), GOAL_COLOR if not met else Color("72df9a"), 2.0)
  if icon != null:
   draw_texture_rect(icon,Rect2(0,0,38,40),false)

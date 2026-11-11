@@ -16,6 +16,7 @@ const LOCKER := Vector3(0, 0, 6)
 const Expedition = preload("res://src/simulation/rover_expedition.gd")
 ## The astronaut away from the outpost while Lifeline is open (see RoverExpeditionController).
 const LOST_CREW := "water_recycler"
+const Story = preload("res://src/simulation/story.gd")
 var config: Dictionary
 var world: Node3D
 var session: Node
@@ -157,9 +158,10 @@ func _physics_process(delta: float) -> void:
 		if world.dialogue_speaker == id:
 			_update_visual(id, false)
 			continue
-		# Maya walks up to the Commander for her introduction and her storm briefings.
-		if id == "crew_briefing" and (not session.maya_intro_complete or Expedition.aftermath(state.rover_expedition) in ["briefing", "alert"] or Expedition.debrief(state.rover_expedition) == "pending" or Expedition.radiation(state.rover_expedition) == "alert"):
-			_approach_commander(delta)
+		# Crew walk up to the Commander when they have something to say: Maya's
+		# introduction, briefings and review; Sam's and Alex's construction requests.
+		if _wants_commander(id):
+			_approach_commander(id, delta)
 			continue
 		if id == LOST_CREW and state.rover_expedition.get("missing", false):
 			continue
@@ -927,8 +929,15 @@ func command(id: String, action: String, argument := "") -> bool:
 	changed.emit()
 	return ok
 
-func _approach_commander(delta: float) -> void:
-	var actor: Node3D = actors.crew_briefing
+func _wants_commander(id: String) -> bool:
+	var d: Dictionary = state.rover_expedition
+	if Story.pending_beat(id, session.crew_introductions, d) != "": return true
+	if id != "crew_briefing": return false
+	var review := Expedition.debrief(d) == "pending" and Story.reached("crew_habitation", session.crew_introductions, d)
+	return not session.maya_intro_complete or Expedition.aftermath(d) in ["briefing", "alert"] or review or Expedition.radiation(d) == "alert"
+
+func _approach_commander(id: String, delta: float) -> void:
+	var actor: Node3D = actors[id]
 	var player: Node3D = world.get_node("Outpost/Astronaut")
 	if world.maya_dialogue_active or player.ui_blocked or player.seated: return
 	var target: Vector3 = actor.get_parent().to_local(player.global_position)
@@ -941,7 +950,7 @@ func _approach_commander(delta: float) -> void:
 		if not ground_hit.is_empty(): after = ground_hit.position
 		if not ground_hit.is_empty() and route_service.clear_segment(actor.position, after):
 			actor.position = after
-			data.crew.crew_briefing.position = after
+			data.crew[id].position = after
 			moving = true
 	if gap > 0.1: actor.look_at(actor.get_parent().to_global(target), Vector3.UP)
-	_update_visual("crew_briefing", moving)
+	_update_visual(id, moving)

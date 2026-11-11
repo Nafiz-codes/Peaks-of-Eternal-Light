@@ -29,7 +29,10 @@ func run() -> void:
  assert(session.orbital_clock.elapsed_seconds == before + 86400.0)
  await process_frame
  session.dashboard_state.pending_events.clear()
- session.account_elapsed_time(86400.0)
+ # Resources follow play time: one simulated day of play closes the day once something is built.
+ session.solar_placement = {"transform": Transform3D.IDENTITY}
+ session.tick_play(session.dashboard_simulator.DAY_SECONDS)
+ await process_frame
  assert(session.dashboard_state.sol == 10)
  assert(session.orbital_clock.elapsed_seconds == before + 86400.0)
  assert(not Save.decode(Save.capture(session)).is_empty())

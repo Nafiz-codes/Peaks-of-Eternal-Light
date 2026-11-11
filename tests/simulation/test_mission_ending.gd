@@ -28,6 +28,8 @@ func run() -> void:
 	check(simulator.load_contracts() == OK, "Contracts load")
 	# Short on power: the review lists it and the mission stays in progress.
 	var state: Variant = simulator.begin_mission("ridge_a")
+	# Every reserve at its goal line except power.
+	for key in Simulator.MISSION_GOALS: state.set(key, Simulator.MISSION_GOALS[key])
 	state.power_kwh = 10.0
 	var shortfalls: Array = simulator.complete_mission(state)
 	check(shortfalls == ["power"] and state.mission_outcome.status == "in_progress", "Low power fails the review without ending the mission")
@@ -54,6 +56,7 @@ func run() -> void:
 
 	# Continue playing: the mission reopens, stays open, and Surface Survey can be replayed.
 	var played: Variant = simulator.begin_mission("ridge_a")
+	for key in Simulator.MISSION_GOALS: played.set(key, Simulator.MISSION_GOALS[key])
 	check(simulator.complete_mission(played).is_empty(), "Base passes the review")
 	played.rover_expedition = Rules.fresh()
 	played.rover_expedition.completed = [0, 1, 2]
@@ -72,7 +75,7 @@ func run() -> void:
 	# DEV resources top up every reserve, with power capped at the battery size.
 	var topped: Variant = simulator.begin_mission("ridge_a")
 	simulator.developer_add_resources(topped)
-	check(is_equal_approx(topped.power_kwh, Simulator.BATTERY_CAPACITY_KWH) and is_equal_approx(topped.water_l, 650.0), "DEV resources fill reserves and cap power")
+	check(is_equal_approx(topped.power_kwh, Simulator.BATTERY_CAPACITY_KWH) and is_equal_approx(topped.water_l, Simulator.INITIAL_WATER_L + 150.0), "DEV resources fill reserves and cap power")
 	for drain in 6: simulator.developer_add_resources(topped, -1.0)
 	check(topped.power_kwh == 0.0 and topped.water_l == 0.0 and topped.oxygen_kg == 0.0 and topped.food_kg == 0.0, "DEV drain stops at zero")
 

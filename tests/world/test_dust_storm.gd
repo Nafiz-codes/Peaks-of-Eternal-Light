@@ -19,6 +19,7 @@ func run():
  assert(not storm.active)
  expedition.data.completed = [0, 1]
  expedition.data.mission = -1
+ expedition.data.storm_ready = true # Alex's Science station is up (story tests cover the wait).
  assert(expedition.available_assignment() == -1)
  storm._process(3.0)
  assert(storm.active and storm.intensity > 0.99)

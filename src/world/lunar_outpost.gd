@@ -9,6 +9,7 @@ const ROVER_SCENE := preload("res://Assets/curiosity_rover.glb")
 const HABITAT_SCENE := preload("res://Assets/outpost/habitat.tscn")
 const ASTRONAUT_HEIGHT := 1.7
 const LunarAstronautScript := preload("res://src/world/lunar_astronaut.gd")
+const Story = preload("res://src/simulation/story.gd")
 
 const LUNAR_REGOLITH := Color("5b5b63")
 const HABITAT := Color("d4d8df")
@@ -486,10 +487,8 @@ func _on_player_interaction(interaction_id: String, from_menu: bool = false) -> 
 	if maya_dialogue_active: return
 	if not from_menu and interaction_id in ["crew_briefing", "water_recycler", "food_storage"]:
 		if get_node("Outpost/Astronaut").global_position.distance_to(get_node("Outpost/" + interaction_id).global_position) > 2.5: return
-		var introduced: bool = session.maya_intro_complete if interaction_id == "crew_briefing" else session.crew_introductions.get(interaction_id, false)
-		if introduced:
-			get_node("MissionHUD").inspect_station(interaction_id)
-			return
+	# Story beats (introductions, briefings, orders) start at once; otherwise E opens
+	# the crew menu, which ends up at inspect_station below.
 	var introduction := ""
 	if interaction_id.begins_with("repair:"):
 		get_node("StructureRepairs").start(interaction_id.trim_prefix("repair:"))
@@ -505,7 +504,7 @@ func _on_player_interaction(interaction_id: String, from_menu: bool = false) -> 
 			introduction = "storm_damage"
 		elif aftermath == "alert":
 			introduction = "storm_lost_contact"
-		elif aftermath == "repairs":
+		elif aftermath == "repairs" and from_menu:
 			_ask_skip_repairs()
 			return
 		elif _review_ready(session, expedition):
@@ -516,6 +515,8 @@ func _on_player_interaction(interaction_id: String, from_menu: bool = false) -> 
 			introduction = "maya_closing"
 	elif interaction_id in ["water_recycler", "food_storage"] and not session.crew_introductions.get(interaction_id, false):
 		introduction = interaction_id
+	if introduction.is_empty() and interaction_id in ["water_recycler", "food_storage"]:
+		introduction = Story.pending_beat(interaction_id, session.crew_introductions, expedition)
 	if not introduction.is_empty():
 		var actor := get_node("Outpost/" + interaction_id) as Node3D
 		if get_node("Outpost/Astronaut").global_position.distance_to(actor.global_position) > 2.5: return
@@ -566,7 +567,9 @@ func _radiation_interaction(interaction_id: String, expedition: Dictionary) -> b
 	var stage := Expedition.radiation(expedition)
 	var storm := get_node("RadiationStorm")
 	var line := ""
-	if stage == "alert" and interaction_id == "crew_briefing":
+	if stage == "prep" and interaction_id == "crew_briefing":
+		line = "maya_radiation_prep"
+	elif stage == "alert" and interaction_id == "crew_briefing":
 		line = "radiation_alert" if storm.shelter_built() else "radiation_no_shelter"
 	elif stage == "orders" and interaction_id in Expedition.RADIATION_CREW and not expedition.get("radiation_told", []).has(interaction_id):
 		line = "radiation_order_" + interaction_id
@@ -581,7 +584,10 @@ func _radiation_interaction(interaction_id: String, expedition: Dictionary) -> b
 	dialogue.finished.connect(func():
 		maya_dialogue_active = false
 		dialogue_speaker = ""
-		if line == "radiation_alert":
+		if line == "maya_radiation_prep":
+			get_node("/root/MissionSession").crew_introductions["maya_radiation_prep"] = true
+			storm.begin_incoming()
+		elif line == "radiation_alert":
 			storm.begin_orders()
 		elif line == "radiation_no_shelter":
 			storm.start_wave() # Nowhere to shelter: everyone is exposed.
@@ -595,6 +601,9 @@ func _radiation_interaction(interaction_id: String, expedition: Dictionary) -> b
 func _review_ready(session: Node, expedition: Dictionary) -> bool:
 	var state: Variant = session.dashboard_state
 	if state == null or state.mission_outcome.get("status", "") == "failure":
+		return false
+	# Sam and Alex talk about the outpost's future first (crew_habitation).
+	if not Story.reached("crew_habitation", session.crew_introductions, expedition):
 		return false
 	match Expedition.debrief(expedition):
 		"pending": return true

@@ -19,7 +19,7 @@ static func state_data(state: RefCounted) -> Dictionary:
 static func capture(session: Node) -> Dictionary:
 	var tick: Dictionary = session.dashboard_last_tick.duplicate(true)
 	tick.erase("state")
-	return {"version": VERSION, "saved_at": Time.get_datetime_string_from_system(), "maya_intro_complete":session.maya_intro_complete, "crew_introductions":session.crew_introductions.duplicate(true), "solar_placement":session.solar_placement.duplicate(true), "extra_panels":session.extra_panels.duplicate(true), "station_placements":session.station_placements.duplicate(true), "building_placements":session.building_placements.duplicate(true), "planning_draft":session.planning_draft.duplicate(true), "approved_plan":session.approved_plan.duplicate(true),
+	return {"version": VERSION, "saved_at": Time.get_datetime_string_from_system(), "maya_intro_complete":session.maya_intro_complete, "crew_introductions":session.crew_introductions.duplicate(true), "solar_placement":session.solar_placement.duplicate(true), "extra_panels":session.extra_panels.duplicate(true), "extra_buildings":session.extra_buildings.duplicate(true), "station_placements":session.station_placements.duplicate(true), "building_placements":session.building_placements.duplicate(true), "planning_draft":session.planning_draft.duplicate(true), "approved_plan":session.approved_plan.duplicate(true),
 		"site_id": session.selected_site_id, "state": state_data(session.dashboard_state),
 		"last_tick": tick, "pose": session.outpost_pose.duplicate(true), "crew_read_reports": session.crew_read_reports.duplicate(true),
 		"orbital_clock": session.orbital_clock.duplicate(true), "player_character": session.player_character.duplicate(true)}
@@ -37,7 +37,7 @@ static func decode(data: Variant) -> Dictionary:
 	var crew_introductions: Variant = data.get("crew_introductions", {})
 	if not crew_introductions is Dictionary: return {}
 	for id in crew_introductions:
-		if id not in ["water_recycler", "food_storage", "maya_closing", "rover_briefing"] or not crew_introductions[id] is bool: return {}
+		if id not in preload("res://src/simulation/story.gd").FLAGS or not crew_introductions[id] is bool: return {}
 	var placement: Variant = data.get("solar_placement", {})
 	if not placement is Dictionary: return {}
 	if not placement.is_empty() and (not placement.get("transform") is Transform3D or not placement.transform.is_finite()): return {}
@@ -62,6 +62,13 @@ static func decode(data: Variant) -> Dictionary:
 		if not entry.transform.basis.is_equal_approx(entry.transform.basis.orthonormalized()) or entry.transform.basis.determinant() < 0.99: return {}
 		var kwh: Variant = entry.get("kwh_per_sol")
 		if not (kwh is float or kwh is int) or not is_finite(float(kwh)) or float(kwh) < 0.0 or float(kwh) > 100.0: return {}
+	var extra_buildings: Variant = data.get("extra_buildings", [])
+	if not extra_buildings is Array or extra_buildings.size() > Simulator.MAX_STRUCTURE_COPIES * Simulator.REPEATABLE_STRUCTURES.size(): return {}
+	var copy_counts := {}
+	for entry in extra_buildings:
+		if not entry is Dictionary or entry.get("id") not in Simulator.REPEATABLE_STRUCTURES or not entry.get("transform") is Transform3D or not entry.transform.is_finite(): return {}
+		if not entry.transform.basis.is_equal_approx(entry.transform.basis.orthonormalized()) or entry.transform.basis.determinant() < 0.99: return {}
+		copy_counts[entry.id] = int(copy_counts.get(entry.id, 0)) + 1
 	var draft: Variant = data.get("planning_draft", {})
 	var approved: Variant = data.get("approved_plan", {})
 	if not draft is Dictionary or not approved is Dictionary: return {}
@@ -105,7 +112,7 @@ static func decode(data: Variant) -> Dictionary:
 			var key: String = property.name
 			if not data.state.has(key) or typeof(data.state[key]) != property.type:
 				# Older version 1 saves omit newer fields; preserve their defaults.
-				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "easter_eggs", "rover_training", "rover_expedition", "placed_panel_kwh_per_sol", "clock_start_seconds", "milestones"] and not data.state.has(key):
+				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "easter_eggs", "rover_training", "rover_expedition", "placed_panel_kwh_per_sol", "clock_start_seconds", "milestones", "structure_copies", "day_progress"] and not data.state.has(key):
 					continue
 				return {}
 			var value: Variant = data.state[key]
@@ -160,6 +167,11 @@ static func decode(data: Variant) -> Dictionary:
 				return {}
 			if not state.rover_pose.position.is_finite() or not is_finite(state.rover_pose.heading):
 				return {}
+		# Every saved copy has a placed building, and only repeatable producers repeat.
+		if state.structure_copies != copy_counts: return {}
+		for id in state.structure_copies:
+			if not state.built_structures.has(id) or not state.structure_copies[id] is int or state.structure_copies[id] < 1 or state.structure_copies[id] > Simulator.MAX_STRUCTURE_COPIES: return {}
+		if state.day_progress < 0.0 or state.day_progress > 50.0: return {}
 		if state.milestones.size() > 32: return {}
 		for entry in state.milestones:
 			if not entry.get("label") is String: return {}
@@ -175,7 +187,7 @@ static func decode(data: Variant) -> Dictionary:
 			return {}
 		if not pose.transform.is_finite() or not is_finite(pose.yaw) or not is_finite(pose.pitch):
 			return {}
-	return {"simulator": simulator, "state": state, "site_id": data.site_id, "maya_intro_complete":introduction, "crew_introductions":crew_introductions.duplicate(true), "solar_placement":placement.duplicate(true), "extra_panels":extra_panels.duplicate(true), "station_placements":stations.duplicate(true), "building_placements":buildings.duplicate(true), "planning_draft":draft.duplicate(true), "approved_plan":approved.duplicate(true),
+	return {"simulator": simulator, "state": state, "site_id": data.site_id, "maya_intro_complete":introduction, "crew_introductions":crew_introductions.duplicate(true), "solar_placement":placement.duplicate(true), "extra_panels":extra_panels.duplicate(true), "extra_buildings":extra_buildings.duplicate(true), "station_placements":stations.duplicate(true), "building_placements":buildings.duplicate(true), "planning_draft":draft.duplicate(true), "approved_plan":approved.duplicate(true),
 		"pose": pose.duplicate(true), "last_tick": data.last_tick.duplicate(true), "crew_read_reports": read_reports.duplicate(true), "orbital_clock": orbital_clock.duplicate(true), "player_character": identity.duplicate(true)}
 
 static func restore(session: Node, data: Dictionary) -> Error:
@@ -187,6 +199,7 @@ static func restore(session: Node, data: Dictionary) -> Error:
 	session.crew_introductions = restored.crew_introductions
 	session.solar_placement = restored.solar_placement
 	session.extra_panels = restored.extra_panels
+	session.extra_buildings = restored.extra_buildings
 	session.station_placements = restored.station_placements
 	session.building_placements = restored.building_placements
 	session.planning_draft = restored.planning_draft

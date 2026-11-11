@@ -45,8 +45,9 @@ var elapsed := 0.0
 var intensity := 0.0
 var bound_data: Dictionary = {}
 
+## The storm waits until Alex's Science station is up after Frozen Horizon (storm_ready).
 static func pending(data: Dictionary) -> bool:
-	return data.get("completed", []).has(1) and not data.get("completed", []).has(2) and int(data.get("mission", -1)) != 2 and not bool(data.get("dust_storm_complete", false))
+	return data.get("completed", []).has(1) and not data.get("completed", []).has(2) and int(data.get("mission", -1)) != 2 and not bool(data.get("dust_storm_complete", false)) and bool(data.get("storm_ready", false))
 
 func _ready() -> void:
 	name = "DustStorm"
