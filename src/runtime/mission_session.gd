@@ -321,6 +321,28 @@ func developer_add_resources(direction := 1.0) -> void:
 	state_changed.emit()
 
 
+## Paid choices before the radiation wave and the dust storm (false when unaffordable).
+func shield_structures() -> bool:
+	return _paid_action(dashboard_simulator.shield_structures(dashboard_state) if dashboard_state != null else false)
+
+
+func stow_producers() -> bool:
+	return _paid_action(dashboard_simulator.stow_producers(dashboard_state) if dashboard_state != null else false)
+
+
+func redeploy_producers() -> void:
+	if dashboard_state == null: return
+	dashboard_simulator.redeploy_producers(dashboard_state)
+	_paid_action(true)
+
+
+func _paid_action(ok: bool) -> bool:
+	if ok:
+		capture_sol_checkpoint()
+		state_changed.emit()
+	return ok
+
+
 func apply_radiation_wave(exposed: int) -> void:
 	if dashboard_state == null:
 		return

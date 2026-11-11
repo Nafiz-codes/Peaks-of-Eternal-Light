@@ -879,7 +879,7 @@ func describe(id: String) -> String:
 		for route in data.routes.values():
 			text += "\n" + route.text
 		for entry in data.log.slice(maxi(0, data.log.size() - 5)):
-			text += "\nSol %d: %s" % [entry.sol, entry.text]
+			text += "\nDay %d: %s" % [entry.sol, entry.text]
 	return text
 
 func _active_event(event_id: String) -> bool:
@@ -934,7 +934,7 @@ func _wants_commander(id: String) -> bool:
 	if Story.pending_beat(id, session.crew_introductions, d) != "": return true
 	if id != "crew_briefing": return false
 	var review := Expedition.debrief(d) == "pending" and Story.reached("crew_habitation", session.crew_introductions, d)
-	return not session.maya_intro_complete or Expedition.aftermath(d) in ["briefing", "alert"] or review or Expedition.radiation(d) == "alert"
+	return not session.maya_intro_complete or Expedition.aftermath(d) in ["briefing", "alert"] or review or Expedition.radiation(d) in ["prep", "alert"] or Expedition.storm_stage(d) == "warning"
 
 func _approach_commander(id: String, delta: float) -> void:
 	var actor: Node3D = actors[id]

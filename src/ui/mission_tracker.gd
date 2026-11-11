@@ -71,6 +71,8 @@ func _process(_delta: float) -> void:
 		var storm: Node = world.get_node("RadiationStorm")
 		objective = "Get the crew to shelter"
 		instruction = "Order each crew member into the radiation habitat (press E): %d / 3 · wave in %d s" % [expeditions.data.get("radiation_told", []).size(), storm.seconds_left()]
+		instruction += "
+You can shelter too: press E at the habitat door."
 		destination = storm.next_crew_position(player.global_position)
 	elif expeditions.Rules.radiation(expeditions.data) == "wave":
 		objective = "Radiation wave"
@@ -90,8 +92,18 @@ func _process(_delta: float) -> void:
 		instruction = "Press E when Maya is nearby."
 		destination = world.get_node("Outpost/crew_briefing").global_position
 	elif not session.construction_ready() and data.get("completed", []).is_empty() and data.get("mission", -1) < 0:
-		objective = "Build the solar panel and Maya's Operations station"
-		instruction = "BUILDING UNLOCKED — Solar Panel · Maya · Operations\nSolar panel: %s · Operations: %s · Press B to build." % ["placed" if session.solar_placement.has("transform") else "to place", "placed" if session.station_placements.has("maya_station") else "to place"]
+		# Name only what is still missing, so a placed panel never reads as "build another".
+		var panel_done: bool = session.solar_placement.has("transform")
+		var station_done: bool = session.station_placements.has("maya_station")
+		if panel_done:
+			objective = "Build Maya's Operations station"
+			instruction = "Solar panel placed. Press B and choose Maya · Operations."
+		elif station_done:
+			objective = "Place your first solar panel"
+			instruction = "Operations station placed. Press B and choose Solar Panel (the first one is free)."
+		else:
+			objective = "Build a solar panel and Maya's Operations station"
+			instruction = "BUILDING UNLOCKED — Solar Panel (first one free) · Maya · Operations\nOne of each is needed. Press B to build."
 	elif session.construction_ready() and data.get("completed", []).is_empty() and data.get("mission", -1) < 0 and not rover_active:
 		if not session.crew_introductions.get("rover_briefing", false):
 			objective = "Speak with Maya"
@@ -118,12 +130,18 @@ func _process(_delta: float) -> void:
 		objective = "Talk with Alex"
 		instruction = "Press E when Alex is nearby."
 		destination = world.get_node("Outpost/water_recycler").global_position
-	elif data.get("completed", []).has(0) and not data.get("completed", []).has(1) and data.get("mission", -1) < 0 and not session.station_placements.has("sam_station") and not rover_active:
-		objective = "Build Sam's Engineering station"
-		instruction = "BUILDING UNLOCKED — Sam · Engineering\nBuild it to prepare for the next expedition. Press B."
-	elif data.get("completed", []).has(1) and not data.get("dust_storm_complete", false) and not data.get("storm_ready", false):
-		objective = "Build Alex's Science station and establish water extraction"
-		instruction = "NEW BUILDINGS — Alex · Science · Water Extractor (water and oxygen) · Greenhouse Module (food and oxygen). Press B."
+	elif data.get("completed", []).has(0) and not data.get("completed", []).has(1) and data.get("mission", -1) < 0 and not (session.station_placements.has("sam_station") and session.station_placements.has("alex_station")) and not rover_active:
+		objective = "Build Sam's and Alex's stations"
+		instruction = "BUILDINGS UNLOCKED — Sam · Engineering · Alex · Science · Greenhouse Module
+Both stations are needed for the next expedition. Press B."
+	elif expeditions.Rules.storm_stage(data) == "waiting":
+		objective = "Establish water extraction"
+		instruction = "NEW BUILDING — Water Extractor (water and oxygen). Press B.
+More extractors and greenhouses keep the reserves up."
+	elif expeditions.Rules.storm_stage(data) == "warning":
+		objective = "Talk with Maya"
+		instruction = "Maya has a warning about the weather: press E when she is nearby."
+		destination = world.get_node("Outpost/crew_briefing").global_position
 	elif expeditions.Rules.debrief(data) in ["pending", "retry"]:
 		objective = "Mission review"
 		instruction = "Talk with Maya: press E when she is nearby." if expeditions.Rules.debrief(data) == "pending" else "Raise every reserve to its goal line on the resource bars, then talk with Maya again. More greenhouses, extractors and solar panels help."
@@ -157,12 +175,15 @@ func _process(_delta: float) -> void:
 		instruction = str(expedition_view.get("objective", instruction))
 	# The first two completed expeditions hand control back to Maya, not Lifeline.
 	var completed: Array = expeditions.data.get("completed", [])
-	if running and completed.has(0) and completed.has(1) and not completed.has(2) and expeditions.data.get("mission", -1) != 2 and str(expeditions.data.get("aftermath", "briefing")) in ["briefing", "alert"]:
+	# Only once the storm has passed (Rules.aftermath is empty before it): before the storm
+	# the next step is Alex's talk, the build window or Maya's warning, shown above.
+	if running and completed.has(0) and completed.has(1) and not completed.has(2) and expeditions.data.get("mission", -1) != 2 and expeditions.Rules.aftermath(expeditions.data) in ["briefing", "alert"]:
 		objective = "Press R to exit Rover and talk to Maya." if rover_active else "Talk with Maya"
-		instruction = "Exit the lander with E, then approach Maya." if rover_active else "Press E near Maya, then choose Talk / Status."
+		instruction = "Exit the lander with E, then approach Maya." if rover_active else "Press E when Maya is nearby."
 		destination = world.get_node("Outpost/crew_briefing").global_position
 	title.text = "◆  " + objective
 	detail.text = instruction
+	_update_talk_markers(destination)
 	if destination is Vector3:
 		detail.text += "\n%.0f m" % observer.global_position.distance_to(destination)
 	# Measure this frame's text before stacking instructions, status, health and key hints.
@@ -191,3 +212,16 @@ func _process(_delta: float) -> void:
 		marker.text = "◆\n%.0f m" % distance
 		marker.position = bounded - marker.size * 0.5
 		marker.show()
+
+## The "!" over a crew member: whoever the objective sends the Commander to talk to; when
+## nobody is waiting, crew with an unread status report.
+func _update_talk_markers(destination: Variant) -> void:
+	var target := ""
+	if destination is Vector3:
+		for id in ["crew_briefing", "food_storage", "water_recycler"]:
+			if world.get_node("Outpost/" + id).global_position.distance_to(destination) < 0.5: target = id
+	for id in ["crew_briefing", "food_storage", "water_recycler"]:
+		var marker := world.get_node_or_null("Outpost/" + id + "/StatusLabel/UpdateMarker")
+		if marker == null: continue
+		marker.visible = id == target or (target.is_empty() and bool(marker.get_meta("unread", false)))
+		marker.modulate = Color("f3cc74") if id == target else Color.WHITE

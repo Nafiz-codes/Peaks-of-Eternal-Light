@@ -334,7 +334,7 @@ func developer_jump_event(index: int) -> bool:
 	session.dashboard_state.pending_events.clear()
 	session.dashboard_state.rover_expedition = fresh
 	session.maya_intro_complete = true
-	session.crew_introductions = _developer_flags(["maya_radiation_prep", "sam_engineering"] + (["alex_science"] if index >= 2 else []))
+	session.crew_introductions = _developer_flags(["maya_radiation_prep", "sam_engineering", "alex_science"] + (["alex_resources"] if index >= 2 else []))
 	if index >= 2: fresh["storm_ready"] = true
 	bound_state = null
 	_sync()
@@ -370,7 +370,7 @@ func _developer_mission_review(access: Node) -> bool:
 	done["aftermath"] = "done"
 	done["radiation"] = "done"
 	done["storm_ready"] = true
-	session.crew_introductions = _developer_flags(["maya_radiation_prep", "sam_engineering", "alex_science", "crew_habitation"])
+	session.crew_introductions = _developer_flags(["maya_radiation_prep", "sam_engineering", "alex_science", "alex_resources", "crew_habitation"])
 	return _developer_on_foot(access, done, "DEV: Mission review")
 
 ## DEV: Surface Survey done; Maya walks up with the radiation wave warning.
@@ -467,9 +467,6 @@ func _physics_process(delta: float) -> void:
 	_sync()
 	_update_circle_visibility()
 	if data.is_empty(): return
-	# The dust storm follows once Alex's Science station is up after Frozen Horizon.
-	if data.get("completed", []).has(1) and not data.get("storm_ready", false) and session.station_placements.has("alex_station") and Story.reached("alex_science", session.crew_introductions, data):
-		data["storm_ready"] = true
 	_check_damage()
 	if damage_blocked():
 		_publish()
@@ -649,7 +646,7 @@ func _recall() -> void:
 	data.location = "outpost"
 	data.phase = "active"
 	escort_link = false
-	feedback = "Expedition suspended. Rover recovered to outpost. Repair or advance the Sol, then resume; objective progress retained."
+	feedback = "Expedition suspended. Rover recovered to outpost. Repair or rest a day, then resume; objective progress retained."
 	_refresh_targets()
 	session.capture_sol_checkpoint()
 	tween = create_tween()
@@ -935,8 +932,12 @@ func available_assignment() -> int:
 	if Rules.radiation(data) not in ["", "done"]: return -1
 	# Lifeline opens only after Maya's storm briefings (damage, then the lost astronaut).
 	if Rules.aftermath(data) not in ["", "done"]: return -1
+	# Before the storm (Alex's talk, the build window, Maya's warning) Lifeline is not open,
+	# so Alex is still at the base.
+	if Rules.storm_stage(data) != "": return -1
 	if data.mission < 0 and data.completed.is_empty() and not session.construction_ready(): return -1
 	var next := Rules.assigned(data)
-	# Frozen Horizon needs Sam's Engineering station to service the sampling arm.
-	if next == 1 and data.mission < 0 and not session.station_placements.has("sam_station"): return -1
+	# Frozen Horizon needs Sam's Engineering station for the sampling arm and Alex's
+	# Science station for the samples.
+	if next == 1 and data.mission < 0 and not (session.station_placements.has("sam_station") and session.station_placements.has("alex_station")): return -1
 	return next

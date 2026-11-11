@@ -15,12 +15,12 @@ const PolarSolar = preload("res://src/simulation/polar_solar.gd")
 # Five-person provisioning: retain the previous ten-sol reserve margin while
 # accounting for the player (12 kWh/sol extra baseline, 25% more consumables).
 ## Enough to build the essentials, not to coast: the crew draws on these continuously.
-const INITIAL_POWER_KWH := 200.0
-const INITIAL_WATER_L := 450.0
-const INITIAL_OXYGEN_KG := 50.0
-const INITIAL_FOOD_KG := 40.0
+const INITIAL_POWER_KWH := 100.0
+const INITIAL_WATER_L := 250.0
+const INITIAL_OXYGEN_KG := 30.0
+const INITIAL_FOOD_KG := 22.0
 ## Maya's review passes when every reserve reaches its goal (the line on the HUD bars).
-const MISSION_GOALS := {"power_kwh": 260.0, "water_l": 470.0, "oxygen_kg": 24.0, "food_kg": 18.0}
+const MISSION_GOALS := {"power_kwh": 200.0, "water_l": 330.0, "oxygen_kg": 40.0, "food_kg": 30.0}
 ## Real play seconds for one modeled day of crew draw and production.
 const DAY_SECONDS := 240.0
 ## Extra copies allowed of each repeatable producer (the first copy is not counted).
@@ -28,10 +28,10 @@ const MAX_STRUCTURE_COPIES := 5
 const REPEATABLE_STRUCTURES := ["water_extractor", "greenhouse"]
 ## Extractor ice also feeds electrolysis; greenhouse plants release oxygen as they grow
 ## (about 1.07 kg of O2 per kg of dry biomass from photosynthesis).
-const EXTRACTOR_WATER_L := 16.0
-const EXTRACTOR_OXYGEN_KG := 1.0
-const GREENHOUSE_FOOD_KG := 1.2
-const GREENHOUSE_OXYGEN_KG := 1.3
+const EXTRACTOR_WATER_L := 24.0
+const EXTRACTOR_OXYGEN_KG := 2.2
+const GREENHOUSE_FOOD_KG := 2.2
+const GREENHOUSE_OXYGEN_KG := 2.0
 ## What one copy of each producer adds per day, for the build menu (solar is per spot).
 const STRUCTURE_OUTPUT := {
 	"water_extractor": {"water_l": EXTRACTOR_WATER_L, "oxygen_kg": EXTRACTOR_OXYGEN_KG},
@@ -53,7 +53,9 @@ const TERRAIN_DEPTH_REFERENCE_M := 2500.0
 const TERRAIN_SLOPE_REFERENCE_DEG := 30.0
 const TERRAIN_DEPTH_WEIGHT := 0.12
 const TERRAIN_SLOPE_WEIGHT := 0.08
-const BASE_SOLAR_GENERATION_KWH_PER_SOL := 65.0
+## No generation without panels: the outpost's power comes only from what the Commander
+## places (the lander's own supply is the starting battery charge).
+const BASE_SOLAR_GENERATION_KWH_PER_SOL := 0.0
 const SOLAR_ARRAY_GENERATION_KWH_PER_SOL := 18.0
 ## Gameplay value: share of sunlight left during the dust storm (visuals use the same value).
 const DUST_STORM_LIGHT_MULTIPLIER := 0.5
@@ -61,17 +63,29 @@ const HISTORY_DAYS := 60
 ## Building costs, as cost key -> state field. Water, oxygen and food are what the crew
 ## use while building (Resources/construction.json explains the values).
 const COST_RESOURCES := {"power": "power_kwh", "water": "water_l", "oxygen": "oxygen_kg", "food": "food_kg"}
-const BUILD_RESERVE_DAYS := 3.0 # Never build so much that supplies drop below this.
+const BUILD_RESERVE_DAYS := 2.0 # Never build so much that supplies drop below this.
 ## Gameplay values: a damaged structure keeps this share of its output until repaired,
 ## and the dust storm can damage these. "solar_panel" is the hand-placed panel.
 const DAMAGED_OUTPUT_SHARE := 0.4
+## Random events that ask the Commander to choose are off: their only prompt was a debug
+## panel, and a waiting choice froze the rover and the day. Automatic events still happen.
+const DECISION_EVENTS_ENABLED := false
 ## Gameplay values for the radiation wave, per crew member left outside the radiation
 ## habitat: medical treatment uses supplies, the dose rises, and the crew work slower.
 const RADIATION_TREATMENT := {"water_l": 15.0, "oxygen_kg": 2.0, "food_kg": 1.5}
 const RADIATION_DOSE_MSV := 0.8
 const RADIATION_SLOWDOWN := 0.15 # Output lost per exposed crew member while they recover.
 const RADIATION_RECOVERY_SOLS := 2
-const STORM_DAMAGE_TARGETS := ["solar_panel", "water_extractor", "greenhouse", "shielding_wall", "solar_array"]
+## Only resource-producing structures take storm damage.
+const STORM_DAMAGE_TARGETS := ["solar_panel", "water_extractor", "greenhouse"]
+## Repairs cost the crew this share of the structure's build cost.
+const REPAIR_COST_SHARE := 0.5
+## Shielding the structures before a radiation wave; unshielded producers make this much
+## less for RADIATION_RECOVERY_SOLS afterwards.
+const STRUCTURE_SHIELD_COST := {"power": 10.0, "water": 6.0, "oxygen": 1.0, "food": 0.5}
+const UNSHIELDED_OUTPUT_SHARE := 0.6
+## Packing producers away before the dust storm (the crew's time outside).
+const STOW_COST := {"power": 6.0, "water": 4.0, "oxygen": 0.8, "food": 0.4}
 
 var sites: Array[Dictionary] = []
 var bvad_constants: Dictionary = {}
@@ -289,7 +303,7 @@ func apply_dust_storm(state: Variant) -> bool:
 		"effects": {"solar_light_multiplier": DUST_STORM_LIGHT_MULTIPLIER, "duration_sols": 1},
 		"remaining_sols": 1,
 		"started_sol": state.sol,
-		"text": "Dust storm: sunlight reaching solar power collectors is cut to %d%% for this sol." % roundi(DUST_STORM_LIGHT_MULTIPLIER * 100.0)
+		"text": "Dust storm: sunlight reaching solar power collectors is cut to %d%% for this day." % roundi(DUST_STORM_LIGHT_MULTIPLIER * 100.0)
 	})
 	_publish_action_state(state)
 	return true
@@ -350,6 +364,15 @@ func apply_radiation_wave(state: Variant, exposed: int) -> void:
 			"started_sol": state.sol,
 			"text": "Radiation sickness: %d crew member(s) recovering; the base produces %d%% less." % [exposed, roundi(RADIATION_SLOWDOWN * exposed * 100.0)]
 		})
+	if not state.structures_shielded:
+		state.active_events.append({
+			"event_id": "radiation_structures",
+			"effects": {"producer_multiplier": UNSHIELDED_OUTPUT_SHARE, "duration_sols": RADIATION_RECOVERY_SOLS},
+			"remaining_sols": RADIATION_RECOVERY_SOLS,
+			"started_sol": state.sol,
+			"text": "Unshielded structures: solar panels, extractors and greenhouses produce %d%% less while their electronics recover." % roundi((1.0 - UNSHIELDED_OUTPUT_SHARE) * 100.0)
+		})
+	state.structures_shielded = false
 	_publish_action_state(state)
 
 
@@ -395,12 +418,56 @@ func apply_storm_damage(state: Variant) -> Array:
 	return damaged
 
 
+func repair_cost(state: Variant, structure_id: String) -> Dictionary:
+	var cost := build_cost(state, "solar_array" if structure_id == "solar_panel" else structure_id)
+	for key in cost: cost[key] = float(cost[key]) * REPAIR_COST_SHARE
+	return cost
+
+
+## The first resource the outpost lacks for `cost` ("" when it can pay).
+func missing_for(state: Variant, cost: Dictionary) -> String:
+	for key in COST_RESOURCES:
+		if float(state.get(COST_RESOURCES[key])) < float(cost.get(key, 0.0)) - 0.0001:
+			return key
+	return ""
+
+
 func repair_structure(state: Variant, structure_id: String) -> bool:
 	if state == null or not state.damaged_structures.has(structure_id):
 		return false
+	var cost := repair_cost(state, structure_id)
+	if not missing_for(state, cost).is_empty():
+		return false
+	_spend(state, cost, -1.0)
 	state.damaged_structures.erase(structure_id)
 	_publish_action_state(state)
 	return true
+
+
+## Before a radiation wave: pay to shield the structures (false when it cannot be paid).
+func shield_structures(state: Variant) -> bool:
+	if state == null or not missing_for(state, STRUCTURE_SHIELD_COST).is_empty():
+		return false
+	_spend(state, STRUCTURE_SHIELD_COST, -1.0)
+	state.structures_shielded = true
+	_publish_action_state(state)
+	return true
+
+
+## Before the dust storm: pack the producers away (offline, but safe from damage).
+func stow_producers(state: Variant) -> bool:
+	if state == null or not missing_for(state, STOW_COST).is_empty():
+		return false
+	_spend(state, STOW_COST, -1.0)
+	state.producers_stowed = true
+	_publish_action_state(state)
+	return true
+
+
+func redeploy_producers(state: Variant) -> void:
+	if state == null: return
+	state.producers_stowed = false
+	_publish_action_state(state)
 
 
 func _output_share(state: Variant, structure_id: String) -> float:
@@ -411,7 +478,12 @@ func _output_share(state: Variant, structure_id: String) -> float:
 func _producing_copies(state: Variant, structure_id: String) -> float:
 	if not state.built_structures.has(structure_id):
 		return 0.0
-	return (1.0 + float(state.structure_copies.get(structure_id, 0))) * _output_share(state, structure_id)
+	return (1.0 + float(state.structure_copies.get(structure_id, 0))) * _output_share(state, structure_id) * _producer_multiplier(state)
+
+
+## Panels, extractors and greenhouses: none while packed away, less after an unshielded wave.
+func _producer_multiplier(state: Variant) -> float:
+	return 0.0 if state.producers_stowed else _active_effect_multiplier_for(state.active_events, "producer_multiplier")
 
 
 ## Another copy of a repeatable producer, placed by the Commander. Returns "" or what is short.
@@ -547,6 +619,8 @@ func _evaluate_event_triggers(state: Variant) -> void:
 	for event in events:
 		var event_id := str(event.get("event_id", ""))
 		if event_id.is_empty() or state.triggered_event_ids.has(event_id) or not _event_condition_met(event_id, state):
+			continue
+		if not DECISION_EVENTS_ENABLED and event.get("choices") is Array and not event.choices.is_empty():
 			continue
 		if not _event_roll_succeeds(event_id, rng):
 			continue
@@ -819,7 +893,7 @@ func _calculate_power(state: Variant, site: Dictionary) -> Dictionary:
 	var generated_kwh := (BASE_SOLAR_GENERATION_KWH_PER_SOL + solar_array_output) * solar_yield * active_effect_multiplier * _active_effect_multiplier_for(state.active_events, "output_multiplier") * light_multiplier
 	# The placed panel's rating already includes its site and spot, so only lost light scales it:
 	# outside a storm the amount shown when placing is exactly what arrives every sol.
-	generated_kwh += state.placed_panel_kwh_per_sol * light_multiplier * _output_share(state, "solar_panel")
+	generated_kwh += state.placed_panel_kwh_per_sol * light_multiplier * _output_share(state, "solar_panel") * _producer_multiplier(state)
 	var baseline_kw_per_person := _field_value(bvad_constants, "power_baseline_kw_per_person")
 	var consumed_kwh := baseline_kw_per_person * float(state.crew_size) * 24.0 * _active_effect_multiplier_for(state.active_events, "power_consumption_multiplier")
 	return {

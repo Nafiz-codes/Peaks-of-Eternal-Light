@@ -72,6 +72,9 @@ const Orbit = preload("res://src/world/orbital_model.gd")
 const SUN_SAMPLES_PER_SOL := 48 # Every 30 minutes
 const BUILD_RADIUS_SCALE := 3.0
 const MAX_REACH_M := 30.0 # Farthest aimed spot from the astronaut
+const MIN_GROUND_NORMAL_Y := 0.87 # Slopes up to about 30°.
+const CORNER_TOLERANCE_M := 0.2 # How far a footprint corner may sit above or below the aimed ground,
+const CORNER_TOLERANCE_PER_M := 0.06 # plus this much per metre of half-width.
 ## Shade is tested every 2 h of Sun positions from five points on the panel; the
 ## 30-minute samples in between share that result.
 const SHADE_STRIDE := 4
@@ -429,17 +432,21 @@ func _show_detail(structure: Dictionary) -> void:
 	detail_content.add_child(title)
 	_detail_line(str(structure.get("effect", "")).trim_prefix("Gameplay effect: "), 14)
 	var output: Dictionary = Simulator.STRUCTURE_OUTPUT.get(id, {})
+	var low_output := {}
 	if id == "solar_array":
-		output = {"power_kwh": PANEL_RATED_KWH_PER_SOL * mean_site_yield()}
+		# No single number: the spot's shade and which way the panel faces decide it.
+		var typical := PANEL_RATED_KWH_PER_SOL * mean_site_yield()
+		output = {"power_kwh": snappedf(typical, 5.0)}
+		low_output = {"power_kwh": snappedf(typical * 0.4, 5.0)}
 	if output.is_empty():
 		_detail_line("Produces no resources each day.", 14, UI.MUTED)
 	else:
 		_detail_line("PRODUCTION" + (" · EACH COPY" if id in Simulator.REPEATABLE_STRUCTURES else ""), 13, UI.MUTED)
 		var use: Dictionary = session.dashboard_simulator.crew_daily_use() if session.dashboard_simulator != null else {}
 		for row in DETAIL_RESOURCES:
-			if output.has(row[0]): detail_content.add_child(_output_row(row, float(output[row[0]]), float(use.get(row[0], 0.0))))
+			if output.has(row[0]): detail_content.add_child(_output_row(row, float(output[row[0]]), float(use.get(row[0], 0.0)), float(low_output.get(row[0], -1.0))))
 		if id == "solar_array":
-			_detail_line("At this site's average sunlight; the spot, angle and shade decide the exact amount.", 12, UI.MUTED)
+			_detail_line("Depends on where it stands: open, level ground facing the Sun gives the most; shade from ridges and buildings, or facing away, gives less.", 12, UI.MUTED)
 	detail_panel.show()
 	_fit_detail()
 
@@ -450,7 +457,7 @@ func _fit_detail() -> void:
 
 ## One resource the building makes: its HUD symbol, the daily amount, and how that
 ## compares with what the whole crew uses each day.
-func _output_row(row: Array, amount: float, crew_use: float) -> PanelContainer:
+func _output_row(row: Array, amount: float, crew_use: float, low := -1.0) -> PanelContainer:
 	var accent: Color = DETAIL_COLORS[row[0]]
 	var tile := PanelContainer.new()
 	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -478,7 +485,9 @@ func _output_row(row: Array, amount: float, crew_use: float) -> PanelContainer:
 	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line.add_child(words)
 	var figure := Label.new()
-	figure.text = "+%s %s" % [("%.1f" % amount).trim_suffix(".0"), row[2]]
+	var amount_text := ("%.1f" % amount).trim_suffix(".0")
+	if low >= 0.0: amount_text = "%d–%d" % [roundi(low), roundi(amount)] # A range: placement decides.
+	figure.text = "+%s %s" % [amount_text, row[2]]
 	figure.add_theme_font_size_override("font_size", 22)
 	figure.add_theme_color_override("font_color", accent.lightened(0.25))
 	figure.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -493,6 +502,7 @@ func _output_row(row: Array, amount: float, crew_use: float) -> PanelContainer:
 		var share := Label.new()
 		var ratio := amount / crew_use
 		share.text = ("%.1f×\ncrew use" % ratio) if ratio >= 1.0 else ("%d%%\nof crew use" % roundi(ratio * 100.0))
+		if low >= 0.0: share.text = "up to %d%%\nof crew use" % roundi(ratio * 100.0)
 		share.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		share.add_theme_font_size_override("font_size", 13)
 		share.add_theme_color_override("font_color", UI.TEXT if ratio >= 1.0 else UI.MUTED)
@@ -830,25 +840,28 @@ func _physics_process(_delta: float) -> void:
 	valid = not hit.is_empty() and hit.collider.name == "LunarSurfaceCollision"
 	panel.visible = valid
 	if valid:
-		valid = hit.normal.y > 0.94 and hit.position.distance_to(player.global_position) > 2.0 and hit.position.distance_to(player.global_position) < MAX_REACH_M and in_build_area(hit.position) and not overlaps_rover_circle(hit.position)
+		valid = hit.normal.y > MIN_GROUND_NORMAL_Y and hit.position.distance_to(player.global_position) > 2.0 and hit.position.distance_to(player.global_position) < MAX_REACH_M and in_build_area(hit.position) and not overlaps_rover_circle(hit.position)
 		var ground_basis := Basis(Quaternion(Vector3.UP, hit.normal)) * Basis(Vector3.UP, yaw)
 		panel.global_transform = Transform3D(ground_basis, hit.position - hit.normal * 0.01)
-		# All corners must rest on the same level surface; reject rocks and edges.
+		# Corners must rest on reasonably even ground; bigger footprints may straddle more
+		# unevenness (their foundations bed into the regolith). Rocks and cliffs still fail.
 		var half := _footprint()
+		var tolerance := CORNER_TOLERANCE_M + CORNER_TOLERANCE_PER_M * maxf(half.x, half.y)
 		for corner in [Vector3(-half.x, 0, -half.y), Vector3(half.x, 0, -half.y), Vector3(-half.x, 0, half.y), Vector3(half.x, 0, half.y)]:
 			var point: Vector3 = panel.global_transform * corner
 			if not in_build_area(point): valid = false
-			var support_query := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 2.0, point - Vector3.UP * 0.3)
+			var support_query := PhysicsRayQueryParameters3D.create(point + Vector3.UP * (tolerance + 2.0), point - Vector3.UP * (tolerance + 0.3))
 			support_query.exclude = [player.get_rid()]
 			var support := get_world_3d().direct_space_state.intersect_ray(support_query)
-			if support.is_empty() or support.collider.name != "LunarSurfaceCollision" or absf((support.position - point).dot(hit.normal)) > 0.03 or support.normal.y < 0.94:
+			if support.is_empty() or support.collider.name != "LunarSurfaceCollision" or absf((support.position - point).dot(hit.normal)) > tolerance or support.normal.y < MIN_GROUND_NORMAL_Y:
 				valid = false
 		var space := PhysicsShapeQueryParameters3D.new()
 		var box := BoxShape3D.new()
 		box.size = Vector3(half.x * 2.0, _clearance_height(), half.y * 2.0)
 		space.shape = box
 		space.transform = Transform3D(panel.global_basis, hit.position + hit.normal * (box.size.y * 0.5 + 0.12))
-		if selected_id == "solar_array": space.exclude = [player.get_rid()]
+		# Only structures, rocks and crew block a spot: uneven ground under the box does not.
+		space.exclude = [hit.collider.get_rid()] + ([player.get_rid()] if selected_id == "solar_array" else [])
 		if not get_world_3d().direct_space_state.intersect_shape(space, 1).is_empty(): valid = false
 	if valid and NASABuildings.MODELS.has(selected_id):
 		# Preserve each crew member's reserved standing space at their outpost.

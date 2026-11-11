@@ -106,7 +106,7 @@
       "choices": [
         {
           "choice_id": "mediate",
-          "text": "Spend a sol mediating",
+          "text": "Spend a day mediating",
           "effects": {
             "crew_stress": "-0.1"
           }
@@ -197,7 +197,7 @@
       "choices": [
         {
           "choice_id": "conserve_power",
-          "text": "Enter a one-sol conservation mode",
+          "text": "Enter a one-day conservation mode",
           "effects": {
             "power_consumption_multiplier": 0.8,
             "crew_stress": "+0.04"
@@ -335,7 +335,7 @@
         },
         {
           "choice_id": "accept_lower_yield",
-          "text": "Accept reduced yield until the next sol",
+          "text": "Accept reduced yield until the next day",
           "effects": {
             "crew_stress": "+0.02"
           }

@@ -19,7 +19,7 @@ func run() -> void:
 	var menu = world.get_node("MissionHUD").crew_dialogue
 	assert(not menu.visible and not session.maya_intro_complete)
 	var dialogue = world.get_node("MayaIntroduction")
-	assert(world.maya_dialogue_active and dialogue.lines.size() == 3)
+	assert(world.maya_dialogue_active and dialogue.lines.size() == 6)
 	assert(dialogue.lines[0][1] == "smiling" and dialogue.lines[2][1] == "neutral")
 	assert(dialogue.view.speech.text.begins_with("Welcome to the Moon."))
 	dialogue.advance()
@@ -28,6 +28,11 @@ func run() -> void:
 	assert(dialogue.view.portrait.visible)
 	dialogue.advance()
 	assert(not session.maya_intro_complete)
+	# Maya explains the reserve bars and the victory targets, with the real goal amounts.
+	dialogue.advance()
+	dialogue.advance()
+	dialogue.advance()
+	assert(dialogue.view.speech.text.contains("%d kilograms of oxygen" % int(preload("res://src/simulation/mission_simulator.gd").MISSION_GOALS.oxygen_kg)))
 	dialogue.advance()
 	await process_frame
 	assert(session.maya_intro_complete and not player.ui_blocked)

@@ -112,7 +112,7 @@ static func decode(data: Variant) -> Dictionary:
 			var key: String = property.name
 			if not data.state.has(key) or typeof(data.state[key]) != property.type:
 				# Older version 1 saves omit newer fields; preserve their defaults.
-				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "easter_eggs", "rover_training", "rover_expedition", "placed_panel_kwh_per_sol", "clock_start_seconds", "milestones", "structure_copies", "day_progress"] and not data.state.has(key):
+				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "easter_eggs", "rover_training", "rover_expedition", "placed_panel_kwh_per_sol", "clock_start_seconds", "milestones", "structure_copies", "day_progress", "structures_shielded", "producers_stowed"] and not data.state.has(key):
 					continue
 				return {}
 			var value: Variant = data.state[key]
@@ -179,6 +179,8 @@ static func decode(data: Variant) -> Dictionary:
 				if not (entry.get(key) is float or entry.get(key) is int) or not is_finite(float(entry[key])): return {}
 		if not state.mission_outcome.get("status", "") in ["in_progress", "success", "failure"]:
 			return {}
+		# A decision saved before decision events were switched off would freeze the game.
+		if not Simulator.DECISION_EVENTS_ENABLED: state.pending_events.clear()
 		state.mission_outcome = simulator._evaluate_mission_outcome(state)
 		simulator._update_report_data(state)
 	var pose: Dictionary = data.pose

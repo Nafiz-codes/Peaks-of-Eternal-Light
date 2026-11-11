@@ -7,10 +7,10 @@
       "structure_id": "solar_array",
       "name": "Solar Panel",
       "build_cost": {
-        "power": 8,
-        "water": 4,
-        "oxygen": 0.8,
-        "food": 0.5
+        "power": 6,
+        "water": 2,
+        "oxygen": 0.3,
+        "food": 0.2
       },
       "effect": "Gameplay effect: another hand-placed solar panel. Its daily energy depends on where it stands, which way it faces and what shades it. The first panel is free.",
       "build_time_sols": 2
@@ -19,10 +19,10 @@
       "structure_id": "water_extractor",
       "name": "Water Extractor",
       "build_cost": {
-        "power": 15,
-        "water": 12,
-        "oxygen": 2.0,
-        "food": 1.2
+        "power": 10,
+        "water": 6,
+        "oxygen": 0.8,
+        "food": 0.5
       },
       "effect": "Gameplay effect: once a rover prospect has been investigated, it melts the ice into water and splits some of it into oxygen by electrolysis. Build more copies to add more.",
       "build_time_sols": 3
@@ -31,10 +31,10 @@
       "structure_id": "greenhouse",
       "name": "Greenhouse Module",
       "build_cost": {
-        "power": 18,
-        "water": 20,
-        "oxygen": 2.0,
-        "food": 1.2
+        "power": 12,
+        "water": 8,
+        "oxygen": 0.8,
+        "food": 0.5
       },
       "effect": "Gameplay effect: grows dry food, and its plants release oxygen as they grow. Build more copies to add more. It needs no extra power or water.",
       "build_time_sols": 3
@@ -43,10 +43,10 @@
       "structure_id": "shielding_wall",
       "name": "Radiation Shielding Habitat",
       "build_cost": {
-        "power": 10,
-        "water": 10,
-        "oxygen": 3.0,
-        "food": 1.8
+        "power": 8,
+        "water": 5,
+        "oxygen": 1.2,
+        "food": 0.8
       },
       "effect": "Gameplay effect: crew who shelter inside it during a radiation wave are protected, and it reduces the crew's everyday radiation dose by 25%. Burying modules under regolith is heavy work, so it costs the crew a lot of oxygen; a regolith stockpile halves the crew's water, oxygen and food cost.",
       "build_time_sols": 2
@@ -55,10 +55,10 @@
       "structure_id": "habitat_module",
       "name": "Habitat Extension",
       "build_cost": {
-        "power": 12,
-        "water": 15,
-        "oxygen": 2.5,
-        "food": 1.5
+        "power": 10,
+        "water": 8,
+        "oxygen": 1.0,
+        "food": 0.6
       },
       "effect": "Gameplay effect: adds two crew-capacity slots and reduces aggregate crew-stress gain by 15%. It is deliberately a late, expensive resilience upgrade.",
       "build_time_sols": 4
@@ -67,10 +67,10 @@
       "structure_id": "comms_relay",
       "name": "Comms Relay",
       "build_cost": {
-        "power": 5,
-        "water": 3,
-        "oxygen": 0.6,
-        "food": 0.4
+        "power": 4,
+        "water": 2,
+        "oxygen": 0.3,
+        "food": 0.2
       },
       "effect": "Gameplay effect: gives early warning of solar-particle events: the radiation wave countdown is shown and the crew get an extra minute to reach shelter.",
       "build_time_sols": 1

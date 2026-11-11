@@ -55,7 +55,7 @@ func _mark(id: String, target: Node3D) -> Area3D:
 	shape.position.y = 0.9
 	area.add_child(shape)
 	var label := Label3D.new()
-	label.text = "DAMAGED\nPress E to repair"
+	label.text = "DAMAGED\nPress E to repair · costs supplies"
 	label.font = world.tag_font(700)
 	label.font_size = 44
 	label.pixel_size = 0.006
@@ -91,6 +91,14 @@ func start(id: String) -> void:
 	if state == null or not state.damaged_structures.has(id) or is_instance_valid(minigame): return
 	var player := world.get_node("Outpost/Astronaut")
 	if player.ui_blocked or player.seated: return
+	# Repairs use the crew's spare parts and time: half the structure's build cost.
+	var cost: Dictionary = session.dashboard_simulator.repair_cost(state, id)
+	var missing: String = session.dashboard_simulator.missing_for(state, cost)
+	var hud := world.get_node("MissionHUD")
+	if not missing.is_empty():
+		hud.notice.text = "Not enough %s to repair it. Repair costs %s." % [missing, world.cost_text(cost)]
+		return
+	hud.notice.text = "Repair cost: " + world.cost_text(cost)
 	minigame = Minigame.new()
 	minigame.player = player
 	minigame.title_text = "Solar panel" if id == "solar_panel" else str(session.dashboard_simulator._find_structure(id).get("name", id.replace("_", " ")))

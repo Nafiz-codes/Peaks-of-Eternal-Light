@@ -36,6 +36,10 @@ var damaged_structures: Dictionary = {}
 var structure_copies: Dictionary = {}
 ## Share of the current day already charged by continuous play (tick_time).
 var day_progress: float = 0.0
+## Paid shielding for the next radiation wave; spent when the wave hits.
+var structures_shielded: bool = false
+## Producers packed away for the dust storm (they make nothing until redeployed).
+var producers_stowed: bool = false
 ## Fixed daily output of the hand-placed solar panel, set from its placement.
 var placed_panel_kwh_per_sol: float = 0.0
 ## World-clock seconds at mission start, so power uses the same days as the sky.
@@ -94,6 +98,8 @@ func snapshot() -> Dictionary:
 		"damaged_structures": damaged_structures.duplicate(true),
 		"structure_copies": structure_copies.duplicate(true),
 		"day_progress": day_progress,
+		"structures_shielded": structures_shielded,
+		"producers_stowed": producers_stowed,
 		"last_rover_action": last_rover_action,
 		"rover_distance_this_sol_km": rover_distance_this_sol_km,
 		"rover_total_distance_km": rover_total_distance_km,

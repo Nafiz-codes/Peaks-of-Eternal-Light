@@ -6,14 +6,15 @@ extends RefCounted
 const Rules = preload("res://src/simulation/rover_expedition.gd")
 
 ## Dialogue flags in story order, each said once (all optional booleans in saves).
-const FLAGS := ["water_recycler", "food_storage", "maya_closing", "rover_briefing", "maya_radiation_prep", "sam_engineering", "alex_science", "crew_habitation"]
+const FLAGS := ["water_recycler", "food_storage", "maya_closing", "rover_briefing", "maya_radiation_prep", "sam_engineering", "alex_science", "alex_resources", "crew_habitation"]
 
 ## The buildings each story beat unlocks.
 const UNLOCKS := {
 	"maya_closing": ["solar_array", "maya_station"],
 	"maya_radiation_prep": ["comms_relay", "shielding_wall"],
 	"sam_engineering": ["sam_station"],
-	"alex_science": ["alex_station", "water_extractor", "greenhouse"],
+	"alex_science": ["alex_station", "greenhouse"],
+	"alex_resources": ["water_extractor"],
 	"crew_habitation": ["habitat_module"],
 }
 
@@ -29,7 +30,8 @@ static func reached(flag: String, intros: Dictionary, d: Dictionary) -> bool:
 		"maya_closing": return not completed.is_empty() or int(d.get("mission", -1)) >= 0
 		"maya_radiation_prep": return completed.has(1) or str(d.get("radiation", "prep")) != "prep"
 		"sam_engineering": return completed.has(1) or int(d.get("mission", -1)) >= 1
-		"alex_science": return completed.has(2) or bool(d.get("dust_storm_complete", false))
+		"alex_science": return completed.has(1) or int(d.get("mission", -1)) >= 1
+		"alex_resources": return completed.has(2) or bool(d.get("dust_storm_complete", false)) or bool(d.get("storm_ready", false))
 		"crew_habitation": return str(d.get("debrief", "pending")) != "pending"
 	return false
 
@@ -50,5 +52,6 @@ static func pending_beat(speaker: String, intros: Dictionary, d: Dictionary) -> 
 			if completed.has(0) and Rules.radiation(d) == "done" and not reached("sam_engineering", intros, d): return "sam_engineering"
 			if completed.has(2) and not reached("crew_habitation", intros, d): return "crew_habitation"
 		"water_recycler":
-			if completed.has(1) and not reached("alex_science", intros, d): return "alex_science"
+			if completed.has(0) and Rules.radiation(d) == "done" and not reached("alex_science", intros, d): return "alex_science"
+			if completed.has(1) and not reached("alex_resources", intros, d): return "alex_resources"
 	return ""

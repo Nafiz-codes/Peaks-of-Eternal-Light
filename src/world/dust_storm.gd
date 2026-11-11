@@ -1,4 +1,6 @@
 extends Node3D
+const Story = preload("res://src/simulation/story.gd")
+const Rules = preload("res://src/simulation/rover_expedition.gd")
 ## One visual-only interlude after Frozen Horizon, before Lifeline.
 const DURATION := 15.0
 const CLOUD = preload("res://src/world/dust_cloud.gdshader")
@@ -96,6 +98,13 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	var data: Dictionary = expeditions.data
+	_show_producers(session.dashboard_state == null or not session.dashboard_state.producers_stowed)
+	# After Alex's talk the crew has STORM_PREP_SECONDS to build before Maya's warning.
+	if Rules.storm_stage(data) == "waiting" and not get_tree().paused and not get_parent().maya_dialogue_active and Story.reached("alex_resources", session.crew_introductions, data):
+		data["storm_prep_elapsed"] = float(data.get("storm_prep_elapsed", 0.0)) + delta
+		if Rules.storm_stage(data) == "warning":
+			session.capture_sol_checkpoint()
+			session.state_changed.emit()
 	if active and (data != bound_data or not pending(data)):
 		_restore()
 	if not pending(data) or expeditions.transitioning: return
@@ -141,7 +150,53 @@ func _process(delta: float) -> void:
 	if elapsed >= DURATION:
 		data["dust_storm_complete"] = true
 		_restore()
+		# Packed-away producers go back up once the dust clears.
+		if session.dashboard_state != null and session.dashboard_state.producers_stowed: session.redeploy_producers()
 		session.capture_sol_checkpoint()
+
+## Packed-away panels, extractors and greenhouses stay where they are under storm covers
+## (they produce nothing) until the crew redeploys them after the storm.
+func _show_producers(shown: bool) -> void:
+	var placement := get_parent().get_node_or_null("SolarPlacement")
+	if placement == null: return
+	var nodes: Array = [placement.solar_panel] if placement.placed else []
+	nodes.append_array(placement.extra_panels)
+	nodes.append_array(placement.extra_buildings)
+	for id in ["water_extractor", "greenhouse"]:
+		var built: Variant = get_parent().construction_view.completed.get(id)
+		if built != null: nodes.append(built)
+	for node in nodes:
+		if not is_instance_valid(node): continue
+		var cover: Node = node.get_node_or_null("StormCover")
+		if shown and cover != null:
+			cover.queue_free()
+		elif not shown and cover == null:
+			node.add_child(_make_cover(node))
+
+func _make_cover(node: Node3D) -> Node3D:
+	var bounds: AABB = preload("res://src/world/nasa_buildings.gd").mesh_bounds(node)
+	var cover := Node3D.new()
+	cover.name = "StormCover"
+	var tarp := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = bounds.size * 1.06 + Vector3(0.1, 0.05, 0.1)
+	tarp.mesh = box
+	tarp.position = bounds.get_center() + Vector3.UP * 0.025
+	var cloth := StandardMaterial3D.new()
+	cloth.albedo_color = Color(0.42, 0.4, 0.36)
+	cloth.roughness = 1.0
+	tarp.material_override = cloth
+	cover.add_child(tarp)
+	var tag := Label3D.new()
+	tag.text = "PACKED AWAY"
+	tag.font_size = 40
+	tag.pixel_size = 0.006
+	tag.outline_size = 8
+	tag.modulate = Color("f3cc74")
+	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	tag.position = Vector3(bounds.get_center().x, bounds.end.y + 0.6, bounds.get_center().z)
+	cover.add_child(tag)
+	return cover
 
 func _restore() -> void:
 	if active and is_instance_valid(environment):

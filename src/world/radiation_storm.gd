@@ -40,6 +40,11 @@ var warning_sign: Control
 var active := false
 var bound_data: Dictionary = {}
 var hidden_crew: Dictionary = {} # crew id -> true while hidden in the habitat
+const WALK_SPEED := 1.6 # Ordered crew walk to the habitat door, then go inside.
+var player_inside := false
+var shelter_camera: Camera3D
+var previous_camera: Camera3D
+var door_hint: Label
 
 func _ready() -> void:
 	name = "RadiationStorm"
@@ -144,10 +149,8 @@ func order_into_shelter(id: String) -> void:
 	var told: Array = data.get("radiation_told", []).duplicate()
 	told.append(id)
 	data["radiation_told"] = told
-	if told.size() >= Rules.RADIATION_CREW.size(): start_wave()
-	else:
-		session.capture_sol_checkpoint()
-		session.state_changed.emit()
+	session.capture_sol_checkpoint()
+	session.state_changed.emit()
 
 ## The wave hits: the stage change and the exposure charge happen together, once.
 func start_wave() -> void:
@@ -161,7 +164,13 @@ func start_wave() -> void:
 func _process(delta: float) -> void:
 	var data: Dictionary = expeditions.data
 	var stage := Rules.radiation(data)
-	_sync_crew(Rules.sheltered(data) if shelter_built() else [])
+	_sync_crew(data.get("radiation_inside", []) if shelter_built() and stage in ["orders", "wave"] else [])
+	_update_player_shelter(stage)
+	if stage in ["orders", "wave"] and shelter_built() and not get_tree().paused:
+		_walk_to_shelter(delta)
+		if stage == "orders" and data.get("radiation_inside", []).size() >= Rules.RADIATION_CREW.size():
+			start_wave()
+			return
 	if active and (data != bound_data or stage != "wave"):
 		_restore()
 	if get_tree().paused or session.dashboard_state == null: return
@@ -203,6 +212,7 @@ func _process(delta: float) -> void:
 	_sweep_fronts(elapsed, intensity)
 	if elapsed >= WAVE_SECONDS:
 		data["radiation"] = "done"
+		_leave_shelter()
 		_restore()
 		session.capture_sol_checkpoint()
 		session.state_changed.emit()
@@ -227,6 +237,111 @@ func _sweep_fronts(elapsed: float, intensity: float) -> void:
 		front.material_override.set_shader_parameter("opacity", intensity * fade * 0.9)
 
 ## Sheltered crew are inside the habitat: hidden, untouchable and not interactive.
+## Where someone at `from` enters the habitat: the edge of its mound facing them.
+func shelter_door(from: Vector3) -> Vector3:
+	var shelter: Node3D = world.construction_view.completed.get("shielding_wall")
+	var model := shelter.get_node_or_null("NASAModel")
+	var hull: Vector3 = model.get_meta("hull_size") if model != null and model.has_meta("hull_size") else Vector3(13, 4, 13)
+	var outward := from - shelter.global_position
+	outward.y = 0.0
+	if outward.length() < 0.01: outward = shelter.global_basis.z
+	return shelter.global_position + outward.normalized() * (maxf(hull.x, hull.z) * 0.5 + 0.8)
+
+## Ordered crew walk to the habitat; at its door they go inside (hidden until the wave passes).
+func _walk_to_shelter(delta: float) -> void:
+	var data: Dictionary = expeditions.data
+	var inside: Array = data.get("radiation_inside", []).duplicate()
+	var fieldwork := world.get_node("CrewFieldwork")
+	for id in data.get("radiation_told", []):
+		if inside.has(id): continue
+		var actor := world.get_node("Outpost/" + id) as Node3D
+		var door := shelter_door(actor.global_position)
+		var target: Vector3 = actor.get_parent().to_local(door)
+		target.y = actor.position.y
+		var gap := actor.position.distance_to(target)
+		if gap < 1.0:
+			inside.append(id)
+			continue
+		var after := actor.position.move_toward(target, WALK_SPEED * delta)
+		var ground_hit: Dictionary = fieldwork.route_service.ground(after)
+		if not ground_hit.is_empty(): after.y = ground_hit.position.y
+		actor.look_at(actor.get_parent().to_global(Vector3(target.x, after.y, target.z)), Vector3.UP)
+		actor.position = after
+		fieldwork._update_visual(id, true)
+	if inside.size() != data.get("radiation_inside", []).size():
+		data["radiation_inside"] = inside
+		session.capture_sol_checkpoint()
+
+## After the wave everyone steps out at the door and walks back to their work.
+func _leave_shelter() -> void:
+	var data: Dictionary = expeditions.data
+	var fieldwork := world.get_node("CrewFieldwork")
+	for id in data.get("radiation_inside", []):
+		var actor := world.get_node("Outpost/" + id) as Node3D
+		if shelter_built():
+			var door: Vector3 = actor.get_parent().to_local(shelter_door(actor.global_position))
+			var ground_hit: Dictionary = fieldwork.route_service.ground(door)
+			actor.position = ground_hit.position if not ground_hit.is_empty() else door
+		fieldwork.return_to_base(id)
+	data["radiation_inside"] = []
+	_exit_player_shelter()
+
+## The Commander may shelter too: E at the door watches the wave through the habitat window.
+func _update_player_shelter(stage: String) -> void:
+	if door_hint == null:
+		var hint_layer := CanvasLayer.new()
+		hint_layer.layer = 58
+		add_child(hint_layer)
+		door_hint = UI.objective_label(UI.objective_font(), 18)
+		door_hint.position = Vector2(40, 260)
+		hint_layer.add_child(door_hint)
+	var player := world.get_node("Outpost/Astronaut")
+	var near := false
+	if stage in ["orders", "wave"] and shelter_built() and not player_inside and not player.seated:
+		near = player.global_position.distance_to(shelter_door(player.global_position)) < 3.5
+	door_hint.text = "E: leave the radiation habitat" if player_inside else ("E: enter the radiation habitat" if near else "")
+	door_hint.visible = not door_hint.text.is_empty()
+	if player_inside and stage not in ["orders", "wave"]: _exit_player_shelter()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_E): return
+	if door_hint == null or not door_hint.visible or get_tree().paused: return
+	var player := world.get_node("Outpost/Astronaut")
+	if player.nearby_interactable != null and not player_inside: return # Talking to crew comes first.
+	get_viewport().set_input_as_handled()
+	if player_inside: _exit_player_shelter()
+	else: _enter_player_shelter()
+
+func _enter_player_shelter() -> void:
+	var player := world.get_node("Outpost/Astronaut")
+	var shelter: Node3D = world.construction_view.completed.get("shielding_wall")
+	if shelter == null: return
+	player_inside = true
+	player.ui_blocked = true
+	player.hide()
+	previous_camera = get_viewport().get_camera_3d()
+	# A window on the base side of the mound, looking out over the outpost.
+	var base: Vector3 = world.get_node("Outpost/Habitat").global_position
+	var window := shelter_door(base) + Vector3.UP * 2.2
+	shelter_camera = Camera3D.new()
+	shelter_camera.name = "ShelterWindowCamera"
+	shelter_camera.fov = 70.0
+	world.add_child(shelter_camera)
+	shelter_camera.global_position = window
+	shelter_camera.look_at(base + Vector3.UP * 1.5, Vector3.UP)
+	shelter_camera.make_current()
+
+func _exit_player_shelter() -> void:
+	if not player_inside: return
+	player_inside = false
+	var player := world.get_node("Outpost/Astronaut")
+	if shelter_built():
+		player.global_position = shelter_door(world.get_node("Outpost/Habitat").global_position) + Vector3.UP * 0.2
+	player.show()
+	player.ui_blocked = false
+	if is_instance_valid(previous_camera): previous_camera.make_current()
+	if is_instance_valid(shelter_camera): shelter_camera.queue_free()
+
 func _sync_crew(sheltered: Array) -> void:
 	for id in Rules.RADIATION_CREW:
 		var hide_it := sheltered.has(id)

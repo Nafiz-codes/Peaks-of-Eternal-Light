@@ -23,7 +23,6 @@ var dialogue_speaker := ""
 var site_record: Dictionary = {}
 var feedback: Dictionary = {}
 var solar_indicator: OmniLight3D
-var event_beacon: MeshInstance3D
 var feedback_tween: Tween
 var overview := false
 var camera_tween: Tween
@@ -108,15 +107,6 @@ func _add_feedback_nodes() -> void:
 	solar_indicator.light_color = Color("91cfff")
 	solar_indicator.omni_range = 7.0
 	add_child(solar_indicator)
-	event_beacon = MeshInstance3D.new()
-	event_beacon.name = "DecisionBeacon"
-	var sphere := SphereMesh.new()
-	sphere.radius = 0.18
-	sphere.height = 0.36
-	event_beacon.mesh = sphere
-	event_beacon.material_override = _material(Color("ffd18a"), 0.4)
-	event_beacon.position = Vector3(3.4, 2.1, 3.8)
-	add_child(event_beacon)
 
 
 func refresh_feedback() -> void:
@@ -144,8 +134,6 @@ func refresh_feedback() -> void:
 		_set_station_status(id)
 	if feedback_tween != null:
 		feedback_tween.kill()
-	event_beacon.visible = feedback.pending > 0
-	event_beacon.scale = Vector3.ONE
 	# Light intensity is an illustrative indicator; displayed kWh stays exact.
 	var energy := clampf(float(feedback.solar_kwh) / 30.0, 0.0, 2.5)
 	if session.reduce_motion:
@@ -153,9 +141,6 @@ func refresh_feedback() -> void:
 	else:
 		feedback_tween = create_tween()
 		feedback_tween.tween_property(solar_indicator, "light_energy", energy, 0.5)
-		if event_beacon.visible:
-			feedback_tween.tween_property(event_beacon, "scale", Vector3.ONE * 1.35, 0.4)
-			feedback_tween.tween_property(event_beacon, "scale", Vector3.ONE, 0.4)
 
 
 func _sync_rover_action(_state: Variant, _reduced_motion: bool) -> void:
@@ -167,7 +152,10 @@ func _set_station_status(id: String) -> void:
 	var session := get_node("/root/MissionSession")
 	var events: Array = [] if session.dashboard_simulator == null else session.dashboard_simulator.events
 	var report := preload("res://src/ui/crew_report.gd").build(id, session.dashboard_state, events)
-	get_node("Outpost/" + id + "/StatusLabel/UpdateMarker").visible = session.crew_read_reports.get(id, "") != report.signature
+	var marker := get_node("Outpost/" + id + "/StatusLabel/UpdateMarker")
+	# The mission tracker shows it: over whoever the objective says to talk to, else unread news.
+	marker.set_meta("unread", session.crew_read_reports.get(id, "") != report.signature)
+	marker.visible = marker.get_meta("unread")
 
 
 func _set_station_hint(station: Node, near: bool) -> void:
@@ -231,6 +219,18 @@ func _add_lighting() -> void:
 	sun.light_color = Color("ffe5bd")
 	sun.light_energy = 1.1
 	sun.shadow_enabled = true
+	# The default 100 m cut shadows off inside the build area (radius ~120 m) and low polar
+	# sunlight throws long shadows: cover the whole outpost and blend the cascades so
+	# shadow sharpness does not jump between them.
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	sun.directional_shadow_max_distance = 450.0
+	sun.directional_shadow_split_1 = 0.06
+	sun.directional_shadow_split_2 = 0.16
+	sun.directional_shadow_split_3 = 0.4
+	sun.directional_shadow_blend_splits = true
+	sun.directional_shadow_fade_start = 0.92
+	sun.shadow_bias = 0.04
+	sun.shadow_normal_bias = 1.5
 	add_child(sun)
 
 
@@ -500,6 +500,8 @@ func _on_player_interaction(interaction_id: String, from_menu: bool = false) -> 
 	if interaction_id == "crew_briefing":
 		if not session.maya_intro_complete:
 			introduction = "crew_briefing"
+		elif Expedition.storm_stage(expedition) == "warning":
+			introduction = "storm_warning"
 		elif aftermath == "briefing":
 			introduction = "storm_damage"
 		elif aftermath == "alert":
@@ -517,12 +519,17 @@ func _on_player_interaction(interaction_id: String, from_menu: bool = false) -> 
 		introduction = interaction_id
 	if introduction.is_empty() and interaction_id in ["water_recycler", "food_storage"]:
 		introduction = Story.pending_beat(interaction_id, session.crew_introductions, expedition)
+	if introduction.is_empty() and interaction_id == "crew_briefing":
+		for other in ["food_storage", "water_recycler"]:
+			if Story.pending_beat(other, session.crew_introductions, expedition) != "":
+				introduction = "redirect_" + other
+				break
 	if not introduction.is_empty():
 		var actor := get_node("Outpost/" + interaction_id) as Node3D
 		if get_node("Outpost/Astronaut").global_position.distance_to(actor.global_position) > 2.5: return
 		if introduction == "storm_damage":
 			# Nothing to damage: go straight to the lost-contact report.
-			if session.apply_storm_damage().is_empty(): introduction = "storm_lost_contact"
+			if expedition.get("storm_stowed", false) or session.apply_storm_damage().is_empty(): introduction = "storm_lost_contact"
 			else: expedition["aftermath"] = "repairs"
 		maya_dialogue_active = true
 		dialogue_speaker = interaction_id
@@ -537,11 +544,18 @@ func _on_player_interaction(interaction_id: String, from_menu: bool = false) -> 
 			elif introduction == "mission_review":
 				_mission_verdict(expedition)
 				return
+			elif introduction == "storm_warning":
+				maya_dialogue_active = false
+				dialogue_speaker = ""
+				_ask_storm_choice(expedition)
+				return
+			elif introduction.begins_with("redirect_"):
+				pass # A pointer only; nothing to remember.
 			elif introduction == "storm_lost_contact":
 				# Lifeline opens now; the rover controller moves Alex to his last known position.
 				expedition["aftermath"] = "done"
 				session.capture_sol_checkpoint()
-			elif introduction != "storm_damage":
+			elif introduction != "storm_damage" and not introduction.begins_with("redirect_"):
 				session.crew_introductions[introduction] = true
 			maya_dialogue_active = false
 			dialogue_speaker = ""
@@ -588,9 +602,9 @@ func _radiation_interaction(interaction_id: String, expedition: Dictionary) -> b
 			get_node("/root/MissionSession").crew_introductions["maya_radiation_prep"] = true
 			storm.begin_incoming()
 		elif line == "radiation_alert":
-			storm.begin_orders()
+			_ask_shield_choice(storm.begin_orders)
 		elif line == "radiation_no_shelter":
-			storm.start_wave() # Nowhere to shelter: everyone is exposed.
+			_ask_shield_choice(storm.start_wave) # Nowhere to shelter: everyone is exposed.
 		else:
 			storm.order_into_shelter(interaction_id))
 	add_child(dialogue)
@@ -653,6 +667,59 @@ func _ask_skip_repairs() -> void:
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE if skip_repairs_dialog.visible else Input.MOUSE_MODE_CAPTURED))
 		add_child(skip_repairs_dialog)
 	if not player.ui_blocked: skip_repairs_dialog.popup_centered()
+
+## A two-way decision the Commander must make; closing the window picks `no`.
+func _ask_choice(title: String, text: String, yes_text: String, no_text: String, on_yes: Callable, on_no: Callable) -> void:
+	var player := get_node("Outpost/Astronaut")
+	var dialog := ConfirmationDialog.new()
+	dialog.title = title
+	dialog.dialog_text = text
+	dialog.dialog_autowrap = true
+	dialog.min_size = Vector2i(560, 220)
+	dialog.ok_button_text = yes_text
+	dialog.cancel_button_text = no_text
+	dialog.exclusive = true
+	var answered := {"done": false}
+	var finish := func(choice: Callable) -> void:
+		if answered.done: return
+		answered.done = true
+		player.ui_blocked = false
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		choice.call()
+		dialog.queue_free()
+	dialog.confirmed.connect(finish.bind(on_yes))
+	dialog.canceled.connect(finish.bind(on_no))
+	add_child(dialog)
+	player.ui_blocked = true
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	dialog.popup_centered()
+
+static func cost_text(cost: Dictionary) -> String:
+	return "%d kWh · %d L water · %.1f kg oxygen · %.1f kg food" % [cost.get("power", 0.0), cost.get("water", 0.0), cost.get("oxygen", 0.0), cost.get("food", 0.0)]
+
+## Before the radiation wave: pay to shield the structures, or let producers lose output.
+func _ask_shield_choice(then: Callable) -> void:
+	var session := get_node("/root/MissionSession")
+	var sim = session.dashboard_simulator
+	_ask_choice("Shield the structures?",
+		"Cover the solar panels, extractors and greenhouses before the wave hits.\nCost: %s.\nUnshielded, they produce %d%% less for two days afterwards." % [cost_text(sim.STRUCTURE_SHIELD_COST), roundi((1.0 - sim.UNSHIELDED_OUTPUT_SHARE) * 100.0)],
+		"Shield them", "Leave them", func():
+			if not session.shield_structures(): get_node("MissionHUD").notice.text = "Not enough supplies to shield the structures."
+			then.call(), then)
+
+## Maya's dust storm warning: pack producers away (paid, offline but safe) or leave them out.
+func _ask_storm_choice(expedition: Dictionary) -> void:
+	var session := get_node("/root/MissionSession")
+	var sim = session.dashboard_simulator
+	var start_storm := func(stowed: bool) -> void:
+		expedition["storm_stowed"] = stowed
+		expedition["storm_ready"] = true
+		session.capture_sol_checkpoint()
+		session.state_changed.emit()
+	_ask_choice("Protect the structures from the dust storm?",
+		"Pack away the solar panels, extractors and greenhouses until the storm passes: they make nothing meanwhile, but nothing gets damaged.\nCost: %s.\nLeft in the open, some may be damaged and need paid repairs." % cost_text(sim.STOW_COST),
+		"Pack them away", "Leave them out", func():
+			start_storm.call(session.stow_producers()), start_storm.bind(false))
 
 func _exit_tree() -> void:
 	Engine.time_scale = 1.0 # The DEV speed-up never outlives the outpost.

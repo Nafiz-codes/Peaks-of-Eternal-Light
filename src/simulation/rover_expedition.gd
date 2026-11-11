@@ -33,7 +33,18 @@ static func radiation(d: Dictionary) -> String:
 	if not completed.has(0) or completed.has(1) or int(d.get("mission", -1)) == 1:
 		return ""
 	return str(d.get("radiation", "prep"))
+## Before the dust storm: "waiting" (Alex's talk, then STORM_PREP_SECONDS to build),
+## "warning" (Maya warns and the Commander chooses to pack producers away or not),
+## "storm" (it blows). Empty outside that window.
+const STORM_PREP_SECONDS := 90.0
+static func storm_stage(d: Dictionary) -> String:
+	var completed: Array = d.get("completed", [])
+	if not completed.has(1) or completed.has(2) or int(d.get("mission", -1)) == 2 or bool(d.get("dust_storm_complete", false)):
+		return ""
+	if bool(d.get("storm_ready", false)): return "storm"
+	return "warning" if float(d.get("storm_prep_elapsed", 0.0)) >= STORM_PREP_SECONDS else "waiting"
 ## Crew inside the radiation habitat (hidden from the outpost) until the wave passes.
+## (Ordered crew walking to the habitat are included: their usual work waits.)
 static func sheltered(d: Dictionary) -> Array:
 	return d.get("radiation_told", []) if radiation(d) in ["orders", "wave"] else []
 ## After Lifeline Maya reviews the mission: "pending" (she comes to the Commander),
@@ -73,6 +84,13 @@ static func valid_save(d: Variant) -> bool:
 	if d.has("radiation_prep_elapsed"):
 		if not d.radiation_prep_elapsed is float or not is_finite(d.radiation_prep_elapsed) or d.radiation_prep_elapsed < 0.0 or d.radiation_prep_elapsed > 600.0: return false
 	if d.has("storm_ready") and not d.storm_ready is bool: return false
+	if d.has("storm_stowed") and not d.storm_stowed is bool: return false
+	if d.has("storm_prep_elapsed"):
+		if not d.storm_prep_elapsed is float or not is_finite(d.storm_prep_elapsed) or d.storm_prep_elapsed < 0.0 or d.storm_prep_elapsed > 600.0: return false
+	if d.has("radiation_inside"):
+		if not d.radiation_inside is Array: return false
+		for id in d.radiation_inside:
+			if id not in RADIATION_CREW: return false
 	if d.has("radiation_told"):
 		if not d.radiation_told is Array: return false
 		for id in d.radiation_told:
