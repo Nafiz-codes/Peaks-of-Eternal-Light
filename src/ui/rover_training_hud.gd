@@ -4,6 +4,7 @@ var title: Label
 var objective: Label
 var telemetry: Label
 var detail: Label
+const FAILURE_RED := Color("ff5a4f")
 var prompt: Label
 var progress: ProgressBar
 var result: Label
@@ -127,11 +128,14 @@ func render(view: Dictionary) -> void:
 	telemetry.text = view.telemetry
 	detail.text = view.detail
 	prompt.text = view.prompt
+	# Failures read in red; everything else keeps the HUD's own colours.
+	prompt.add_theme_color_override("font_color", FAILURE_RED if str(view.prompt).contains("FAILED") else Color("ffd18a"))
 	progress.value = view.progress * 100.0
 	extraction_popup.visible = view.get("extract_nearby", false) or view.progress > 0.0
 	extraction_prompt.text = view.get("extract_hint", "Hold E to scan")
 	progress.visible = extraction_popup.visible
 	result.text = view.result
+	result.add_theme_color_override("font_color", FAILURE_RED if str(view.result).contains("FAILED") else Color("83e8ef"))
 	var navigation: Dictionary = view.get("navigation", {})
 	waypoint.visible = false # MissionTracker owns the shared crescent destination marker.
 	if waypoint.visible:

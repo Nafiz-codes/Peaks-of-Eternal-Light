@@ -307,14 +307,29 @@ func locks_drive() -> bool:
 	return transitioning or busy_id != "" or dialogue > 0 or damage_blocked()
 
 ## The current operation counts as done (milestone, and Frozen Horizon's ice prospect).
-func _record_completion() -> void:
-	if data.completed.has(data.mission): return
+## A success also brings back supplies; returns them as text for the completion message.
+func _record_completion(success := true) -> String:
+	if data.completed.has(data.mission): return ""
 	data.completed.append(data.mission)
+	var reward_text := ""
+	if success and bound_state != null:
+		var reward: Dictionary = session.dashboard_simulator.OPERATION_REWARDS[data.mission]
+		session.dashboard_simulator.grant(bound_state, reward)
+		reward_text = "
+%s
+Recovered: %s" % [str(reward.why), world_cost_text(reward)]
 	session.record_milestone(Rules.TITLES[data.mission])
 	if data.mission == 1 and bound_state != null:
 		# The ice samples confirm the prospect: a Water Extractor can produce here.
 		bound_state.volatile_prospect_found = true
 		bound_state.volatile_prospect_status = "extraction_candidate"
+	return reward_text
+
+func world_cost_text(amounts: Dictionary) -> String:
+	var parts: Array = []
+	for row in [["power", "%+d kWh"], ["water", "%+d L water"], ["oxygen", "%+.1f kg oxygen"], ["food", "%+.1f kg food"]]:
+		if float(amounts.get(row[0], 0.0)) != 0.0: parts.append(row[1] % amounts[row[0]])
+	return " · ".join(parts)
 
 ## DEV: finish the current rover operation (or the next one, even if the story has not
 ## opened it yet) at once, with the rover parked back at the outpost.
@@ -324,14 +339,14 @@ func developer_skip_mission() -> bool:
 	if skipped < 0: return false
 	if driver.active: driver.stop_control()
 	data.mission = skipped
-	_record_completion()
+	var reward := _record_completion()
 	data.mission = -1
 	data.location = "outpost"
 	data.phase = "completed"
 	_place_rover(Vector3(32, ground_y(Vector3(32,0,20)), 20))
 	_restore_crew()
 	_refresh_targets()
-	feedback = "DEV: skipped " + Rules.TITLES[skipped]
+	feedback = "DEV: skipped " + Rules.TITLES[skipped] + reward
 	session.state_changed.emit()
 	session.capture_sol_checkpoint()
 	return true
@@ -602,7 +617,45 @@ func _escort(delta: float) -> void:
 func damage_blocked() -> bool:
 	return damage_mode != "" or data.get("phase", "") == "failed"
 
+const FAILED_MOVE_ON_SECONDS := 5.0
+var failed_at_msec := -1
+
+func _move_on_seconds_left() -> int:
+	if failed_at_msec < 0: return ceili(FAILED_MOVE_ON_SECONDS)
+	return ceili(maxf(0.0, FAILED_MOVE_ON_SECONDS - (Time.get_ticks_msec() - failed_at_msec) / 1000.0))
+
+## After a failed operation: count it as done (and failed) and bring the wrecked rover
+## home. The next operation opens once the Commander repairs it (see rover_drive.repair).
+func _move_on_after_failure() -> void:
+	var failed_op := int(data.mission)
+	if failed_op < 0: return
+	var failures: Array = data.get("failed_operations", []).duplicate()
+	if not failures.has(failed_op): failures.append(failed_op)
+	data["failed_operations"] = failures
+	_record_completion(false) # A failed operation brings nothing back.
+	data.mission = -1
+	data.location = "outpost"
+	data.phase = "completed"
+	damage_mode = ""
+	failed_at_msec = -1
+	damage_dialog.hide()
+	driver._update_health()
+	escort_link = false
+	_place_rover(Vector3(32, ground_y(Vector3(32,0,20)), 20))
+	_restore_crew()
+	_refresh_targets()
+	armed = false
+	driver.stop_control()
+	feedback = Rules.TITLES[failed_op].to_upper() + " FAILED — the wrecked rover is back at the outpost. Repair it on foot to continue."
+	session.state_changed.emit()
+	session.capture_sol_checkpoint()
+
 func _check_damage() -> void:
+	if damage_mode == "failed" and failed_at_msec >= 0 and _move_on_seconds_left() <= 0 and not get_tree().paused:
+		_move_on_after_failure()
+		return
+	if damage_mode == "failed" and failed_at_msec < 0:
+		failed_at_msec = Time.get_ticks_msec() # A save loaded mid-failure starts the wait again.
 	if bound_state.rover_health > 10:
 		data.erase("damage_warning_acknowledged")
 	if data.location != "expedition" or transitioning: return
@@ -612,7 +665,9 @@ func _check_damage() -> void:
 	var mode := "failed" if failed else "warning"
 	if damage_mode == mode: return
 	damage_mode = mode
-	if failed: data.phase = "failed"
+	if failed:
+		data.phase = "failed"
+		failed_at_msec = Time.get_ticks_msec()
 	driver.speed = 0
 	driver.velocity = Vector3.ZERO
 	busy_id = ""
@@ -622,8 +677,10 @@ func _check_damage() -> void:
 	arm.pose(0)
 	hud.extract_held = false
 	motor.volume_db = -80
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	damage_dialog.show_damage(failed, ceili(bound_state.rover_health))
+	# A destroyed rover no longer asks for a retry: the failure shows, then the story moves on.
+	if not failed:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		damage_dialog.show_damage(failed, ceili(bound_state.rover_health))
 	session.capture_sol_checkpoint()
 
 func _damage_confirm() -> void:
@@ -763,8 +820,8 @@ func _transition(outward: bool) -> void:
 		else:
 			_place_rover(Vector3(32,ground_y(Vector3(32,0,20)),20))
 		data.location = "outpost"
-		_record_completion()
-		feedback = Rules.TITLES[data.mission].to_upper()+" COMPLETE"
+		var reward := _record_completion()
+		feedback = Rules.TITLES[data.mission].to_upper()+" COMPLETE" + reward
 		if data.mission == 2: feedback += "\nMissing crew member recovered.\nAll four astronauts accounted for."
 		data.mission = -1
 		data.phase = "completed"
@@ -868,7 +925,7 @@ func _publish() -> void:
 	var objective := "Drive to the violet departure circle. Stop at its center."
 	var details := "Surface Survey, then Frozen Horizon, then Lifeline.\nEach operation unlocks when the one before it is complete."
 	var prompt := "WASD: drive · Space: brake · R: lander · L: lights"
-	if bound_state.rover_health <= 0: prompt = "MISSION FAILED — Rover destroyed. Retry the mission."
+	if bound_state.rover_health <= 0 and data.location == "expedition": prompt = "MISSION FAILED — Rover destroyed. Recovering it to the outpost in %d s." % _move_on_seconds_left()
 	if data.location == "expedition":
 		if data.mission == 0:
 			objective = "Investigate three geological formations."
@@ -896,7 +953,7 @@ func _publish() -> void:
 		if data.mission == 2 and not lights.visible:
 			objective = "Low light — L improves visibility.\n" + objective
 		prompt += "\nEnter: suspend expedition and recover rover."
-	if bound_state.rover_health <= 0: prompt = "MISSION FAILED — Rover destroyed. Retry the mission."
+	if bound_state.rover_health <= 0 and data.location == "expedition": prompt = "MISSION FAILED — Rover destroyed. Recovering it to the outpost in %d s." % _move_on_seconds_left()
 	var extract_nearby := false
 	var extract_hint := "Hold E to scan"
 	if data.location == "expedition" and data.mission in [0, 1]:
@@ -960,6 +1017,8 @@ func available_assignment() -> int:
 	# so Alex is still at the base.
 	if Rules.storm_stage(data) != "": return -1
 	if data.mission < 0 and data.completed.is_empty() and not session.construction_ready(): return -1
+	# A wrecked rover must be repaired at the outpost before any operation opens.
+	if bound_state != null and bound_state.rover_health <= 0.0 and data.location == "outpost": return -1
 	var next := Rules.assigned(data)
 	# Frozen Horizon needs Sam's Engineering station for the sampling arm and Alex's
 	# Science station for the samples.

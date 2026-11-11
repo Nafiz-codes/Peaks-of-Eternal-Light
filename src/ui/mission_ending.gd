@@ -1,9 +1,20 @@
 extends Control
 ## Game ending: plays the ending film with the closing title over it, then the mission
 ## statistics, where the Commander can keep playing or return to the start menu.
+## A failed mission (a reserve stayed empty, or the final review fell short) plays the
+## abandoned-outpost film instead and can only return to the start menu.
 ## Esc or Enter skips the film. Without the film file the title shows on black.
 const VIDEO_PATH := "res://Assets/video/ending.ogv"
 const TITLE := "Humanity's New Frontier"
+const FAILED_VIDEO_PATH := "res://Assets/video/bad_ending.ogv"
+const FAILED_TITLE := "The Frontier Falls Silent"
+const FAILURE_TEXT := {
+	"review_shortfall": "The reserves fell short of the targets at Maya's final review.",
+	"oxygen_depleted": "The outpost ran out of oxygen.",
+	"water_depleted": "The outpost ran out of water.",
+	"food_depleted": "The outpost ran out of food.",
+	"power_depleted": "The outpost ran out of power.",
+}
 const TITLE_AT := 5.0 # Seconds into the film when the title starts to fade in.
 const HOLD_AFTER := 3.0 # Seconds the title stays on the film's last frame.
 const UI = preload("res://src/ui/ui_style.gd")
@@ -15,11 +26,15 @@ var title: Label
 var cover: ColorRect
 var finishing := false
 var holding := false
+var failed := false
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	Engine.time_scale = 1.0 # A DEV speed-up must not rush the film.
+	var state: Variant = get_node("/root/MissionSession").dashboard_state
+	failed = state != null and state.mission_outcome.get("status", "") == "failure"
+	var video_path := FAILED_VIDEO_PATH if failed else VIDEO_PATH
 	get_node("/root/GameMenu").set_process_input(false)
 	# The mission ambience carries across scene changes; silence it under the film.
 	var music := get_node("/root/MenuMusic")
@@ -29,7 +44,7 @@ func _ready() -> void:
 	black.color = Color.BLACK
 	add_child(black)
 	black.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var has_video := ResourceLoader.exists(VIDEO_PATH)
+	var has_video := ResourceLoader.exists(video_path)
 	if has_video:
 		var aspect := AspectRatioContainer.new()
 		aspect.ratio = 16.0 / 9.0
@@ -37,14 +52,14 @@ func _ready() -> void:
 		aspect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		video = VideoStreamPlayer.new()
 		video.expand = true
-		video.stream = load(VIDEO_PATH)
+		video.stream = load(video_path)
 		aspect.add_child(video)
 		video.finished.connect(_hold_then_finish, CONNECT_ONE_SHOT)
 	title = Label.new()
-	title.text = TITLE
+	title.text = FAILED_TITLE if failed else TITLE
 	title.add_theme_font_override("font", preload("res://Assets/fonts/corpta-demo.regular.otf"))
 	title.add_theme_font_size_override("font_size", 52)
-	title.add_theme_color_override("font_color", Color("f4f7fb"))
+	title.add_theme_color_override("font_color", Color("b9c2cf") if failed else Color("f4f7fb"))
 	title.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.75))
 	title.add_theme_constant_override("outline_size", 10)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -127,11 +142,13 @@ func _show_stats() -> void:
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var layout := UI.box()
 	frame.add_child(layout)
-	var heading := UI.label("MISSION COMPLETE", 34)
-	heading.add_theme_color_override("font_shadow_color", Color("28607d"))
+	var heading := UI.label("MISSION FAILED" if failed else "MISSION COMPLETE", 34, Color("e0857a") if failed else UI.TEXT)
+	heading.add_theme_color_override("font_shadow_color", Color("5a2a26") if failed else Color("28607d"))
 	heading.add_theme_constant_override("shadow_offset_y", 3)
 	layout.add_child(heading)
 	layout.add_child(UI.label("%s  ·  %s" % [_site_name(session), session.commander_address()], 18, UI.AMBER))
+	if failed and state != null:
+		layout.add_child(UI.label(str(FAILURE_TEXT.get(str(state.mission_outcome.get("failure_reason", "")), "The outpost could not be sustained.")), 18, UI.MUTED))
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 24)
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -151,6 +168,7 @@ func _show_stats() -> void:
 	buttons.add_theme_constant_override("separation", 16)
 	layout.add_child(buttons)
 	var keep := UI.button("Continue playing", _continue, state == null or state.mission_outcome.get("status", "") != "success")
+	keep.visible = not failed # A failed outpost cannot be continued; start again from the menu.
 	keep.tooltip_text = "Return to the outpost. Operation Surface Survey can be flown again."
 	var leave := UI.button("Return to main menu", _to_main_menu)
 	for button in [keep, leave]:

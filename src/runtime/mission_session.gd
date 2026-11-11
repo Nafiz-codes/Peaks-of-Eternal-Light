@@ -226,8 +226,16 @@ func building_unlocked(id: String) -> bool:
 
 ## Continuous resource time: called every outpost frame with play time (dev speed-ups
 ## included). Closes the day's bookkeeping when a whole day has run and nothing blocks it.
+const DEPLETION_GRACE_SECONDS := 20.0
+## Seconds since a reserve ran out (< 0 while none is empty). Not saved: a reload gives a
+## fresh countdown.
+var depletion_elapsed := -1.0
+var depleted_reserve := ""
+signal reserve_depleted(resource: String)
+
 func tick_play(seconds: float) -> void:
 	if dashboard_state == null or not has_built_anything(): return
+	_tick_depletion(seconds)
 	if dashboard_simulator.tick_time(dashboard_state, seconds):
 		if can_advance() and dashboard_state.rover_expedition.get("location", "outpost") != "expedition":
 			action_busy = true
@@ -319,6 +327,31 @@ func developer_add_resources(direction := 1.0) -> void:
 	dashboard_simulator.developer_add_resources(dashboard_state, direction)
 	capture_sol_checkpoint()
 	state_changed.emit()
+
+
+## A reserve at zero: warn once (Maya's radio call pauses play), then the Commander has
+## DEPLETION_GRACE_SECONDS to get it back above zero before the mission fails.
+func _tick_depletion(seconds: float) -> void:
+	if dashboard_state.mission_outcome.get("status", "") != "in_progress":
+		depletion_elapsed = -1.0
+		return
+	var empty: String = dashboard_simulator.empty_reserve(dashboard_state)
+	if empty.is_empty():
+		depletion_elapsed = -1.0
+		depleted_reserve = ""
+		return
+	if depletion_elapsed < 0.0:
+		depletion_elapsed = 0.0
+		depleted_reserve = empty
+		reserve_depleted.emit(empty)
+		return
+	depleted_reserve = empty
+	depletion_elapsed += seconds
+	if depletion_elapsed >= DEPLETION_GRACE_SECONDS:
+		dashboard_simulator.fail_mission(dashboard_state, empty + "_depleted")
+		depletion_elapsed = -1.0
+		capture_sol_checkpoint()
+		state_changed.emit()
 
 
 ## Paid choices before the radiation wave and the dust storm (false when unaffordable).

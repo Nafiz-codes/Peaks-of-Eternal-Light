@@ -75,6 +75,8 @@ func _ready() -> void:
 	add_child(preload("res://src/world/structure_repairs.gd").new())
 	add_child(preload("res://src/world/radiation_storm.gd").new())
 	session.state_changed.connect(refresh_feedback)
+	session.state_changed.connect(_check_failure)
+	session.reserve_depleted.connect(_warn_depleted)
 	refresh_feedback()
 	var solar := preload("res://src/world/solar_placement.gd").new()
 	solar.name = "SolarPlacement"
@@ -634,11 +636,13 @@ func _mission_verdict(expedition: Dictionary) -> void:
 		dialogue.dialogue_id = "mission_ready"
 	else:
 		dialogue.dialogue_id = "mission_short"
-		dialogue.text_override = "Not yet, Commander. We're short on %s. Build those reserves back up and talk to me again." % " and ".join(shortfalls)
+		dialogue.text_override = "I'm sorry, Commander. We're short on %s, and our time is up. This outpost can't become humanity's first Moon base. Not this time." % (shortfalls[0] if shortfalls.size() == 1 else ", ".join(shortfalls.slice(0, shortfalls.size() - 1)) + " and " + str(shortfalls[-1]))
 	dialogue.finished.connect(func():
 		maya_dialogue_active = false
 		dialogue_speaker = ""
 		expedition["debrief"] = "done" if shortfalls.is_empty() else "retry"
+		if not shortfalls.is_empty():
+			session.dashboard_simulator.fail_mission(session.dashboard_state, "review_shortfall")
 		session.capture_sol_checkpoint()
 		session.state_changed.emit()
 		if shortfalls.is_empty():
@@ -720,6 +724,32 @@ func _ask_storm_choice(expedition: Dictionary) -> void:
 		"Pack away the solar panels, extractors and greenhouses until the storm passes: they make nothing meanwhile, but nothing gets damaged.\nCost: %s.\nLeft in the open, some may be damaged and need paid repairs." % cost_text(sim.STOW_COST),
 		"Pack them away", "Leave them out", func():
 			start_storm.call(session.stow_producers()), start_storm.bind(false))
+
+## Maya's radio call when a reserve runs out; the 20 s countdown starts after it.
+func _warn_depleted(resource: String) -> void:
+	if maya_dialogue_active: return
+	maya_dialogue_active = true
+	var warning := preload("res://src/ui/maya_introduction.gd").new()
+	warning.dialogue_id = "depletion_warning"
+	warning.text_override = "Commander, our %s is gone! We have twenty seconds to get it back above zero: build what produces it, or tear down structures for their supplies. Otherwise this mission is over." % resource
+	warning.finished.connect(func():
+		maya_dialogue_active = false
+		dialogue_speaker = "")
+	add_child(warning)
+
+## A failed mission ends with the bad-ending film.
+var ending_started := false
+func _check_failure() -> void:
+	var session := get_node("/root/MissionSession")
+	if ending_started or session.dashboard_state == null or session.dashboard_state.mission_outcome.get("status", "") != "failure": return
+	if maya_dialogue_active: return # Maya's verdict finishes first; it calls back in.
+	ending_started = true
+	_go_to_ending.call_deferred()
+
+func _go_to_ending() -> void:
+	var driver := get_node_or_null("RoverHull")
+	if driver != null and driver.active: driver.stop_control()
+	get_tree().change_scene_to_file("res://scenes/mission_ending.tscn")
 
 func _exit_tree() -> void:
 	Engine.time_scale = 1.0 # The DEV speed-up never outlives the outpost.

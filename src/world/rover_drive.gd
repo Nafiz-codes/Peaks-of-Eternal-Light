@@ -28,6 +28,7 @@ var session: Node
 var health_bar: ProgressBar
 var health_title: Label
 var repair_label: Label3D
+var repair_game: CanvasLayer # The timing minigame while a repair is under way.
 var contacts: Dictionary = {}
 var impact_cooldown := 0.0
 enum Power { INACTIVE, STARTING, READY }
@@ -107,7 +108,7 @@ func _update_health() -> void:
 	health_bar.modulate = Color("ff6868") if health <= 25.0 else Color("83e6a0")
 	repair_label.text = "ROVER HEALTH %d / 100" % ceili(health)
 	if health < 100.0:
-		repair_label.text += "\n[E] Repair rover (on foot)"
+		repair_label.text += "\n[E] Repair rover (on foot · costs supplies)"
 	if health <= 0.0:
 		repair_label.text += "\nDISABLED"
 
@@ -120,14 +121,24 @@ func repair() -> bool:
 		return false
 	if player.global_position.distance_to(rover.global_position + Vector3(0, 0.8, 0)) > 3.2 or state.rover_health >= 100.0:
 		return false
-	var fieldwork := world.get_node_or_null("CrewFieldwork")
-	if fieldwork != null and not fieldwork.consume_manual_repair():
-		repair_label.text = "REPAIR BLOCKED\nNeed a repair kit and an unreserved worksite.\nAsk the equipment specialist."
+	if is_instance_valid(repair_game): return false
+	var cost: Dictionary = session.dashboard_simulator.ROVER_REPAIR_COST
+	var missing: String = session.dashboard_simulator.missing_for(state, cost)
+	var hud := world.get_node("MissionHUD")
+	if not missing.is_empty():
+		hud.notice.text = "Not enough %s to repair the rover. Repair costs %s." % [missing, world.cost_text(cost)]
 		return false
-	state.rover_health = 100.0
-	_update_health()
-	session.capture_sol_checkpoint()
-	session.state_changed.emit()
+	hud.notice.text = "Rover repair cost: " + world.cost_text(cost)
+	repair_game = preload("res://src/ui/repair_minigame.gd").new()
+	repair_game.player = player
+	repair_game.title_text = "Rover"
+	repair_game.finished.connect(func(repaired: bool):
+		if repaired and session.dashboard_simulator.repair_rover(session.dashboard_state):
+			_update_health()
+			hud.notice.text = "Rover repaired. Operations can continue."
+			session.capture_sol_checkpoint()
+			session.state_changed.emit())
+	world.add_child(repair_game)
 	return true
 
 func _apply_collision_damage(incoming: Vector3) -> void:
@@ -171,6 +182,9 @@ func start_control() -> bool:
 	if get_tree().paused or not available() or world.get_node("Outpost/Astronaut").ui_blocked or world.get_node("MissionHUD")._modal_visible():
 		return false
 	if session.start_selected_mission() != OK or not session.can_advance():
+		return false
+	if session.dashboard_state.rover_health <= 0.0:
+		world.get_node("MissionHUD").notice.text = "The rover is wrecked: repair it at the outpost first."
 		return false
 	active = true
 	power_state = Power.STARTING

@@ -85,6 +85,10 @@ static func valid_save(d: Variant) -> bool:
 		if not d.radiation_prep_elapsed is float or not is_finite(d.radiation_prep_elapsed) or d.radiation_prep_elapsed < 0.0 or d.radiation_prep_elapsed > 600.0: return false
 	if d.has("storm_ready") and not d.storm_ready is bool: return false
 	if d.has("storm_stowed") and not d.storm_stowed is bool: return false
+	if d.has("failed_operations"):
+		if not d.failed_operations is Array: return false
+		for op in d.failed_operations:
+			if not op is int or op < 0 or op > 2: return false
 	if d.has("storm_prep_elapsed"):
 		if not d.storm_prep_elapsed is float or not is_finite(d.storm_prep_elapsed) or d.storm_prep_elapsed < 0.0 or d.storm_prep_elapsed > 600.0: return false
 	if d.has("radiation_inside"):

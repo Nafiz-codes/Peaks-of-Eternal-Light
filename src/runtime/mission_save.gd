@@ -112,7 +112,7 @@ static func decode(data: Variant) -> Dictionary:
 			var key: String = property.name
 			if not data.state.has(key) or typeof(data.state[key]) != property.type:
 				# Older version 1 saves omit newer fields; preserve their defaults.
-				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "easter_eggs", "rover_training", "rover_expedition", "placed_panel_kwh_per_sol", "clock_start_seconds", "milestones", "structure_copies", "day_progress", "structures_shielded", "producers_stowed"] and not data.state.has(key):
+				if key in ["shielding_wall_material_discount", "rover_pose", "rover_health", "fieldwork", "easter_eggs", "rover_training", "rover_expedition", "placed_panel_kwh_per_sol", "clock_start_seconds", "milestones", "structure_copies", "day_progress", "structures_shielded", "producers_stowed", "depletion_failure"] and not data.state.has(key):
 					continue
 				return {}
 			var value: Variant = data.state[key]

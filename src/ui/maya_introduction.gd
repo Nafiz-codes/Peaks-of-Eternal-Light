@@ -14,6 +14,7 @@ const INTRODUCTIONS := {
  "mission_review": {"speaker": "Dr. Maya Chen", "text": "Commander, the days we were scheduled to run this base are complete. Now we check whether we've done enough for it to be the stepping stone for humanity's first Moon base. Running the resource check now."},
  "mission_ready": {"speaker": "Dr. Maya Chen", "text": "Power, water, oxygen and food are all in good shape. It's confirmed, Commander: this outpost is ready to become humanity's first Moon base."},
  "mission_short": {"speaker": "Dr. Maya Chen", "text": "Not yet, Commander."},
+ "depletion_warning": {"speaker": "Dr. Maya Chen", "text": "Commander, one of our reserves is gone!"},
  "redirect_food_storage": {"speaker": "Dr. Maya Chen", "text": "Sam wanted a word with you, Commander. You'll find him at his work area."},
  "redirect_water_recycler": {"speaker": "Dr. Maya Chen", "text": "Alex has something to discuss with you, Commander. Go and find him."},
 }

@@ -23,6 +23,8 @@ const INITIAL_FOOD_KG := 22.0
 const MISSION_GOALS := {"power_kwh": 200.0, "water_l": 330.0, "oxygen_kg": 40.0, "food_kg": 30.0}
 ## Real play seconds for one modeled day of crew draw and production.
 const DAY_SECONDS := 240.0
+## Gameplay easing on the crew's NASA-baseline daily use of every reserve.
+const CREW_DRAW_SCALE := 0.85
 ## Extra copies allowed of each repeatable producer (the first copy is not counted).
 const MAX_STRUCTURE_COPIES := 5
 const REPEATABLE_STRUCTURES := ["water_extractor", "greenhouse"]
@@ -85,6 +87,14 @@ const REPAIR_COST_SHARE := 0.5
 const STRUCTURE_SHIELD_COST := {"power": 10.0, "water": 6.0, "oxygen": 1.0, "food": 0.5}
 const UNSHIELDED_OUTPUT_SHARE := 0.6
 ## Packing producers away before the dust storm (the crew's time outside).
+## Supplies a successful rover operation brings back (none when it fails).
+const OPERATION_REWARDS := [
+	{"power": 40.0, "water": 20.0, "why": "The survey charted a sunlit ridge line and a frost patch: the panels were retuned and the frost melted down."},
+	{"water": 45.0, "oxygen": 5.0, "why": "The ice samples were melted down, and part of the water split into oxygen."},
+	{"oxygen": 4.0, "food": 6.0, "why": "Alex's unused emergency oxygen and ration packs came back with him."},
+]
+## Fixing a wrecked rover (parts and the crew's time outside).
+const ROVER_REPAIR_COST := {"power": 15.0, "water": 6.0, "oxygen": 1.0, "food": 0.6}
 const STOW_COST := {"power": 6.0, "water": 4.0, "oxygen": 0.8, "food": 0.4}
 
 var sites: Array[Dictionary] = []
@@ -334,6 +344,20 @@ func complete_mission(state: Variant) -> Array:
 	return shortfalls
 
 
+## The mission has failed: a reserve stayed empty too long, or the review fell short.
+func fail_mission(state: Variant, reason: String) -> void:
+	if state == null or state.mission_outcome.get("status", "") != "in_progress": return
+	state.depletion_failure = reason
+	_publish_action_state(state)
+
+
+## The first reserve that has run out ("" when none), in the order the crew feels it.
+func empty_reserve(state: Variant) -> String:
+	for key in ["oxygen", "water", "food", "power"]:
+		if float(state.get(COST_RESOURCES[key])) <= 0.0: return key
+	return ""
+
+
 ## Reserves at a story milestone; each label is recorded once (replays add nothing).
 func record_milestone(state: Variant, label: String) -> void:
 	if state == null:
@@ -440,6 +464,23 @@ func repair_structure(state: Variant, structure_id: String) -> bool:
 		return false
 	_spend(state, cost, -1.0)
 	state.damaged_structures.erase(structure_id)
+	_publish_action_state(state)
+	return true
+
+
+## Adds supplies (rewards); power stays within the battery.
+func grant(state: Variant, amounts: Dictionary) -> void:
+	if state == null: return
+	_spend(state, amounts, 1.0)
+	_publish_action_state(state)
+
+
+## Pays for and completes a rover repair (false when the outpost cannot pay).
+func repair_rover(state: Variant) -> bool:
+	if state == null or not missing_for(state, ROVER_REPAIR_COST).is_empty():
+		return false
+	_spend(state, ROVER_REPAIR_COST, -1.0)
+	state.rover_health = 100.0
 	_publish_action_state(state)
 	return true
 
@@ -827,15 +868,10 @@ func _update_report_data(state: Variant) -> void:
 func _evaluate_mission_outcome(state: Variant) -> Dictionary:
 	var existing_outcome: Dictionary = state.mission_outcome
 	var failure_reason := str(existing_outcome.get("failure_reason", ""))
-	if failure_reason.is_empty():
-		if state.oxygen_kg <= 0.0:
-			failure_reason = "oxygen_depleted"
-		elif state.water_l <= 0.0:
-			failure_reason = "water_depleted"
-		elif state.food_kg <= 0.0:
-			failure_reason = "food_depleted"
-		elif state.consecutive_power_depleted_sols >= 2:
-			failure_reason = "sustained_power_depletion"
+	# A reserve at zero starts a short countdown in the session (warning, then 20 s to
+	# recover it); only when that runs out, or the final review falls short, is it a failure.
+	if failure_reason.is_empty() and not str(state.depletion_failure).is_empty():
+		failure_reason = state.depletion_failure
 
 	var failure_sol := int(existing_outcome.get("failure_sol", 0))
 	if not failure_reason.is_empty() and failure_sol == 0:
@@ -895,7 +931,7 @@ func _calculate_power(state: Variant, site: Dictionary) -> Dictionary:
 	# outside a storm the amount shown when placing is exactly what arrives every sol.
 	generated_kwh += state.placed_panel_kwh_per_sol * light_multiplier * _output_share(state, "solar_panel") * _producer_multiplier(state)
 	var baseline_kw_per_person := _field_value(bvad_constants, "power_baseline_kw_per_person")
-	var consumed_kwh := baseline_kw_per_person * float(state.crew_size) * 24.0 * _active_effect_multiplier_for(state.active_events, "power_consumption_multiplier")
+	var consumed_kwh := baseline_kw_per_person * float(state.crew_size) * 24.0 * CREW_DRAW_SCALE * _active_effect_multiplier_for(state.active_events, "power_consumption_multiplier")
 	return {
 		"generated_kwh": generated_kwh,
 		"consumed_kwh": consumed_kwh,
@@ -907,7 +943,8 @@ func _calculate_power(state: Variant, site: Dictionary) -> Dictionary:
 
 
 ## The whole crew's gross daily use of each reserve (before recycling or producers).
-func crew_daily_use(crew_count: int = 4) -> Dictionary:
+func crew_daily_use(crew_size: int = 4) -> Dictionary:
+	var crew_count := float(crew_size) * CREW_DRAW_SCALE
 	return {
 		"power_kwh": _field_value(bvad_constants, "power_baseline_kw_per_person") * crew_count * 24.0,
 		"water_l": crew_count * (_field_value(bvad_constants, "potable_water_consumption_l_per_person_per_day") + _field_value(bvad_constants, "hygiene_water_consumption_l_per_person_per_day")),
@@ -917,7 +954,7 @@ func crew_daily_use(crew_count: int = 4) -> Dictionary:
 
 
 func _calculate_life_support(state: Variant) -> Dictionary:
-	var crew_count := float(state.crew_size)
+	var crew_count := float(state.crew_size) * CREW_DRAW_SCALE
 	var water_consumed_l := crew_count * (
 		_field_value(bvad_constants, "potable_water_consumption_l_per_person_per_day")
 		+ _field_value(bvad_constants, "hygiene_water_consumption_l_per_person_per_day")

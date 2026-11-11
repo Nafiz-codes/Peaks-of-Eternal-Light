@@ -30,7 +30,7 @@ static func build(id: String, state: Variant, catalog: Array = []) -> Dictionary
 			"power_console":
 				report.update = "We have %.2f kWh in reserve. Last Earth day we generated %.2f kWh and used %.2f kWh, for a balance of %+.2f kWh." % [state.power_kwh, state.power_generated_kwh, state.power_consumed_kwh, state.power_balance_kwh]
 				if state.consecutive_power_depleted_sols > 0:
-					report.update += " Power has been depleted for %d consecutive Earth day(s). Two consecutive depleted Earth days end the mission." % state.consecutive_power_depleted_sols
+					report.update += " Power has been depleted for %d consecutive Earth day(s). If any reserve stays at zero for twenty seconds, the mission fails." % state.consecutive_power_depleted_sols
 				elif state.power_balance_kwh < 0:
 					report.update += " We used more than we generated last Earth day. Keep an eye on the reserve."
 			"water_recycler":

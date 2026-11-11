@@ -40,6 +40,9 @@ var day_progress: float = 0.0
 var structures_shielded: bool = false
 ## Producers packed away for the dust storm (they make nothing until redeployed).
 var producers_stowed: bool = false
+## Why the mission failed once the zero-reserve countdown ran out or the final review fell
+## short ("oxygen_depleted", "review_shortfall", ...); empty while it can still succeed.
+var depletion_failure: String = ""
 ## Fixed daily output of the hand-placed solar panel, set from its placement.
 var placed_panel_kwh_per_sol: float = 0.0
 ## World-clock seconds at mission start, so power uses the same days as the sky.
@@ -100,6 +103,7 @@ func snapshot() -> Dictionary:
 		"day_progress": day_progress,
 		"structures_shielded": structures_shielded,
 		"producers_stowed": producers_stowed,
+		"depletion_failure": depletion_failure,
 		"last_rover_action": last_rover_action,
 		"rover_distance_this_sol_km": rover_distance_this_sol_km,
 		"rover_total_distance_km": rover_total_distance_km,

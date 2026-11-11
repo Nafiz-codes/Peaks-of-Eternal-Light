@@ -60,6 +60,13 @@ func _process(_delta: float) -> void:
 	var data: Dictionary = expeditions.data
 	if not running:
 		instruction = str(state.mission_outcome.get("status", "")).capitalize()
+	elif state.rover_health <= 0.0 and expeditions.data.get("location", "outpost") == "outpost" and not rover_active:
+		objective = "Repair the rover"
+		instruction = "Walk to the rover at the outpost and press E. The repair costs supplies; operations wait until it is fixed."
+		destination = world.get_node("RoverHull").global_position
+	elif session.depletion_elapsed >= 0.0:
+		objective = "%s depleted" % str(session.depleted_reserve).capitalize()
+		instruction = "%d s to get it back above zero: build what produces it, or press C to tear down structures for their supplies." % ceili(maxf(0.0, session.DEPLETION_GRACE_SECONDS - session.depletion_elapsed))
 	elif preload("res://src/world/dust_storm.gd").pending(expeditions.data):
 		objective = "Dust storm"
 		instruction = "Visibility reduced and solar power halved for the rest of this Earth day. Wait for the dust to clear."
