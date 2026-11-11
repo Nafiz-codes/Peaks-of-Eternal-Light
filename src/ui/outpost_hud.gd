@@ -22,7 +22,7 @@ var operations: AcceptDialog
 var activity: Label
 var clear_preview_button: Button
 var reading_tween: Tween
-var crew_dialogue: AcceptDialog
+var crew_dialogue: Control
 var orbital_panel: AcceptDialog
 
 func _ready() -> void:

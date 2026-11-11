@@ -17,93 +17,77 @@ const INTRODUCTIONS := {
  "mission_short": {"speaker": "Dr. Maya Chen", "text": "Not yet, Commander."},
  "storm_lost_contact": {"speaker": "Dr. Maya Chen", "text": "Commander, we've lost contact with Alex. He went out to check a reading before the storm and hasn't reported back. Take the rover to his last known location and bring him home."}
 }
+const SEQUENCES := {
+	"crew_briefing": [
+		["crew_briefing", "smiling", "Welcome to the Moon. I’m Dr. Maya Chen, your flight engineer and training officer. I’ll help you learn the equipment and work safely out here."],
+		["player", "questioning", "Where do I start?"],
+		["crew_briefing", "neutral", "First, meet your crew. Sam keeps our equipment and habitat running and Alex leads our science work. Then come back to me and we’ll get started on construction."]
+	],
+	"food_storage": [
+		["food_storage", "smiling", "Hey, what's up. I’m Sam Okafor. Your guy for robotics, habitat operations and whatever needs fixing."],
+		["player", "questioning", "So you’re the person to ask about rovers and construction?"],
+		["food_storage", "smiling", "Exactly. Rovers, building equipment, life-support maintenance—that’s my territory. I’m also the crew’s medical officer, so let me know if you’re feeling unwell."]
+	],
+	"water_recycler": [
+		["water_recycler", "smiling", "Hello! I’m Dr. Alex Rivera, lunar geologist and resource scientist."],
+		["water_recycler", "confident", "I study what the rocks and terrain can tell us about this place."],
+		["player", "questioning", "What will we be investigating?"],
+		["water_recycler", "neutral", "We’ll collect samples and examine possible signs of water ice in shadowed terrain. I’ll also do my best to help you interpret the observations and NASA data as we go."]
+	]
+}
 var dialogue_id := "crew_briefing"
-var text_override := "" # Replaces the line's text when set (for lines built at runtime).
+var text_override := ""
 var player: Node
-var content: VBoxContainer
-var previous_blocked := false
-var build_hud: CanvasLayer
-var previous_build_visible := false
+var content: Control
+var view: Control
+var lines: Array = []
+var line_index := 0
+var timer: Tween
+var ending := false
 
 func _ready() -> void:
 	name = "MayaIntroduction"
 	layer = 95
 	player = get_parent().get_node("Outpost/Astronaut")
-	previous_blocked = player.ui_blocked
-	player.ui_blocked = true
-	var placement := get_parent().get_node_or_null("SolarPlacement")
-	if placement != null:
-		build_hud = placement.hud
-		previous_build_visible = build_hud.visible
-		build_hud.hide()
-	var root := Control.new()
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(root)
-	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	content = VBoxContainer.new()
-	root.add_child(content)
-	content.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	content.anchor_left = 0.12
-	content.anchor_right = 0.88
-	content.offset_top = -165
-	content.offset_bottom = -35
-	content.add_theme_constant_override("separation", 8)
-	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var font := SystemFont.new()
-	font.font_names = PackedStringArray(["Segoe UI", "Noto Sans", "Arial"])
-	var speech: Dictionary = INTRODUCTIONS[dialogue_id]
-	var spoken_text: String = (speech.text if text_override.is_empty() else text_override).replace("Commander", get_node("/root/MissionSession").commander_address())
-	for entry in [[speech.speaker, Color("ffd36a"), 22], [spoken_text, Color.WHITE, 20]]:
-		var label := Label.new()
-		label.text = entry[0]
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		if entry[0] == speech.speaker:
-			var name_font := font.duplicate() as SystemFont
-			name_font.font_weight = 600
-			label.add_theme_font_override("font", name_font)
-		else:
-			label.add_theme_font_override("font", font)
-		label.add_theme_font_size_override("font_size", entry[2])
-		label.add_theme_color_override("font_color", entry[1])
-		label.add_theme_color_override("font_outline_color", Color("141820"))
-		label.add_theme_constant_override("outline_size", 4)
-		content.add_child(label)
-		if entry[0] == speech.speaker:
-			var divider := TextureRect.new()
-			divider.name = "GoldDivider"
-			divider.custom_minimum_size.y = 9
-			divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			divider.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			var gradient := Gradient.new()
-			gradient.offsets = PackedFloat32Array([0.0, 0.2, 0.5, 0.8, 1.0])
-			gradient.colors = PackedColorArray([Color(1, 0.77, 0.3, 0), Color(1, 0.77, 0.3, 0.5), Color(1, 0.86, 0.5, 1), Color(1, 0.77, 0.3, 0.5), Color(1, 0.77, 0.3, 0)])
-			var texture := GradientTexture2D.new()
-			texture.width = 256
-			texture.height = 8
-			texture.gradient = gradient
-			divider.texture = texture
-			var shader := Shader.new()
-			shader.code = "shader_type canvas_item; void fragment() { vec4 gold = texture(TEXTURE, UV); float d = abs(UV.y - 0.5); float core = 1.0 - smoothstep(0.05, 0.17, d); float glow = exp(-d * 7.0) * 0.35; COLOR = vec4(gold.rgb, gold.a * min(1.0, core + glow)) * COLOR; }"
-			var glow_material := ShaderMaterial.new()
-			glow_material.shader = shader
-			divider.material = glow_material
-			content.add_child(divider)
-	content.modulate.a = 0.0
-	var fade := create_tween()
-	fade.tween_property(content, "modulate:a", 1.0, 0.18)
-	fade.tween_interval(maxf(6.0, spoken_text.length() * 0.055)) # Longer lines stay up longer.
-	fade.tween_property(content, "modulate:a", 0.0, 0.18)
-	fade.tween_callback(func():
-		player.ui_blocked = previous_blocked
+	view = preload("res://src/ui/conversation_view.gd").new()
+	add_child(view)
+	content = view
+	view.begin(get_parent())
+	if SEQUENCES.has(dialogue_id) and text_override.is_empty():
+		lines = SEQUENCES[dialogue_id].duplicate(true)
+	else:
+		var entry: Dictionary = INTRODUCTIONS[dialogue_id]
+		var id := "crew_briefing"
+		if entry.speaker == "Dr. Alex Rivera": id = "water_recycler"
+		elif entry.speaker == "Sam Okafor": id = "food_storage"
+		lines = [[id, "neutral", entry.text if text_override.is_empty() else text_override]]
+	_show_line()
+
+func _show_line() -> void:
+	var line: Array = lines[line_index]
+	view.present(line[0], str(line[2]).replace("Commander", get_node("/root/MissionSession").commander_address()), line[1])
+	view.hint.text = "E / Enter / click: continue · %d / %d" % [line_index + 1, lines.size()]
+	timer = create_tween()
+	timer.tween_interval(maxf(6.0, str(line[2]).length() * 0.065))
+	timer.tween_callback(advance)
+
+func advance() -> void:
+	if ending: return
+	if timer != null and timer.is_valid(): timer.kill()
+	line_index += 1
+	if line_index < lines.size():
+		_show_line()
+	else:
+		ending = true
+		view.end()
 		finished.emit()
-		queue_free())
+		queue_free()
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.keycode in [KEY_E, KEY_B, KEY_I]:
+	if ending: return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_E, KEY_ENTER, KEY_SPACE]:
 		get_viewport().set_input_as_handled()
-
-func _exit_tree() -> void:
-	if is_instance_valid(player): player.ui_blocked = previous_blocked
-	if is_instance_valid(build_hud): build_hud.visible = previous_build_visible
+		advance()
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		get_viewport().set_input_as_handled()
+		advance()

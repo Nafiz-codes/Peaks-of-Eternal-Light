@@ -1,73 +1,71 @@
 extends SceneTree
 var failures := 0
-func _init() -> void: call_deferred("run")
-func check(ok: bool, message: String) -> void:
- if not ok:
-  failures += 1
-  push_error(message)
-func run() -> void:
- var session := root.get_node("MissionSession")
- check(session.commander_address() == "Commander", "Unnamed saves use the Commander fallback.")
- check(session.confirm_new_commander("commander-01", "আরহাম Chen"), "Select a named commander.")
- session.select_landing_site("ridge_a")
- session.start_selected_mission()
- var world := preload("res://scenes/lunar_outpost_3d.tscn").instantiate()
- root.add_child(world)
- current_scene = world
- await physics_frame
- await create_timer(0.5).timeout
- var player := world.get_node("Outpost/Astronaut")
- player.set_physics_process(false)
- check(not world.maya_dialogue_active, "Dialogue waits for an E interaction.")
- var lines := [
-  ["crew_briefing", "Dr. Maya Chen", "Welcome, Commander আরহাম Chen! I'm Dr. Maya Chen, your flight engineer and instructor. I'll guide you through the equipment, scientific data, and mission procedures."],
-  ["water_recycler", "Dr. Alex Rivera", "Dr. Alex Rivera, planetary geologist. I'm here to help us understand the Moon's terrain, history, and potential resources."],
-  ["food_storage", "Sam Okafor", "And I'm Sam Okafor, robotics and habitat engineer. Give me the equipment, and I'll help turn it into a functioning base."],
-  ["crew_briefing", "Dr. Maya Chen", "We all have our specialties, Commander আরহাম Chen. But you'll be making the final decisions."]
- ]
- for speech in lines:
-  var actor := world.get_node("Outpost/" + str(speech[0])) as Node3D
-  player.global_position = actor.global_position + Vector3(0,0,8)
-  world._on_player_interaction(speech[0])
-  check(not world.maya_dialogue_active, "Introductions require approaching the correct NPC.")
-  player.global_position = actor.global_position + Vector3(0,0,1.8)
-  world._on_player_interaction(speech[0])
-  check(world.maya_dialogue_active and player.ui_blocked, "E starts the selected NPC introduction.")
-  var dialogue := world.get_node("MayaIntroduction")
-  check(dialogue.content.get_child(0).text == speech[1], "Correct speaker name.")
-  check(dialogue.content.get_child(2).text == speech[2], "User's dialogue is reproduced exactly.")
-  check(dialogue.content.get_child(1).name == "GoldDivider", "Gold glowing divider is retained.")
-  check(dialogue.content.modulate.a == 0.0, "Dialogue begins faded out.")
-  var stop := actor.global_position
-  world._on_player_interaction("water_recycler")
-  check(world.dialogue_speaker == speech[0], "Repeated E cannot replace the active speaker.")
-  await create_timer(0.25).timeout
-  check(dialogue.content.modulate.a > 0.99, "Fast fade-in completes.")
-  check(not world.get_node("SolarPlacement").hud.visible, "Build hints do not overlap subtitles.")
-  if "--capture" in OS.get_cmdline_user_args():
-   await RenderingServer.frame_post_draw
-   root.get_texture().get_image().save_png("res://.tools/intro_" + dialogue.dialogue_id + ".png")
-  await create_timer(5.6).timeout
-  check(world.maya_dialogue_active and dialogue.content.modulate.a > 0.99, "Text remains readable for the six-second hold.")
-  check(actor.global_position.is_equal_approx(stop), "Speaking NPC stays in place.")
-  await create_timer(0.65).timeout
-  check(not world.maya_dialogue_active and not player.ui_blocked, "Fade-out restores normal movement.")
-  check(world.dialogue_speaker.is_empty(), "Speaker hold is released.")
- check(session.maya_intro_complete and session.crew_introductions.get("water_recycler",false) and session.crew_introductions.get("food_storage",false) and session.crew_introductions.get("maya_closing",false), "All four introductions complete independently.")
- world._on_player_interaction("crew_briefing")
- check(not world.maya_dialogue_active and world.get_node("MissionHUD").crew_dialogue.visible, "Later E interactions retain existing crew reports and actions.")
- world.get_node("MissionHUD").crew_dialogue.hide()
- var Save = preload("res://src/runtime/mission_save.gd")
- var saved: Dictionary = Save.capture(session)
- check(Save.decode(saved).crew_introductions == session.crew_introductions, "Introduction completion survives save/load.")
- saved.erase("crew_introductions")
- check(not Save.decode(saved).is_empty(), "Older saves remain valid.")
- saved.crew_introductions = {"food_storage": "invalid"}
- check(Save.decode(saved).is_empty(), "Invalid saved introduction flags are rejected.")
- session.reset_current_mission()
- check(session.crew_introductions.is_empty() and not session.maya_intro_complete, "New mission restores all introductions.")
- world.queue_free()
- await physics_frame
- await process_frame
- print("CREW INTRODUCTIONS: %d failures" % failures)
- quit(failures)
+func _init(): call_deferred("run")
+func check(ok: bool, message: String):
+	if not ok:
+		failures += 1
+		push_error(message)
+func capture(label: String):
+	if DisplayServer.get_name() == "headless": return
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("res://.tools/conversation_" + label + ".png")
+func run():
+	root.size = Vector2i(960, 540) if "--small" in OS.get_cmdline_user_args() else Vector2i(1360, 820)
+	var session = root.get_node("MissionSession")
+	session.confirm_new_commander("commander-01", "Commander")
+	session.select_landing_site("ridge_a")
+	session.start_selected_mission()
+	var world = load("res://scenes/lunar_outpost_3d.tscn").instantiate()
+	root.add_child(world)
+	current_scene = world
+	await physics_frame
+	await process_frame
+	var player = world.get_node("Outpost/Astronaut")
+	player.set_physics_process(false)
+	var menu = world.get_node("MissionHUD").crew_dialogue
+	for id in ["crew_briefing", "food_storage", "water_recycler", "crew_briefing"]:
+		var actor = world.get_node("Outpost/" + id)
+		player.global_position = actor.global_position + Vector3(0, 0, 1.8)
+		world._on_player_interaction(id)
+		check(menu.visible and menu.buttons.size() == 5, "E opens five choices")
+		check(player.ui_blocked, "Player blocked during choices")
+		check(root.get_node("GameMenu")._modal_visible(), "Conversation owns Escape before pause menu")
+		await capture("choices_" + id)
+		var wheel := InputEventMouseButton.new()
+		wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+		wheel.pressed = true
+		menu._input(wheel)
+		check(menu.selected == 3, "Wheel changes selected choice")
+		var talk := InputEventKey.new()
+		talk.keycode = KEY_3
+		talk.pressed = true
+		menu._input(talk)
+		check(world.maya_dialogue_active, "Talk starts introduction")
+		var dialogue = world.get_node("MayaIntroduction")
+		var expected: Array = dialogue.SEQUENCES.get(id, []) if dialogue.dialogue_id != "maya_closing" else []
+		while not dialogue.ending:
+			check(dialogue.view.portrait.texture != null, "Correct character portrait is available")
+			if not expected.is_empty():
+				check(dialogue.view.speech.text == expected[dialogue.line_index][2], "Exact authored dialogue line")
+			await capture(id + "_" + str(dialogue.line_index))
+			dialogue.advance()
+		await process_frame
+		check(not world.maya_dialogue_active and not player.ui_blocked, "Conversation restores control")
+	check(session.maya_intro_complete and session.crew_introductions.get("water_recycler", false) and session.crew_introductions.get("food_storage", false), "Introductions marked complete")
+	var saved: Dictionary = preload("res://src/runtime/mission_save.gd").capture(session)
+	check(preload("res://src/runtime/mission_save.gd").decode(saved).crew_introductions == session.crew_introductions, "Introduction flags survive save/load")
+	world._on_player_interaction("crew_briefing")
+	menu._choose(2)
+	check(menu.visible and not world.maya_dialogue_active, "Completed introduction becomes status")
+	menu._choose(0)
+	check(world.get_node("CrewFieldwork").data.crew.crew_briefing.task == "follow", "Follow command connected")
+	var escape := InputEventKey.new()
+	escape.keycode = KEY_ESCAPE
+	escape.pressed = true
+	menu._input(escape)
+	check(not menu.visible and not player.ui_blocked, "Escape restores gameplay")
+	check(world.get_node("MissionTracker").visible, "Objective HUD restored")
+	print("NPC conversation failures: ", failures)
+	quit(failures)

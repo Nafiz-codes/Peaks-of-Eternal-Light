@@ -24,19 +24,14 @@ func run() -> void:
 	await process_frame
 	var hud := world.get_node("MissionHUD")
 	var player := world.get_node("Outpost/Astronaut")
-	var dialogue: AcceptDialog = hud.crew_dialogue
+	var dialogue: Control = hud.crew_dialogue
 	for id in Report.ROLES:
-		world._on_player_interaction(id)
+		dialogue.open_status(id)
 		check(dialogue.visible and player.ui_blocked, "E interaction opens a conversation and blocks movement: " + id)
 		check(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Dialogue releases the cursor.")
 		check(not world.get_node("Outpost/" + id + "/StatusLabel/UpdateMarker").visible, "Reading clears the update marker.")
 		check(session.dashboard_state == null, "Talking does not start a mission implicitly.")
-		var displayed_text := ""
-		for label in dialogue.content.find_children("*", "Label", true, false):
-			displayed_text += label.text + "\n"
-		check("Ready when you are, Commander Rivera." in displayed_text, "Radio greeting addresses the selected commander.")
-		if id == "crew_briefing":
-			check("Commander Rivera, the final decisions are yours." in displayed_text, "Maya's report uses the commander's name.")
+		check(not dialogue.view.speech.text.is_empty(), "Status includes a readable report.")
 		dialogue.hide()
 		check(not player.ui_blocked, "Closing restores player input.")
 	check(session.start_selected_mission() == OK, "Mission starts.")

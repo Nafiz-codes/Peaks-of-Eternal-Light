@@ -173,7 +173,7 @@ func _set_station_hint(station: Node, near: bool) -> void:
 	# Rover repair shares these area handlers but has no crew name tag.
 	var label := station.get_node_or_null("StatusLabel") as Label3D
 	if label == null or not label.has_meta("station_title"): return
-	label.text = str(label.get_meta("station_title")) + ("\nPress E" if near else "")
+	label.text = str(label.get_meta("station_title")) + ("\nPress E to interact" if near else "")
 	var name_label := label.get_node_or_null("CrewName") as Label3D
 	if name_label != null:
 		name_label.position.y = 0.36 if near else 0.18
@@ -481,9 +481,13 @@ static func tag_font(weight := 600) -> FontVariation:
 	return font
 
 
-func _on_player_interaction(interaction_id: String) -> void:
+func _on_player_interaction(interaction_id: String, from_menu: bool = false) -> void:
 	var session := get_node("/root/MissionSession")
 	if maya_dialogue_active: return
+	if not from_menu and interaction_id in ["crew_briefing", "water_recycler", "food_storage"]:
+		if get_node("Outpost/Astronaut").global_position.distance_to(get_node("Outpost/" + interaction_id).global_position) > 2.5: return
+		get_node("MissionHUD").inspect_station(interaction_id)
+		return
 	var introduction := ""
 	if interaction_id.begins_with("repair:"):
 		get_node("StructureRepairs").start(interaction_id.trim_prefix("repair:"))
@@ -546,7 +550,10 @@ func _on_player_interaction(interaction_id: String) -> void:
 		get_node("MissionHUD").open_operations("rover")
 		return
 	# Inspect authoritative readings; stations never modify resource values.
-	get_node("MissionHUD").inspect_station(interaction_id)
+	if from_menu:
+		get_node("MissionHUD").crew_dialogue.open_status(interaction_id)
+	else:
+		get_node("MissionHUD").inspect_station(interaction_id)
 
 
 ## Radiation wave: Maya's warning, then the Commander's order to each crew member.

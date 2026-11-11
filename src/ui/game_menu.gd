@@ -138,6 +138,8 @@ func _input(event: InputEvent) -> void:
 		show_page("home")
 
 func _modal_visible() -> bool:
+	for dialogue in get_tree().get_nodes_in_group("conversation_modal"):
+		if dialogue.is_visible_in_tree(): return true
 	var scene := get_tree().current_scene
 	if scene != null:
 		for window in scene.find_children("*", "Window", true, false):
