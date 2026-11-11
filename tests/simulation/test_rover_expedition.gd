@@ -10,15 +10,15 @@ func check(value: bool, message: String):
 func _initialize():
 	var d := Rules.fresh()
 	check(Rules.valid_save(d),"Fresh save valid")
-	for sol in range(2): check(Rules.assigned(d,sol) == -1,"Future operation locked")
-	check(Rules.assigned(d,2) == 0,"Survey unlocks Sol 2")
-	check(Rules.assigned(d,6) == 0,"Overdue operation retained")
+	# Operations follow story order, not the sol count (days were replaced by Earth time).
+	check(Rules.assigned(d) == 0,"Surface Survey comes first")
 	d.completed.append(0)
-	check(Rules.assigned(d,3) == -1,"Frozen Horizon locked before Sol 4")
-	check(Rules.assigned(d,4) == 1,"Frozen Horizon unlocks Sol 4")
+	check(Rules.assigned(d) == 1,"Frozen Horizon follows the survey")
 	d.completed.append(1)
-	check(Rules.assigned(d,5) == -1,"Lifeline locked before Sol 6")
-	check(Rules.assigned(d,6) == 2,"Lifeline unlocks Sol 6")
+	check(Rules.assigned(d) == 2,"Lifeline follows Frozen Horizon")
+	d.completed.append(2)
+	check(Rules.assigned(d) == -1,"Nothing is assigned after all three")
+	d.completed = [0,1]
 	d.mission = 2
 	d.discovered = true
 	d.stabilized = true

@@ -27,6 +27,11 @@ func render_sun(direction: Vector3, name_: String) -> Image:
 	return img
 
 func run() -> void:
+	if DisplayServer.get_name() == "headless":
+		# Headless never draws a frame, so frame_post_draw would wait forever.
+		print("Earth lighting render: skipped (needs --rendering-method gl_compatibility, not --headless).")
+		quit(0)
+		return
 	root.size = Vector2i(512, 512)
 	var world := Node3D.new()
 	root.add_child(world)

@@ -157,6 +157,7 @@ func _exit_tree() -> void:
 	end()
 
 func _layout() -> void:
+	if not is_inside_tree(): return # The deferred first layout can land after a scene change.
 	var viewport_size := get_viewport().get_visible_rect().size
 	var factor := clampf(minf(viewport_size.x / 1360.0, viewport_size.y / 820.0), 0.65, 1.0)
 	var diameter := 82.0 * factor

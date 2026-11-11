@@ -6,6 +6,7 @@ func check(ok: bool, message: String) -> void:
 		failures += 1
 		push_error(message)
 func run() -> void:
+	root.size = Vector2i(1360, 820) # Headless windows start at 64x64; the Back click needs real layout.
 	change_scene_to_file("res://scenes/startup.tscn")
 	await scene_changed
 	await process_frame
@@ -64,7 +65,7 @@ func run() -> void:
 	check(not player.playing, "Mission pause menu does not restart music")
 	check(ambient.playing, "Mission ambience continues in pause settings")
 	menu.show_page("settings")
-	check(menu.body.find_children("*", "CheckButton", true, false)[0].text == "Music enabled", "Mission settings exposes music toggle")
+	check(menu.body.find_children("*", "CheckButton", true, false)[0].text.to_upper() == "MUSIC ENABLED", "Mission settings exposes music toggle")
 	menu.close_menu()
 	change_scene_to_file("res://scenes/lunar_landing_selector.tscn")
 	await scene_changed

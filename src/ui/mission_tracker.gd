@@ -8,6 +8,7 @@ var world: Node3D
 var expeditions: Node
 var expedition_view: Dictionary = {}
 var mission_font: SystemFont
+var hud: Node # MissionHUD; its key hints sit below the objective.
 
 func _ready() -> void:
 	name = "MissionTracker"
@@ -15,6 +16,7 @@ func _ready() -> void:
 	world = get_parent()
 	session = get_node("/root/MissionSession")
 	expeditions = world.get_node("RoverTraining")
+	hud = world.get_node_or_null("MissionHUD")
 	expeditions.hud_changed.connect(func(view: Dictionary): expedition_view = view)
 	mission_font = preload("res://src/ui/ui_style.gd").objective_font()
 	title = _label(20)
@@ -40,11 +42,13 @@ func _process(_delta: float) -> void:
 	marker.hide()
 	var rover_active: bool = expeditions.driver.active
 	title.size.x = 360 if rover_active else 410
+	detail.size.x = 360 # Set before the text so wrapping is measured at the final width.
 	var state = session.dashboard_state
 	# Read only the authoritative campaign and expedition objectives.
 	if state == null:
 		title.text = ""
 		detail.text = ""
+		if hud != null: hud.help_hint.position.y = 135
 		return
 	var objective: String = str(state.mission_outcome.get("primary_objective", ""))
 	var instruction: String = session.elapsed_time_label()
@@ -129,10 +133,12 @@ func _process(_delta: float) -> void:
 	detail.text = instruction
 	if destination is Vector3:
 		detail.text += "\n%.0f m" % observer.global_position.distance_to(destination)
-	# Measure this frame's text before stacking instructions, status and health.
+	# Measure this frame's text before stacking instructions, status, health and key hints.
 	var title_bottom: float = title.position.y + maxf(title.size.y, title.get_minimum_size().y)
 	detail.position = Vector2(22, maxf(76, title_bottom + 8)) if rover_active else Vector2(52, maxf(60, title_bottom + 6))
-	detail.size.x = 360
+	detail.size.y = 0 # Shrink back to the text after a longer instruction.
+	var detail_bottom: float = detail.position.y + detail.get_minimum_size().y
+	if hud != null: hud.help_hint.position.y = maxf(135, detail_bottom + 10)
 	if rover_active:
 		var status_label: Label = expeditions.hud.result
 		status_label.position = Vector2(22, detail.position.y + maxf(detail.size.y, detail.get_minimum_size().y) + 12)

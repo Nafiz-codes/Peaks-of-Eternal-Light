@@ -43,6 +43,9 @@ func _run() -> void:
 	current_scene = world
 	await process_frame
 	check(session.start_selected_mission() == OK, "Mission starts.")
+	# Maya walks over for her intro; freeze crew so saved and restored positions match exactly.
+	world.get_node("CrewFieldwork").set_physics_process(false)
+	world.get_node("CrewFieldwork").set_process(false)
 	await process_frame
 	var player := world.get_node("Outpost/Astronaut")
 	var before: Dictionary = Save.state_data(session.dashboard_state)
@@ -57,7 +60,7 @@ func _run() -> void:
 		await process_frame
 	check(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Pause menu keeps the mouse available if gameplay recaptures it.")
 	for button in menu.overlay.find_children("*", "Button", true, false):
-		if button.text == "Settings":
+		if button.text.to_upper() == "SETTINGS": # Game UI is shown in capitals.
 			click_at(button.get_global_rect().get_center())
 	check(menu.page == "settings", "Mouse click navigates to Settings while paused.")
 	for frame in range(3):

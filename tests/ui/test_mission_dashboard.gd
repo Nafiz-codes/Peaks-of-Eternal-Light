@@ -58,10 +58,14 @@ func _verify() -> void:
 		app.start_mission()
 		check(app.state.snapshot() == initial, "Duplicate starts must not recreate state")
 		while reference.mission_outcome.status == "in_progress" and reference.sol < 7:
-			app.run_button.pressed.emit()
 			var once: int = app.state.sol
-			app.advance_turn()
-			check(app.state.sol == once, "Repeated callbacks while a turn is updating must not tick twice")
+			app.run_button.pressed.emit()
+			app.advance_turn() # A second press during the Sol fade must be ignored.
+			# The Sol advances behind an animated fade, not synchronously.
+			var transition: Node = root.get_node("MissionSession").sol_transition
+			while is_instance_valid(transition) and transition.busy:
+				await process_frame
+			check(app.state.sol == once + 1, "Repeated callbacks while a turn is updating must not tick twice")
 			baseline.advance_sol(reference)
 			while not reference.pending_events.is_empty():
 				var pending: Dictionary = reference.pending_events[0]

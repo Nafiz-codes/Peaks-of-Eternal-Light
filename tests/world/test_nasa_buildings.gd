@@ -47,7 +47,7 @@ func run():
   session.dashboard_state.food_kg = 1000.0
   placement._select(entry[1])
   var found := false
-  for z in [-9,-4,1,6,10]:
+  for z in [-9,-4,1,6,10,-24,-18,18,24]: # Outer rows fit the 13 m shelter.
    for x in [-10,-5,0,5,10]:
     var spot := Vector3(x,0,z)
     player.global_position = spot + Vector3(0,0,8)

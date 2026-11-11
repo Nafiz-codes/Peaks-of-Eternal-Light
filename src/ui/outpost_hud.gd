@@ -80,6 +80,11 @@ func _ready() -> void:
 			notice.text = "DEV: +150 kWh, +150 L water, +20 kg oxygen, +15 kg food.")
 		supplies.name = "DeveloperAddResources"
 		actions.add_child(supplies)
+		var drain := UI.button("DEV: -Resources", func():
+			session.developer_add_resources(-1.0)
+			notice.text = "DEV: -150 kWh, -150 L water, -20 kg oxygen, -15 kg food (not below zero).")
+		drain.name = "DeveloperRemoveResources"
+		actions.add_child(drain)
 		var speed := UI.button("DEV: Speed 1×", Callable())
 		speed.name = "DeveloperSpeed"
 		speed.tooltip_text = "Runs the whole game faster: walking, crew work, the sky and daily accounting."

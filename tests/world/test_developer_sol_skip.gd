@@ -19,44 +19,16 @@ func run() -> void:
 	root.add_child(world)
 	current_scene = world
 	await process_frame
-	check(world.get_node("MissionHUD").find_child("DeveloperSkipSols", true, false) != null, "Debug skip control exists in mission panel.")
-	world.get_node("MissionHUD").find_child("DeveloperSolCount", true, false).value = 2
-	world.get_node("MissionHUD").find_child("DeveloperSkipSols", true, false).pressed.emit()
-	await create_timer(1.5).timeout
-	check(session.dashboard_state != null, "Skip button starts selected mission.")
-	await process_frame
+	# Days were replaced by Earth time: the Sol-skip tool is switched off and must refuse.
+	check(world.get_node("MissionHUD").find_child("DeveloperSkipSols", true, false) == null, "No Sol-skip control while it is disabled.")
+	check(session.start_selected_mission() == OK, "Mission starts.")
 	var state: Variant = session.dashboard_state
-	check(state.sol == 2, "Calendar is Sol 2.")
-	var legacy: Dictionary = preload("res://src/runtime/mission_save.gd").capture(session)
-	legacy.state.mission_length_sols = 10
-	check(preload("res://src/runtime/mission_save.gd").decode(legacy).state.mission_length_sols == 7, "Legacy ten-Sol saves migrate to seven Sols.")
-	var power: float = state.power_kwh
-	var food: float = state.food_kg
+	check(not session.developer_skip_sols(2) and state.sol == 0, "Disabled Sol skip leaves the calendar alone.")
 	var rules := preload("res://src/simulation/rover_expedition.gd")
-	check(rules.assigned(state.rover_expedition, state.sol) == 0, "Survey unlock follows calendar.")
-	check(session.developer_skip_sols(4) and state.sol == 6, "Can jump to rescue unlock Sol.")
-	check(state.power_kwh == power and state.food_kg == food, "Developer jump does not consume supplies.")
-	check(rules.assigned(state.rover_expedition, state.sol) == 0, "Overdue incomplete survey is preserved.")
-	check(not session.developer_skip_sols(-1), "Backward skips rejected.")
 	var driver := world.get_node("RoverHull")
-	driver.active = true
-	check(not session.developer_skip_sols(1), "Cannot skip during rover control.")
-	driver.active = false
-	paused = true
-	check(not session.developer_skip_sols(1), "Paused game cannot jump.")
-	paused = false
-	state.rover_expedition.location = "expedition"
-	check(not session.developer_skip_sols(1), "Cannot skip with rover away.")
-	state.rover_expedition.location = "outpost"
-	check(not session.developer_skip_sols(100) and state.sol == 6, "Jump stops before final simulated Sol.")
-	check(not session.developer_skip_sols(1), "Final outcome cannot be bypassed.")
-	check(not preload("res://src/runtime/mission_save.gd").decode(session.sol_checkpoint).is_empty(), "Skipped calendar checkpoint remains loadable.")
 	var expedition := world.get_node("RoverTraining")
-	for mission in [2, 0, 1]:
-		check(expedition.developer_select_mission(mission), "Developer can select any mission out of order.")
-		check(rules.assigned(state.rover_expedition, state.sol) == mission, "Selected mission overrides normal scheduling.")
-		check(state.rover_expedition.samples.is_empty() and state.rover_expedition.surveys.is_empty(), "Selected operation starts fresh.")
-	check(not preload("res://src/runtime/mission_save.gd").decode(session.sol_checkpoint).is_empty(), "Developer-selected mission saves correctly.")
+	# The old mission picker shares the disabled flag; DEV "Go to event" replaces it (test_developer_events).
+	check(not expedition.developer_select_mission(1), "Disabled mission picker refuses.")
 	driver.position.y = 25
 	await driver._settle_parked()
 	check(driver.position.y < 1.0, "Floating parked rover is settled onto the surface.")
@@ -67,6 +39,6 @@ func run() -> void:
 	root.get_node("GameAudio").hover_player.stop()
 	await create_timer(0.1).timeout
 	await process_frame
-	print("Developer Sol skip: %d failures / %d assertions." % [failures, assertions])
+	print("Developer tools: %d failures / %d assertions." % [failures, assertions])
 	quit(1 if failures else 0)
 

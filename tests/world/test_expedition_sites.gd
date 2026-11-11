@@ -40,7 +40,7 @@ func run():
 			var angle := TAU * sample / 16.0
 			var point: Vector3 = controller.departure.position + Vector3(cos(angle), 0, sin(angle)) * 5.0
 			check(absf(controller.ground_y(point) - 1.0) < 0.02, "Departure footprint is flat: " + site.site_id)
-		check(controller.crew.get_meta("crew_id") == "CREW_02","Maya identity used for rescue")
+		check(controller.crew.get_meta("crew_id") == "CREW_03","Alex (water recycler) is the lost astronaut; Maya stays to brief the Commander")
 		check(world.find_children("StationAstronaut","Node3D",true,false).size() == 3,"No duplicate crew")
 		driver.active = false
 		world.queue_free()

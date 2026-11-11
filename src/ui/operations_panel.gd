@@ -66,7 +66,7 @@ func open_operations(kind: String, state: Variant, contract: Dictionary, invoker
 			var card := UI.panel(content)
 			card.add_child(UI.label(str(structure.get("name", id)), 19))
 			var cost: Dictionary = structure.get("build_cost", {})
-			card.add_child(UI.label("Energy %s kWh · Water %s L · Oxygen %s kg · Food %s kg · Build time: %s Earth days" % [cost.get("power", "?"), cost.get("water", "?"), cost.get("oxygen", "?"), cost.get("food", "?"), structure.get("build_time_sols", "?")], 14, UI.BLUE))
+			card.add_child(UI.label("Energy %s kWh · Water %s L · Oxygen %s kg · Food %s kg · Build time: %s Earth days" % [_amount(cost.get("power")), _amount(cost.get("water")), _amount(cost.get("oxygen")), _amount(cost.get("food")), _amount(structure.get("build_time_sols"))], 14, UI.BLUE))
 			card.add_child(UI.label(str(structure.get("effect", "Effect description unavailable.")), 14))
 			var built: bool = state != null and state.built_structures.has(id)
 			var queued: bool = false if state == null else state.construction_queue.any(func(job): return str(job.get("structure_id", "")) == id)
@@ -92,3 +92,7 @@ func open_operations(kind: String, state: Variant, contract: Dictionary, invoker
 		UI.disclosure(content, "Parameter sources and assumptions", str(rover.get("notes", "Source notes unavailable.")))
 	popup_centered_clamped(Vector2i(740, 620), 0.9)
 	get_ok_button().grab_focus()
+
+## JSON numbers arrive as floats; show 8 rather than 8.0 (and ? when missing).
+static func _amount(value: Variant) -> String:
+	return ("%.2f" % float(value)).rstrip("0").rstrip(".") if value is float or value is int else "?"

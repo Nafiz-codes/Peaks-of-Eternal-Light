@@ -279,10 +279,10 @@ func continue_after_ending() -> bool:
 	return true
 
 
-func developer_add_resources() -> void:
+func developer_add_resources(direction := 1.0) -> void:
 	if dashboard_state == null:
 		return
-	dashboard_simulator.developer_add_resources(dashboard_state)
+	dashboard_simulator.developer_add_resources(dashboard_state, direction)
 	capture_sol_checkpoint()
 	state_changed.emit()
 

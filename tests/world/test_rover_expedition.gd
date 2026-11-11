@@ -68,9 +68,12 @@ func run():
 	check(not controller.remote_ready(),"Startup gates tools and travel")
 	await create_timer(10.5).timeout
 	check(controller.remote_ready(),"Actual startup completes")
-	check(Rules.assigned(controller.data,1) == -1,"Sol 1 locked")
+	check(controller.available_assignment() == -1,"Operations wait for the solar panel and three crew stations")
 	controller._update_circle_visibility()
-	check(not controller.departure.visible, "No departure circle on a Sol without a mission")
+	check(not controller.departure.visible, "No departure circle before the base is built")
+	# Building has its own tests; mark the base as built so operations open.
+	session.solar_placement = {"transform": Transform3D.IDENTITY}
+	session.station_placements = {"maya_station": Transform3D.IDENTITY, "alex_station": Transform3D.IDENTITY, "sam_station": Transform3D.IDENTITY}
 	check(controller.arm.triangle_count > 0,"Existing instrument geometry articulated")
 	check(controller.droplets.size() == 3,"Exactly three supplied droplet instances")
 	check(world.find_children("StationAstronaut","Node3D",true,false).size() == 3,"Exactly three NPCs plus player")
@@ -95,6 +98,7 @@ func run():
 			# The storm and Maya's briefings have their own tests; open Lifeline directly.
 			controller.data["dust_storm_complete"] = true
 			controller.data["aftermath"] = "done"
+			controller._physics_process(0.01) # Notice Lifeline opening, as every frame does in play.
 		check(Rules.assigned(controller.data,session.dashboard_state.sol) == mission,"Correct assignment")
 		driver.active = false
 		controller._update_circle_visibility()
@@ -211,7 +215,7 @@ func run():
 		check(not Save.decode(Save.capture(session)).is_empty(),"Completed mission save validates")
 	check(not controller.data.missing,"Rescued crew restored")
 	var crew_phase: String = world.get_node("CrewFieldwork").data.crew[controller.LOST_CREW].phase
-	check(controller.crew.get_node("InteractionArea").monitoring and controller.crew.get_node("CrewBody").collision_layer == 1 and crew_phase in ["Available","Preparing","Traveling","Working","Recording results","Returning"],"Rescued Maya resumes normal fieldwork: "+crew_phase)
+	check(controller.crew.get_node("InteractionArea").monitoring and controller.crew.get_node("CrewBody").collision_layer == 1 and crew_phase in ["Available","Preparing","Traveling","Working","Recording results","Returning","Waiting for assistance"],"Rescued Alex resumes normal fieldwork: "+crew_phase)
 	check(world.find_children("StationAstronaut","Node3D",true,false).size() == 3,"Four unique crew after cinematic")
 	await capture("completed")
 	print("EXPEDITION: %d failures / %d assertions" % [failures,assertions])

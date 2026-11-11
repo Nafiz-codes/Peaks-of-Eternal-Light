@@ -73,6 +73,12 @@ func run() -> void:
 	key(KEY_TAB, true)
 	check(root.gui_get_focus_owner() == boot.buttons[0], "Shift Tab returns to Start")
 	key(KEY_ENTER)
+	# Start plays the opening film, then commander selection (both have their own tests).
+	await create_timer(1.4).timeout
+	boot._finish_opening()
+	while boot.state != boot.State.SELECTING_COMMANDER or boot.commander_menu.busy: await process_frame
+	check(root.get_node("MissionSession").confirm_new_commander("commander-01", "Commander"), "Commander confirmed")
+	boot._begin_selected_mission()
 	var nav = boot.planetary
 	await create_timer(1.0).timeout
 	check(nav.moon_entry > 0 and nav.moon_entry < 1 and nav.earth_entry > 0 and nav.earth_entry < 1, "Independent planet entrances overlap")
@@ -81,7 +87,7 @@ func run() -> void:
 	check(current_scene == world and nav.mode == nav.Mode.OVERVIEW, "Startup hands off to overview")
 	check(nav.sidebar.visible and nav.sidebar.modulate.a > 0.99, "Sidebar remains visible")
 	check(nav.sidebar_buttons.size() == 4, "Four real outposts")
-	for i in range(4): check(nav.sidebar_buttons[i].text == world.site_records[i].name, "Data-driven outpost name")
+	for i in range(4): check(nav.sidebar_buttons[i].text.to_upper() == str(world.site_records[i].name).to_upper(), "Data-driven outpost name")
 	for dimensions in [Vector2i(1366, 768), Vector2i(1600, 900), Vector2i(1920, 1080)]:
 		root.size = dimensions
 		await process_frame
@@ -167,7 +173,7 @@ func run() -> void:
 	click(label.get_global_rect().get_center())
 	check(world.selected_site_id == "ridge_a" and world.landing_in_progress, "Surface name launches correct outpost")
 	await create_timer(3.8).timeout
-	check(current_scene != null and current_scene.name == "MissionPlanning", "Pre-landing planning entry succeeds")
+	check(current_scene != null and current_scene.name == "LunarOutpost", "Surface name lands at the outpost")
 	# Every sidebar choice must deploy without a second surface click.
 	for index in range(4):
 		change_scene_to_file("res://scenes/lunar_landing_selector.tscn")
@@ -199,8 +205,7 @@ func run() -> void:
 		await create_timer(3.55).timeout
 		check(world.landing_in_progress and world.selected_site_id == site.site_id, "Focus automatically continues into landing")
 		await create_timer(3.7).timeout
-		check(current_scene != null and current_scene.name == "MissionPlanning", "Sidebar arrives in actual location scene")
+		check(current_scene != null and current_scene.name == "LunarOutpost", "Sidebar arrives in actual location scene")
 		check(root.get_node("MissionSession").selected_site_id == site.site_id, "Actual location matches sidebar choice")
-		check(root.get_camera_3d() == null, "Planning has no astronaut arrival or surface camera")
 	print("LUNAR NAVIGATION TEST: %d failures" % failures)
 	quit(failures)

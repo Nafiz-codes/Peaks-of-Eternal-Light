@@ -21,7 +21,7 @@ func _run() -> void:
 			var z := 1737400.0 * deg_to_rad(-43.37) - (-1315038.4235352 - (row + 0.5) * 59.2252938)
 			check(absf(Elevation.elevation(x, z) - expected[row][column]) < 0.0001, "Source sample scale and orientation")
 	check(Elevation.height(0, 0) == 0 and Elevation.height(10, 0) == 0, "Landing pad stays level")
-	var site := {"site_id": "crater_rim_b"}
+	var site := {"site_id": "crater_rim_b", "terrain_model": "tycho_sldem2015"} # Real sites now use polar LOLA data.
 	var terrain := Terrain.build(site)
 	var horizon := Terrain.build_surroundings(site, terrain.material_override)
 	var vertices: PackedVector3Array = terrain.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]

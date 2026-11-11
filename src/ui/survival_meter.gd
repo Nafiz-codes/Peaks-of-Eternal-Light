@@ -41,7 +41,9 @@ func _draw() -> void:
  var x := 34.0
  var right := size.x - 2.0
  var ratio := clampf(value / maxf(max_value, 0.001), 0.0, 1.0)
- var end := lerpf(x + 9, right - 10, ratio)
+ if right < x + 30: return # Not laid out yet: the frame polygons would fold over.
+ # Wide enough that the smallest fill is still a valid (non-crossing) polygon.
+ var end := maxf(x + 13, lerpf(x + 9, right - 10, ratio))
  if kind == "oxygen_kg":
   capsule(Rect2(x, 13, right-x, 18), HUD_ACCENT)
   capsule(Rect2(x+3, 16, right-x-6, 12), Color("171c2b"))

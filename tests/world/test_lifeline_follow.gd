@@ -14,7 +14,9 @@ func run():
 	var escort := world.get_node("RoverTraining")
 	var driver := world.get_node("RoverHull")
 	escort.set_physics_process(false)
-	escort.data.missing = true # Lifeline is open: outpost fieldwork leaves Maya alone.
+	escort.data.missing = true # Lifeline is open: outpost fieldwork leaves the lost astronaut alone.
+	# As _restore_crew does: the walking follower carries them, so their standing body must not block it.
+	escort.crew.get_node("CrewBody").collision_layer = 0
 	driver.set_physics_process(false)
 	var start := Vector3(4000,0.02,12)
 	escort.crew.global_position = start

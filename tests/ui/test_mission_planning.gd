@@ -22,23 +22,25 @@ func run() -> void:
 	# Exercise the existing video-finished handler without waiting for the movie.
 	startup._finish_opening()
 	for attempt in range(100):
-		if startup.commander_menu != null: break
+		# The menu ignores input until the opening's fade-out finishes.
+		if startup.commander_menu != null and not startup.commander_menu.busy: break
 		await create_timer(0.1).timeout
 	check(startup.commander_menu != null,"Existing startup reaches commander selection")
 	startup.commander_menu.select_appearance("commander-02",false)
 	startup.commander_menu.name_input.text = "Planner"
 	startup.commander_menu._validate()
+	startup.commander_menu._open_name()
 	startup.commander_menu._confirm()
 	await create_timer(3.8).timeout
-	check(current_scene.name != "Startup","Startup hands off existing selector")
+	check(session.commander_name()=="Planner","Startup confirms the commander")
 	for id in ["ridge_a","shadow_zone","crater_rim_b","plateau_d"]:
-		if current_scene.scene_file_path != "res://scenes/lunar_landing_selector.tscn":
-			change_scene_to_file("res://scenes/lunar_landing_selector.tscn")
-			await scene_changed
+		# Landing now goes straight to the outpost, so open the planning screen directly.
 		session.reduce_motion = true
-		current_scene.select_site(id)
+		session.select_landing_site(id)
+		session.begin_planning()
+		change_scene_to_file("res://scenes/mission_planning.tscn")
 		await scene_changed
-		check(current_scene.name=="MissionPlanning","Selected outpost opens planning: "+id)
+		check(current_scene.name=="MissionPlanning","Planning screen opens: "+id)
 		check(session.commander_name()=="Planner","Identity survives planning")
 		check(not root.get_node("MenuMusic").mission_active,"Planning retains pre-mission music context")
 		var menu := root.get_node("GameMenu")
@@ -54,10 +56,12 @@ func run() -> void:
 		check(session.planning_draft.zone_id=="south" and session.planning_draft.cargo.battery==3,"Back preserves choices")
 		ui._step(-1)
 		await scene_changed
-		current_scene.select_site(id)
+		check(current_scene.scene_file_path == "res://scenes/lunar_landing_selector.tscn","Back leaves planning for the selector")
+		session.begin_planning()
+		change_scene_to_file("res://scenes/mission_planning.tscn")
 		await scene_changed
 		ui = current_scene
-		check(session.planning_draft.zone_id=="south" and session.planning_draft.cargo.battery==3,"Returning through selector preserves same-site draft")
+		check(session.planning_draft.zone_id=="south" and session.planning_draft.cargo.battery==3,"Reopening planning preserves same-site draft")
 		ui._choose("zone_id","compact")
 		for step in range(6):
 			ui._step(step)

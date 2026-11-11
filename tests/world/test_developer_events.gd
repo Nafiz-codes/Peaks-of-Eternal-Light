@@ -43,6 +43,8 @@ func run():
  var water: float = session.dashboard_state.water_l
  hud.find_child("DeveloperAddResources", true, false).pressed.emit()
  assert(session.dashboard_state.water_l == water + 150.0)
+ hud.find_child("DeveloperRemoveResources", true, false).pressed.emit()
+ assert(session.dashboard_state.water_l == water)
  var speed: Button = hud.find_child("DeveloperSpeed", true, false)
  speed.pressed.emit()
  assert(Engine.time_scale == 2.0)

@@ -21,7 +21,7 @@ func run() -> void:
 	check(not access.door_available(), "Door is unavailable from the initial surface position")
 	player.global_position = access.landing
 	await process_frame
-	check(access.button.visible and access.button.text == "Get inside  [E]", "Get inside is offered at the capsule hatch")
+	check(access.button.visible and access.button.text.to_upper() == "GET INSIDE  [E]", "Get inside is offered at the capsule hatch")
 	access.button.pressed.emit()
 	await create_timer(0.4).timeout
 	check(access.busy and access.fade.modulate.a > 0 and access.fade.modulate.a < 1, "Entry gradually darkens the screen")

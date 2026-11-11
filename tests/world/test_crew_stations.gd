@@ -61,7 +61,7 @@ func run() -> void:
   var preview: Node3D = placement.panel
   var shell_bounds := AABB()
   var first_mesh := true
-  var is_tower := id == "maya_station"
+  var is_tower: bool = id == "maya_station"
   for mesh in (preview.get_node("StationBuilding") if is_tower else preview.find_child("HabitatShell", true, false)).find_children("*", "MeshInstance3D", true, false):
    var box: AABB = (preview.global_transform.affine_inverse() * mesh.global_transform) * mesh.get_aabb()
    shell_bounds = box if first_mesh else shell_bounds.merge(box)

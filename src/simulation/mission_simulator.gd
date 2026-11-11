@@ -338,14 +338,15 @@ func resume_after_success(state: Variant) -> bool:
 	return true
 
 
-## Debug builds only (outpost DEV tools): top up every reserve.
-func developer_add_resources(state: Variant) -> void:
+## Debug builds only (outpost DEV tools): top up every reserve, or drain it with
+## direction -1 (never below zero, power never above the battery).
+func developer_add_resources(state: Variant, direction := 1.0) -> void:
 	if state == null:
 		return
-	state.power_kwh = minf(_battery_capacity(state), state.power_kwh + 150.0)
-	state.water_l += 150.0
-	state.oxygen_kg += 20.0
-	state.food_kg += 15.0
+	state.power_kwh = clampf(state.power_kwh + 150.0 * direction, 0.0, _battery_capacity(state))
+	state.water_l = maxf(0.0, state.water_l + 150.0 * direction)
+	state.oxygen_kg = maxf(0.0, state.oxygen_kg + 20.0 * direction)
+	state.food_kg = maxf(0.0, state.food_kg + 15.0 * direction)
 	_publish_action_state(state)
 
 

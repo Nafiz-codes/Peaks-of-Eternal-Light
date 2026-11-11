@@ -21,10 +21,15 @@ func _run() -> void:
 		await process_frame
 		var hud := outpost.get_node("MissionHUD")
 		hud.advance_turn()
+		# The first press starts the mission behind the animated Sol fade.
+		var transition: Node = session.sol_transition
+		while is_instance_valid(transition) and transition.busy: await process_frame
 		var reference: Variant = simulator.begin_mission(str(site.site_id))
+		if session.dashboard_state != null: reference.clock_start_seconds = session.dashboard_state.clock_start_seconds
 		check(session.dashboard_state != null and session.dashboard_state.sol == 0, "World starts the selected mission.")
 		var safety := 0
-		while session.dashboard_state.mission_outcome.status == "in_progress" and safety < 30:
+		# The mission is open-ended (Maya's review ends it), so play a fixed week.
+		while session.dashboard_state.mission_outcome.status == "in_progress" and safety < 7:
 			safety += 1
 			if not session.dashboard_state.pending_events.is_empty():
 				var pending: Dictionary = session.dashboard_state.pending_events[0]
@@ -57,7 +62,12 @@ func _run() -> void:
 			outpost.refresh_feedback()
 			check(session.dashboard_state.snapshot() == before_render, "World rendering never changes mission state.")
 			check(hud.values.Water.text.contains("%.2f" % reference.water_l), "HUD shows the exact water reserve.")
-		check(safety < 30, "Mission terminates within its bounded sol count.")
+		check(session.dashboard_state.mission_outcome.status == "in_progress", "Sols alone never end the open-ended mission.")
+		# Maya's review ends it; a well-stocked base passes.
+		session.dashboard_state.power_kwh = 1000.0
+		session.dashboard_state.life_support_status = {"water": "nominal", "oxygen": "nominal", "food": "nominal"}
+		check(session.complete_mission().is_empty() and session.dashboard_state.mission_outcome.status == "success", "Maya's review completes the mission.")
+		await process_frame
 		check(not session.advance_mission(), "Terminal missions refuse more sols.")
 		check(hud.report_button.text == "View mission report", "Terminal outcome provides report navigation.")
 		print("Site %s: %s on sol %d" % [site.site_id, session.dashboard_state.mission_outcome.status, session.dashboard_state.sol])

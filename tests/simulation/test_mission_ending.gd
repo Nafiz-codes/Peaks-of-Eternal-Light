@@ -73,6 +73,8 @@ func run() -> void:
 	var topped: Variant = simulator.begin_mission("ridge_a")
 	simulator.developer_add_resources(topped)
 	check(is_equal_approx(topped.power_kwh, Simulator.BATTERY_CAPACITY_KWH) and is_equal_approx(topped.water_l, 650.0), "DEV resources fill reserves and cap power")
+	for drain in 6: simulator.developer_add_resources(topped, -1.0)
+	check(topped.power_kwh == 0.0 and topped.water_l == 0.0 and topped.oxygen_kg == 0.0 and topped.food_kg == 0.0, "DEV drain stops at zero")
 
 	print("MISSION ENDING: %d failures" % failures)
 	quit(failures)

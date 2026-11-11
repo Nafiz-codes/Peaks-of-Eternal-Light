@@ -19,6 +19,7 @@ func click(point: Vector2) -> void:
 		root.push_input(event)
 func run() -> void:
 	var audio := root.get_node("GameAudio")
+	root.size = Vector2i(1360, 820) # Headless windows start at 64x64, leaving the button off-screen.
 	var scene := Control.new()
 	root.add_child(scene)
 	current_scene = scene
