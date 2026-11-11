@@ -1,7 +1,7 @@
 extends Control
 const UI = preload("res://src/ui/ui_style.gd")
 const Report = preload("res://src/ui/crew_report.gd")
-const OPTIONS := [["Talk / status", "status"], ["Follow", "follow"], ["Regroup crew", "regroup"], ["Assist current step", "assist"], ["Return to base", "return"]]
+const OPTIONS := [["Talk / status", "status"], ["Follow", "follow"], ["Regroup crew", "regroup"], ["Assist current step", "assist"], ["Return to base", "return"], ["Ask about Alex", "alex"]]
 signal action_requested(kind: String, event_id: String)
 signal report_read
 var specialist_id := ""
@@ -13,6 +13,7 @@ var view: Control
 var buttons: Array[Button] = []
 var selected := 0
 var saved_speaker := ""
+var response_open := false
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -23,7 +24,8 @@ func _ready() -> void:
 	view = preload("res://src/ui/conversation_view.gd").new()
 	add_child(view)
 	for index in OPTIONS.size():
-		var button := UI.button("%d  %s" % [index + 1, OPTIONS[index][0]], _choose.bind(index))
+		var button := UI.button(str(OPTIONS[index][0]), func(): pass)
+		button.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		button.custom_minimum_size.y = 28
 		button.add_theme_font_size_override("font_size", 13)
 		for state in ["normal", "hover", "pressed", "focus"]:
@@ -44,6 +46,7 @@ func _ready() -> void:
 
 func open_conversation(id: String) -> void:
 	if not Report.ROLES.has(id): return
+	response_open = false
 	specialist_id = id
 	site_id = session.selected_site_id
 	saved_speaker = world.dialogue_speaker
@@ -53,7 +56,9 @@ func open_conversation(id: String) -> void:
 	view.begin(world)
 	view._position_choices()
 	view.show_options_only()
-	view.hint.text = "Mouse wheel: choose · Enter / E: confirm · 1–5: select · Esc: leave"
+	buttons[5].visible = _alex_available()
+	view._position_choices()
+	view.hint.text = "Mouse wheel: choose · E / left-click: select · Esc: leave"
 	_select(0)
 
 func open_status(id: String) -> void:
@@ -67,16 +72,31 @@ func refresh_report() -> void:
 	if fieldwork != null and not fieldwork.data.is_empty() and fieldwork.data.crew.has(specialist_id):
 		text = str(fieldwork.data.crew[specialist_id].message)
 	view.present(specialist_id, text.replace("Commander", session.commander_address()), "neutral")
+	response_open = true
+	view.choices.hide()
+	view.hint.text = "E / left-click: return to gameplay"
 	session.crew_read_reports[specialist_id] = report.signature
 	report_read.emit()
 
 func _select(index: int) -> void:
-	selected = posmod(index, buttons.size())
+	selected = posmod(index, 6 if buttons[5].visible else 5)
 	buttons[selected].grab_focus()
 
 func _choose(index: int) -> void:
 	if not visible: return
 	var action: String = OPTIONS[index][1]
+	if action == "alex":
+		if not _alex_available(): return
+		hide()
+		world.maya_dialogue_active = true
+		world.dialogue_speaker = "food_storage"
+		var dialogue := preload("res://src/ui/maya_introduction.gd").new()
+		dialogue.dialogue_id = "sam_alex"
+		dialogue.finished.connect(func():
+			world.maya_dialogue_active = false
+			world.dialogue_speaker = "")
+		world.add_child(dialogue)
+		return
 	if action == "status":
 		hide()
 		world._on_player_interaction(specialist_id, true)
@@ -88,16 +108,30 @@ func _choose(index: int) -> void:
 func _input(event: InputEvent) -> void:
 	if not visible: return
 	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
-		_select(selected + (-1 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1))
+		if not response_open: _select(selected + (-1 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1))
 		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+		get_viewport().set_input_as_handled()
+		if response_open: hide()
+		else:
+			# Clicking a visible row selects it; clicking elsewhere confirms the scroll selection.
+			for index in buttons.size():
+				if buttons[index].visible and buttons[index].get_global_rect().has_point(event.position):
+					_select(index)
+					break
+			_choose(selected)
 	elif event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE: hide()
-		elif event.keycode >= KEY_1 and event.keycode <= KEY_5: _choose(event.keycode - KEY_1)
-		elif event.keycode in [KEY_ENTER, KEY_E]: _choose(selected)
-		elif event.keycode in [KEY_UP, KEY_DOWN]: _select(selected + (-1 if event.keycode == KEY_UP else 1))
-		else: return
+		elif event.keycode == KEY_E:
+			if response_open: hide()
+			else: _choose(selected)
+		# Consume other keys so focused buttons cannot activate via Enter/Space.
 		get_viewport().set_input_as_handled()
 
 func _request(kind: String, event_id: String) -> void:
 	hide()
 	action_requested.emit(kind, event_id)
+
+func _alex_available() -> bool:
+	var expedition: Dictionary = world.get_node("RoverTraining").data
+	return specialist_id == "food_storage" and bool(expedition.get("dust_storm_complete", false)) and expedition.get("completed", []).has(1) and not expedition.get("completed", []).has(2)

@@ -18,6 +18,15 @@ const INTRODUCTIONS := {
  "storm_lost_contact": {"speaker": "Dr. Maya Chen", "text": "Commander, we've lost contact with Alex. He went out to check a reading before the storm and hasn't reported back. Take the rover to his last known location and bring him home."}
 }
 const SEQUENCES := {
+	"sam_alex": [
+		["player", "questioning", "Sam, have you heard from Alex since the dust storm?"],
+		["food_storage", "concerned", "Nothing. I’ve been calling since the dust cleared. I marked where Alex last checked in on your map. I hope you find him. I’ll keep the radio on."]
+	],
+	"rover_briefing": [
+		["crew_briefing", "smiling", "The structures are in place. It’s time to explore more of the Moon. Now head over to the lander to drive your very own rover."],
+		["player", "questioning", "How will I control the rover?"],
+		["crew_briefing", "confident", "You can do it from inside the lander. Once you’re there, we’ll get ready for your first rover expedition."]
+	],
 	"crew_briefing": [
 		["crew_briefing", "smiling", "Welcome to the Moon. I’m Dr. Maya Chen, your flight engineer and training officer. I’ll help you learn the equipment and work safely out here."],
 		["player", "questioning", "Where do I start?"],

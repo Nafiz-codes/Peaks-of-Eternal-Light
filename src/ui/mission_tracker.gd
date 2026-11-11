@@ -40,10 +40,6 @@ func _process(_delta: float) -> void:
 	marker.hide()
 	var rover_active: bool = expeditions.driver.active
 	title.size.x = 360 if rover_active else 410
-	# Long objectives wrap onto a second line; keep the instruction below them.
-	var title_bottom: float = title.position.y + maxf(title.size.y, title.get_minimum_size().y)
-	detail.position = Vector2(22, maxf(76, title_bottom + 8)) if rover_active else Vector2(52, maxf(60, title_bottom + 6))
-	detail.size.x = 360
 	var state = session.dashboard_state
 	# Read only the authoritative campaign and expedition objectives.
 	if state == null:
@@ -92,8 +88,20 @@ func _process(_delta: float) -> void:
 		instruction = "%d damaged. Press E at a marked structure, or talk to Maya to leave them." % repairs.points.size()
 		destination = repairs.nearest(player.global_position)
 	elif not session.construction_ready() and expeditions.data.get("completed", []).is_empty() and expeditions.data.get("mission", -1) < 0:
-		objective = "Build the solar panel and three crew stations"
-		instruction = "Press B to open construction."
+		var built := 0
+		for station in ["maya_station", "alex_station", "sam_station"]:
+			if session.station_placements.has(station): built += 1
+		objective = "Build the solar panel and 3 workstations"
+		instruction = "Solar panels: %d/8 · Workstations: %d/3\nPress B to open construction." % [int(session.solar_placement.has("transform")) + session.extra_panels.size(), built]
+	elif session.construction_ready() and expeditions.data.get("completed", []).is_empty() and expeditions.data.get("mission", -1) < 0 and not rover_active:
+		if not session.crew_introductions.get("rover_briefing", false):
+			objective = "Speak with Maya"
+			instruction = "Press E near Maya, then choose Talk / Status."
+			destination = world.get_node("Outpost/crew_briefing").global_position
+		else:
+			objective = "Go to the Lander and Drive the Rover"
+			instruction = "Press E at the hatch to enter, then press R to control the rover."
+			destination = world.get_node("LanderAccess").landing
 	elif not expeditions.data.is_empty():
 		var assignment: int = expeditions.available_assignment()
 		if assignment >= 0:
@@ -104,13 +112,27 @@ func _process(_delta: float) -> void:
 				destination = navigation.get("destination")
 			else:
 				destination = expeditions.departure.global_position
+			if not rover_active:
+				objective = "Take control of the Rover again to start the next mission"
+				instruction = "Enter the lander with E, then press R for " + expeditions.Rules.TITLES[assignment] + "."
+				destination = world.get_node("LanderAccess").landing
 	if rover_active and not expedition_view.is_empty():
 		objective = str(expedition_view.get("title", objective))
 		instruction = str(expedition_view.get("objective", instruction))
+	# The first two completed expeditions hand control back to Maya, not Lifeline.
+	var completed: Array = expeditions.data.get("completed", [])
+	if running and completed.has(0) and completed.has(1) and not completed.has(2) and expeditions.data.get("mission", -1) != 2 and str(expeditions.data.get("aftermath", "briefing")) in ["briefing", "alert"]:
+		objective = "Press R to exit Rover and talk to Maya." if rover_active else "Talk with Maya"
+		instruction = "Exit the lander with E, then approach Maya." if rover_active else "Press E near Maya, then choose Talk / Status."
+		destination = world.get_node("Outpost/crew_briefing").global_position
 	title.text = "◆  " + objective
 	detail.text = instruction
 	if destination is Vector3:
 		detail.text += "\n%.0f m" % observer.global_position.distance_to(destination)
+	# Measure this frame's text before stacking instructions, status and health.
+	var title_bottom: float = title.position.y + maxf(title.size.y, title.get_minimum_size().y)
+	detail.position = Vector2(22, maxf(76, title_bottom + 8)) if rover_active else Vector2(52, maxf(60, title_bottom + 6))
+	detail.size.x = 360
 	if rover_active:
 		var status_label: Label = expeditions.hud.result
 		status_label.position = Vector2(22, detail.position.y + maxf(detail.size.y, detail.get_minimum_size().y) + 12)

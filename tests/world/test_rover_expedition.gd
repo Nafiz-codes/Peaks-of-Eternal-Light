@@ -85,6 +85,9 @@ func run():
 	driver.camera.global_transform = camera_pose
 	for mission in range(3):
 		await advance_to(Rules.SOLS[mission])
+		if not driver.active:
+			check(driver.start_control(), "Next expedition reconnects from lander")
+			await create_timer(10.5).timeout
 		if mission == 1:
 			# The radiation wave has its own test; open Frozen Horizon directly.
 			controller.data["radiation"] = "done"
@@ -204,6 +207,7 @@ func run():
 		await create_timer(20 if mission == 2 else 1.5).timeout
 		check(controller.data.location == "outpost" and controller.data.completed.has(mission),"Return commits mission")
 		check(not controller.armed,"Return marker disarmed")
+		check(not driver.active and access.inside and player.seated and not player.ui_blocked, "Return hands control to seated Commander")
 		check(not Save.decode(Save.capture(session)).is_empty(),"Completed mission save validates")
 	check(not controller.data.missing,"Rescued crew restored")
 	var crew_phase: String = world.get_node("CrewFieldwork").data.crew[controller.LOST_CREW].phase

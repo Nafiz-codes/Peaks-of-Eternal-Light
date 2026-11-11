@@ -510,6 +510,8 @@ func _on_player_interaction(interaction_id: String, from_menu: bool = false) -> 
 			return
 		elif _review_ready(session, expedition):
 			introduction = "mission_review"
+		elif session.construction_ready() and not session.crew_introductions.get("rover_briefing", false) and expedition.get("mission", -1) < 0 and expedition.get("completed", []).is_empty():
+			introduction = "rover_briefing"
 		elif session.crew_introductions.get("water_recycler", false) and session.crew_introductions.get("food_storage", false) and not session.crew_introductions.get("maya_closing", false):
 			introduction = "maya_closing"
 	elif interaction_id in ["water_recycler", "food_storage"] and not session.crew_introductions.get(interaction_id, false):

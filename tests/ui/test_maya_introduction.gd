@@ -2,6 +2,7 @@ extends SceneTree
 func _init() -> void: call_deferred("run")
 func run() -> void:
 	var session = root.get_node("MissionSession")
+	session.confirm_new_commander("commander-01", "Commander")
 	session.select_landing_site("ridge_a")
 	session.start_selected_mission()
 	change_scene_to_file("res://scenes/lunar_outpost_3d.tscn")
@@ -24,7 +25,7 @@ func run() -> void:
 	dialogue.advance()
 	assert(not session.maya_intro_complete)
 	assert(dialogue.view.speech.text == "Where do I start?")
-	assert(not dialogue.view.portrait.visible)
+	assert(dialogue.view.portrait.visible)
 	dialogue.advance()
 	assert(not session.maya_intro_complete)
 	dialogue.advance()

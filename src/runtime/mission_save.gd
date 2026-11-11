@@ -37,7 +37,7 @@ static func decode(data: Variant) -> Dictionary:
 	var crew_introductions: Variant = data.get("crew_introductions", {})
 	if not crew_introductions is Dictionary: return {}
 	for id in crew_introductions:
-		if id not in ["water_recycler", "food_storage", "maya_closing"] or not crew_introductions[id] is bool: return {}
+		if id not in ["water_recycler", "food_storage", "maya_closing", "rover_briefing"] or not crew_introductions[id] is bool: return {}
 	var placement: Variant = data.get("solar_placement", {})
 	if not placement is Dictionary: return {}
 	if not placement.is_empty() and (not placement.get("transform") is Transform3D or not placement.transform.is_finite()): return {}

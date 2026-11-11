@@ -30,7 +30,7 @@ func _ready() -> void:
 	add_child(preload("res://src/ui/survival_bars.gd").new())
 	world = get_parent()
 	session = get_node("/root/MissionSession")
-	help_hint = UI.label("Alt: show resource details\nV: first / third person · Esc: pause menu", 15, UI.TEXT)
+	help_hint = UI.label("", 15, UI.TEXT)
 	help_hint.position = Vector2(18, 135)
 	help_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	help_hint.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -162,7 +162,7 @@ func _input(event: InputEvent) -> void:
 		# Keep the decision dialog's cursor and focus until it is dismissed.
 		if not _modal_visible():
 			panel.visible = not panel.visible
-			help_hint.text = ("Alt: hide resource details" if panel.visible else "Alt: show resource details") + "\nV: first / third person · Esc: pause menu"
+			help_hint.text = ""
 			if panel.visible:
 				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 			else:

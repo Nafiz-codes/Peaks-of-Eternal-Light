@@ -58,7 +58,7 @@ func _ready() -> void:
 	_place(line, 0.10, 0.875, 0.90, 0.877)
 	speech = _label(column, 18, Color.WHITE)
 	_place(speech, 0.06, 0.89, 0.94, 0.965)
-	hint = _label(column, 11, Color("c8d5e2"))
+	hint = _label(self, 11, Color("c8d5e2"))
 	_place(hint, 0.10, 0.975, 0.90, 1.0)
 	choices = VBoxContainer.new()
 	add_child(choices)
@@ -98,16 +98,21 @@ func present(id: String, text: String, expression := "neutral") -> void:
 	speaker.text = session.commander_name() if id == "player" else str(NAMES.get(id, id))
 	speech.text = text
 	var entry: Dictionary = {}
-	if id != "player":
+	if id == "player":
+		entry = session.commander_portrait(expression)
+		if not entry.is_empty():
+			entry = entry.duplicate(true)
+			entry.asset_path = "res://Assets/characters/Commander/%s/%s-dialogue-transparent.png" % [entry.variant_id, entry.variant_id]
+	else:
 		var catalog: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://Resources/characters/preparation/expressions.json"))
 		for frame in catalog.frames:
 			if frame.character_id == IDS.get(id, "") and frame.suggested_emotion == expression:
 				entry = frame
 				break
-	if not entry.is_empty():
+	if id != "player" and not entry.is_empty():
 		entry = entry.duplicate(true)
 		entry.asset_path = PORTRAITS[id]
-	portrait.texture = null if id == "player" else Identity.texture_for_frame(entry)
+	portrait.texture = Identity.texture_for_frame(entry)
 	portrait.visible = portrait.texture != null
 
 func begin(world: Node) -> void:
@@ -177,7 +182,7 @@ func _position_choices() -> void:
 	if is_instance_valid(choice_actor) and camera != null:
 		var target := choice_actor.global_position + Vector3(0, 1.3, 0)
 		if not camera.is_position_behind(target):
-			point = camera.unproject_position(target) + Vector2(45, -choices.size.y * 0.5)
+			point = camera.unproject_position(target) + Vector2(clampf(viewport_size.x * 0.14, 110.0, 190.0), -choices.size.y * 0.5)
 	# Keep the menu beside the actor and clear of the lower dialogue band.
 	point.x = clampf(point.x, 12, maxf(12, viewport_size.x - width - 12))
 	point.y = clampf(point.y, 12, maxf(12, viewport_size.y * 0.57 - choices.size.y))

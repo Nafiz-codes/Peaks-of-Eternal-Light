@@ -647,6 +647,7 @@ func _recall() -> void:
 	armed = false
 
 func _check_circle(delta: float) -> void:
+	if transitioning: return
 	if damage_blocked() or bound_state.rover_health <= 0: return
 	var circle := departure if data.location == "outpost" else extraction
 	var distance := Vector2(driver.position.x-circle.position.x,driver.position.z-circle.position.z).length()
@@ -694,6 +695,12 @@ func _place_rover(p: Vector3) -> void:
 
 func _transition(outward: bool) -> void:
 	if transitioning or damage_blocked() or bound_state.rover_health <= 0: return
+	# Departure and completed extraction are distinct operations. Never treat
+	# an outpost departure or unfinished ice mission as a return to the lander.
+	if outward:
+		if data.location != "outpost" or data.mission != available_assignment(): return
+	else:
+		if data.location != "expedition" or not Rules.ready_to_return(data): return
 	transitioning = true
 	var token := generation
 	driver.speed = 0
@@ -723,6 +730,9 @@ func _transition(outward: bool) -> void:
 		data.mission = -1
 		data.phase = "completed"
 		_restore_crew()
+		# The Commander remains seated in the lander during remote expeditions.
+		# Restore their camera and input while the return fade is still opaque.
+		driver.stop_control()
 	_refresh_targets()
 	session.capture_sol_checkpoint()
 	tween = create_tween()
