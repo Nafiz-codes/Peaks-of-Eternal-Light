@@ -90,7 +90,7 @@ func _build() -> void:
 	navigation.theme.default_font = preload("res://Assets/fonts/corpta-demo.regular.otf")
 	canvas.add_child(navigation)
 	navigation.modulate.a = 0.0
-	var title := _label("PEAKS OF\nETERNAL LIGHTS", 44, Color("edf5fa"))
+	var title := _label("PEAKS OF\nETERNAL LIGHT", 44, Color("edf5fa"))
 	navigation.add_child(title)
 	title.position = Vector2(0, 34)
 	for i in range(5):
@@ -118,7 +118,7 @@ func _build() -> void:
 		button.focus_entered.connect(_highlight.bind(button, true))
 		button.focus_exited.connect(_highlight.bind(button, false))
 	preload("res://src/ui/menu_navigation.gd").configure(buttons)
-	for entry in [["Made with", "Godot", "G A M E   E N G I N E"], ["Created for", "NASA Space Apps Challenge 2026", "Challenge: Build a Junior Astronaut Mission Trainer"], ["Developed by", "Triarchy", "P E A K S   O F   E T E R N A L   L I G H T S"]]:
+	for entry in [["Made with", "Godot", "G A M E   E N G I N E"], ["Created for", "NASA Space Apps Challenge 2026", "Challenge: Build a Junior Astronaut Mission Trainer"], ["Developed by", "Triarchy", "P E A K S   O F   E T E R N A L   L I G H T"]]:
 		var credit := VBoxContainer.new()
 		credit.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		credit.add_theme_constant_override("separation", 18)
