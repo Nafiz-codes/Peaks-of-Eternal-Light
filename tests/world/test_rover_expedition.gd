@@ -56,6 +56,11 @@ func run():
 	await process_frame
 	driver = world.get_node("RoverHull")
 	controller = world.get_node("RoverTraining")
+	# Easter-egg cards spawn at random spots; one beside an ice deposit would take the E press.
+	var eggs := world.get_node_or_null("EasterEggs")
+	if eggs != null:
+		eggs.set_process(false)
+		eggs.set_process_input(false)
 	var player = world.get_node("Outpost/Astronaut")
 	var access = world.get_node("LanderAccess")
 	access.inside = true
@@ -138,6 +143,10 @@ func run():
 				hold.pressed = true
 				Input.parse_input_event(hold)
 				Input.flush_buffered_events()
+				# Game days now pass in real time: the frame a day closes briefly blocks actions.
+				for wait in 30:
+					if controller.remote_ready(): break
+					await process_frame
 				controller.handle_key(KEY_E)
 				check(controller.busy_id == id,"Sampling starts: "+id)
 				controller._physics_process(2)

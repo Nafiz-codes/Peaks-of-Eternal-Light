@@ -83,7 +83,7 @@ You can shelter too: press E at the habitat door."
 		destination = storm.next_crew_position(player.global_position)
 	elif expeditions.Rules.radiation(expeditions.data) == "wave":
 		objective = "Radiation wave"
-		var exposed: int = 3 - (expeditions.data.get("radiation_told", []).size() if world.get_node("RadiationStorm").shelter_built() else 0)
+		var exposed: int = 3 - (expeditions.data.get("radiation_inside", []).size() if world.get_node("RadiationStorm").shelter_built() else 0)
 		instruction = "Solar particles are hitting the base. %s Wait for the wave to pass." % ("All crew are sheltered." if exposed == 0 else "%d crew exposed: they need treatment and will work slower." % exposed)
 	elif not session.maya_intro_complete:
 		objective = "Talk with Maya"

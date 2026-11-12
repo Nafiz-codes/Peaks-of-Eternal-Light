@@ -31,6 +31,8 @@ var skip_repairs_dialog: ConfirmationDialog
 const Expedition = preload("res://src/simulation/rover_expedition.gd")
 
 
+var session_restored_pose := false # The Commander was put back where a save or return left them.
+
 func _ready() -> void:
 	name = "LunarOutpost"
 	var session := get_node("/root/MissionSession")
@@ -54,6 +56,7 @@ func _ready() -> void:
 		player.camera_pitch = session.outpost_pose.pitch
 		player.set_first_person(bool(session.outpost_pose.get("first_person", false)))
 		player._sync_camera_rig()
+		session_restored_pose = true
 	_add_site_readout()
 	_add_feedback_nodes()
 	_add_prop_collisions()
@@ -86,6 +89,31 @@ func _ready() -> void:
 		var free_camera := preload("res://src/world/developer_free_camera.gd").new()
 		free_camera.name = "DeveloperFreeCamera"
 		add_child(free_camera)
+	_settle_spawns()
+
+
+## After loading, move anyone who would stand inside a structure (e.g. one placed or
+## rebuilt where they were saved) to the nearest free ground. Waits for the structures'
+## collision to exist first. Crew at their own post are left alone.
+func _settle_spawns() -> void:
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	if not is_inside_tree(): return
+	var fieldwork := get_node("CrewFieldwork")
+	var routes: RefCounted = fieldwork.route_service
+	var player := get_node("Outpost/Astronaut")
+	if not player.seated and session_restored_pose:
+		var feet: Vector3 = player.global_position
+		var ground_hit: Dictionary = routes.ground(feet)
+		if not ground_hit.is_empty() and routes.overlaps_structure(ground_hit.position):
+			player.global_position = routes.free_spot(ground_hit.position) + Vector3.UP * 0.2
+	if fieldwork.data.is_empty(): return
+	for id in fieldwork.IDS:
+		var actor: Node3D = get_node("Outpost/" + id)
+		if not actor.visible or actor.position.distance_to(fieldwork.homes[id]) < 0.6: continue
+		if routes.overlaps_structure(actor.position):
+			actor.position = routes.free_spot(actor.position)
+			fieldwork.data.crew[id].position = actor.position
 
 
 func _add_prop_collisions() -> void:
@@ -726,7 +754,7 @@ func _ask_storm_choice(expedition: Dictionary) -> void:
 	_ask_choice("Protect the structures from the dust storm?",
 		"Pack away the solar panels, extractors and greenhouses until the storm passes: they make nothing meanwhile, but nothing gets damaged.\nCost: %s.\nLeft in the open, some may be damaged and need paid repairs." % cost_text(sim.STOW_COST),
 		"Pack them away", "Leave them out", func():
-			start_storm.call(session.stow_producers()), start_storm.bind(false))
+			start_storm.call(session.stow_producers()), start_storm.bind(false), true) # Same themed pop-up as the radiation choice.
 
 ## Maya's radio call when a reserve runs out; the 20 s countdown starts after it.
 func _warn_depleted(resource: String) -> void:

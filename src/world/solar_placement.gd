@@ -161,7 +161,11 @@ func _ready() -> void:
 		extra_panels.append(bought)
 	for entry in session.extra_buildings:
 		extra_buildings.append(_make_copy(str(entry.id), entry.transform))
-	default_homes = get_parent().get_node("CrewFieldwork").homes.duplicate()
+	var crew_work := get_parent().get_node("CrewFieldwork")
+	default_homes = crew_work.homes.duplicate()
+	# Crew must reach anything built in the build area (stations, the radiation habitat),
+	# so their walkable ground covers all of it, not just the original 14 m pad.
+	crew_work.route_service.radius = maxf(crew_work.route_service.radius, build_radius() + 2.0)
 	for id in session.station_placements:
 		var station := _new_station(id)
 		station.transform = session.station_placements[id]
@@ -209,8 +213,13 @@ func _select(id: String) -> void:
 	if session.station_placements.has(id): return
 	# After the free first panel, more panels can be bought while there is room.
 	adding_panel = id == "solar_array" and placed
-	if adding_panel and (session.dashboard_state == null or extra_panels.size() >= Save.MAX_EXTRA_PANELS):
+	if adding_panel and (session.dashboard_state == null or extra_panels.size() >= Save.MAX_EXTRA_PANELS or session.generator_limit_reached()):
 		adding_panel = false
+		return
+	# Eight generating structures at most (panels, extractors and greenhouses together).
+	var new_generator: bool = (id == "solar_array" and not placed) or (id in session.GENERATORS and (session.dashboard_state == null or not session.dashboard_state.built_structures.has(id) or id in Simulator.REPEATABLE_STRUCTURES))
+	if new_generator and session.generator_limit_reached():
+		label.text = "Generator limit reached: at most %d solar panels, extractors and greenhouses in total." % session.MAX_GENERATORS
 		return
 	selected_id = id
 	build_error_until = 0
@@ -343,8 +352,8 @@ func _refresh_menu() -> void:
 				status = "Click to place"
 			elif state == null:
 				status = "Start the mission first"
-			elif extra_panels.size() >= Save.MAX_EXTRA_PANELS:
-				status = "No room for more panels"
+			elif extra_panels.size() >= Save.MAX_EXTRA_PANELS or session.generator_limit_reached():
+				status = "Generator limit reached (%d of %d)" % [session.generator_count(), session.MAX_GENERATORS]
 			else:
 				available = affordable
 				status = "Click to place another" if affordable else "Not enough " + shortfall
@@ -354,8 +363,8 @@ func _refresh_menu() -> void:
 			status = "Placed" if not available else "Click to place"
 		elif NASABuildings.MODELS.has(id) and id in Simulator.REPEATABLE_STRUCTURES and state != null and state.built_structures.has(id):
 			# More producers offset the crew's constant draw.
-			if copies >= Simulator.MAX_STRUCTURE_COPIES:
-				status = "Built · %d of %d (no room for more)" % [copies + 1, copies + 1]
+			if copies >= Simulator.MAX_STRUCTURE_COPIES or session.generator_limit_reached():
+				status = "Built %d · generator limit reached (%d of %d)" % [copies + 1, session.generator_count(), session.MAX_GENERATORS]
 			else:
 				available = affordable
 				status = ("Built %d · click to place another" % (copies + 1)) if affordable else ("Built %d · need %s for another" % [copies + 1, shortfall])
@@ -837,7 +846,70 @@ func _update_output_card() -> void:
 		top = hint.position.y + maxf(hint.size.y, hint.get_line_count() * hint.get_line_height()) + 12.0
 	output_card.position = Vector2(22.0, clampf(top, 12.0, maxf(12.0, bounds.y - output_card.size.y - 90.0)))
 
+## Walkable-path grid shown under the building being placed: faint red cells are blocked
+## (structures, rocks, and the footprint the new building would take); clear ground between
+## them is where the crew can walk. Rebuilt only when the aim moves or turns.
+const WALK_GRID_MARGIN := 6.0 # Metres of surroundings shown around the footprint.
+const WALK_GRID_STEP := 1.0
+const WALK_BLOCKED := Color(1.0, 0.25, 0.2, 0.1)
+var walk_grid: MultiMeshInstance3D
+var walk_grid_transform := Transform3D()
+var walk_grid_checked_at := 0
+var walk_grid_open: Array[bool] = [] # Per cell, as drawn: true = the crew can walk there.
+
+func _update_walk_grid() -> void:
+	if walk_grid == null:
+		walk_grid = MultiMeshInstance3D.new()
+		walk_grid.name = "WalkableGrid"
+		walk_grid.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var cell := PlaneMesh.new()
+		cell.size = Vector2.ONE * WALK_GRID_STEP * 0.86
+		var look := StandardMaterial3D.new()
+		look.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		look.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		look.vertex_color_use_as_albedo = true
+		look.no_depth_test = false
+		cell.material = look
+		var cells := MultiMesh.new()
+		cells.transform_format = MultiMesh.TRANSFORM_3D
+		cells.use_colors = true
+		cells.mesh = cell
+		walk_grid.multimesh = cells
+		add_child(walk_grid)
+	walk_grid.show()
+	var moved := walk_grid_transform.origin.distance_to(panel.global_position) > 0.5 or not walk_grid_transform.basis.is_equal_approx(panel.global_basis)
+	if not moved or Time.get_ticks_msec() - walk_grid_checked_at < 150: return
+	walk_grid_transform = panel.global_transform
+	walk_grid_checked_at = Time.get_ticks_msec()
+	var routes: RefCounted = get_parent().get_node("CrewFieldwork").route_service
+	var half := _footprint()
+	var inverse := panel.global_transform.affine_inverse()
+	var centre := panel.global_position
+	var origin := Vector3(snappedf(centre.x, WALK_GRID_STEP), 0, snappedf(centre.z, WALK_GRID_STEP))
+	var placed_cells: Array = []
+	routes.refresh_layout()
+	var reach := ceili((maxf(half.x, half.y) + WALK_GRID_MARGIN) / WALK_GRID_STEP)
+	for z in range(-reach, reach + 1):
+		for x in range(-reach, reach + 1):
+			if Vector2(x, z).length() > reach: continue
+			# Remembered per layout, so moving the aim re-checks only cells it has not seen.
+			var spot: Array = routes.standing(origin + Vector3(x, 0, z) * WALK_GRID_STEP)
+			if spot[0] == null: continue # Not walkable ground at all (off the pad, too steep).
+			var local: Vector3 = inverse * spot[0]
+			var under_new := absf(local.x) < half.x + 0.4 and absf(local.z) < half.y + 0.4
+			# Only blocked ground is drawn: open ground stays clear, so walkable paths read as gaps.
+			if under_new or not spot[1]: placed_cells.append([spot[0] + Vector3.UP * 0.05, false])
+	var cells := walk_grid.multimesh
+	cells.instance_count = placed_cells.size()
+	walk_grid_open.clear()
+	for index in placed_cells.size():
+		cells.set_instance_transform(index, Transform3D(Basis.IDENTITY, placed_cells[index][0]))
+		cells.set_instance_color(index, WALK_BLOCKED)
+		walk_grid_open.append(placed_cells[index][1])
+
 func _physics_process(_delta: float) -> void:
+	if not active or not panel.visible:
+		if walk_grid != null: walk_grid.hide()
 	if not active and not destroying: return
 	if player.seated or player.ui_blocked: return
 	var hit := _aim_hit()
@@ -889,6 +961,7 @@ func _physics_process(_delta: float) -> void:
 			route_checked_at = Time.get_ticks_msec()
 			route_ok = not crew.station_route(npc, dock, panel.global_transform).is_empty()
 		valid = route_ok and route_transform.origin.distance_to(panel.global_position) < 0.3 and route_transform.basis.is_equal_approx(panel.global_basis)
+	if active and panel.visible: _update_walk_grid()
 	if panel.visible and selected_id == "solar_array": _update_output_card()
 	else: output_card.hide()
 	material.albedo_color = Color(0.05, 0.75, 1.0, 0.4) if valid else Color(1.0, 0.15, 0.1, 0.4)
@@ -1082,16 +1155,20 @@ func confirm() -> void:
 	_add_collision()
 	# Preserve the approved ground transform; only the presentation falls.
 	var landing := panel.transform
+	# Remember what was placed: the selection may change before the drop ends.
+	var placed_id := selected_id
+	var placed_node := panel
+	var placed_name := _display_name()
 	panel.position = landing.origin + landing.basis.y.normalized() * 0.12
 	var drop := create_tween()
 	drop.tween_property(panel, "position", landing.origin, 0.385).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await drop.finished
-	panel.transform = landing
+	placed_node.transform = landing
 	_dust_ring()
 	settling = false
-	label.text = _display_name() + " placed"
-	if selected_id != "solar_array": _apply_station_home(selected_id, panel.global_transform)
-	_reset_selection()
+	label.text = placed_name + " placed"
+	if placed_id != "solar_array": _apply_station_home(placed_id, placed_node.global_transform)
+	if selected_id == placed_id and panel == placed_node: _reset_selection()
 
 func _confirm_building() -> void:
 	var state: Variant = session.dashboard_state

@@ -40,6 +40,9 @@ const STRUCTURE_OUTPUT := {
 	"greenhouse": {"food_kg": GREENHOUSE_FOOD_KG, "oxygen_kg": GREENHOUSE_OXYGEN_KG},
 }
 const BATTERY_CAPACITY_KWH := 300.0
+## Storage the outpost has for each supply: production past it is lost (like a full battery),
+## so building more producers cannot stockpile without limit. Well above MISSION_GOALS.
+const STORAGE_CAPACITY := {"water_l": 500.0, "oxygen_kg": 70.0, "food_kg": 55.0}
 
 ## NASA NESC Table 8.4-2: unshielded lunar-surface GCR effective dose during
 ## the 2009 solar minimum. CRaTER supplies the observational radiation context;
@@ -298,7 +301,18 @@ func _spend(state: Variant, cost: Dictionary, sign: float) -> void:
 	for key in COST_RESOURCES:
 		var field: String = COST_RESOURCES[key]
 		state.set(field, maxf(0.0, float(state.get(field)) + sign * float(cost.get(key, 0.0))))
-	state.power_kwh = minf(state.power_kwh, _battery_capacity(state))
+	_clamp_reserves(state)
+
+
+## Most a reserve can hold: the battery for power, storage for water, oxygen and food.
+func capacity(state: Variant, field: String) -> float:
+	return _battery_capacity(state) if field == "power_kwh" else float(STORAGE_CAPACITY.get(field, INF))
+
+
+## Keeps every reserve within what the outpost can store (never below zero).
+func _clamp_reserves(state: Variant) -> void:
+	for field in ["power_kwh", "water_l", "oxygen_kg", "food_kg"]:
+		state.set(field, clampf(float(state.get(field)), 0.0, capacity(state, field)))
 
 
 ## The storm interlude cuts sunlight for the current sol; the next Run Sol pays for it once.
@@ -418,6 +432,7 @@ func developer_add_resources(state: Variant, direction := 1.0) -> void:
 	state.water_l = maxf(0.0, state.water_l + 150.0 * direction)
 	state.oxygen_kg = maxf(0.0, state.oxygen_kg + 20.0 * direction)
 	state.food_kg = maxf(0.0, state.food_kg + 15.0 * direction)
+	_clamp_reserves(state)
 	_publish_action_state(state)
 
 
@@ -647,6 +662,7 @@ func dispatch_rover(state: Variant, action_id: String, distance_km: float) -> Di
 func _publish_action_state(state: Variant) -> void:
 	# Build and rover actions happen between sol ticks. Keep the current-sol
 	# snapshot and report aligned with any immediately spent resources/state.
+	_clamp_reserves(state)
 	state.life_support_status = _life_support_status(state, maxf(0.0, -state.water_balance_l), state.oxygen_consumed_kg, state.food_consumed_kg)
 	state.mission_outcome = _evaluate_mission_outcome(state)
 	_update_report_data(state)
@@ -728,7 +744,7 @@ func _event_roll_succeeds(event_id: String, rng: RandomNumberGenerator) -> bool:
 func _apply_event_effects(state: Variant, event_id: String, effects: Dictionary) -> void:
 	for key in ["water_l", "oxygen_kg", "food_kg"]:
 		if effects.has(key):
-			state.set(key, maxf(0.0, float(state.get(key)) + _numeric_effect(effects[key])))
+			state.set(key, clampf(float(state.get(key)) + _numeric_effect(effects[key]), 0.0, capacity(state, key)))
 	if effects.has("crew_stress"):
 		var stress_change := _numeric_effect(effects.crew_stress)
 		if stress_change > 0.0 and state.built_structures.has("habitat_module"):
@@ -915,6 +931,7 @@ func _apply_balances(state: Variant, site: Dictionary, fraction: float) -> Dicti
 	state.oxygen_kg = maxf(0.0, state.oxygen_kg - state.oxygen_consumed_kg * fraction)
 	state.food_consumed_kg = life_support_tick.food_consumed_kg
 	state.food_kg = maxf(0.0, state.food_kg - state.food_consumed_kg * fraction)
+	_clamp_reserves(state)
 	state.life_support_status = _life_support_status(state, -state.water_balance_l, state.oxygen_consumed_kg, state.food_consumed_kg)
 	return {"power": power_tick, "life_support": life_support_tick, "dose_multiplier": structural_dose_multiplier}
 

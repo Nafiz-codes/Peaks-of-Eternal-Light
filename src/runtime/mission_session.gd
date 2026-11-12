@@ -292,6 +292,8 @@ func resolve_decision(event_id: String, choice_id: String) -> Dictionary:
 func queue_structure(structure_id: String) -> Dictionary:
 	if action_busy or dashboard_state == null:
 		return {"ok": false, "error": "mission_not_ready"}
+	if structure_id in GENERATORS and generator_limit_reached():
+		return {"ok": false, "error": "generator_limit"}
 	var result: Dictionary = dashboard_simulator.queue_construction(dashboard_state, structure_id)
 	if result.get("ok", false):
 		capture_sol_checkpoint()
@@ -401,10 +403,26 @@ func sync_panel_output() -> void:
 	state_changed.emit()
 
 
+## At most this many generating structures in total: solar panels (the free one included),
+## water extractors and greenhouses, copies included.
+const MAX_GENERATORS := 8
+const GENERATORS := ["water_extractor", "greenhouse"]
+
+func generator_count() -> int:
+	var count := (1 if solar_placement.has("transform") else 0) + extra_panels.size()
+	if dashboard_state != null:
+		for id in GENERATORS:
+			if dashboard_state.built_structures.has(id) or dashboard_state.construction_queue.any(func(job): return str(job.get("structure_id", "")) == id):
+				count += 1 + int(dashboard_state.structure_copies.get(id, 0))
+	return count
+
+func generator_limit_reached() -> bool:
+	return generator_count() >= MAX_GENERATORS
+
 ## Another solar panel: pays its cost and records it together. Returns "" or what is short.
 func buy_solar_panel(xform: Transform3D, kwh_per_sol: float) -> String:
 	if dashboard_state == null: return "mission"
-	if extra_panels.size() >= Save.MAX_EXTRA_PANELS: return "space"
+	if extra_panels.size() >= Save.MAX_EXTRA_PANELS or generator_limit_reached(): return "space"
 	var shortfall: String = dashboard_simulator.buy_solar_panel(dashboard_state, kwh_per_sol)
 	if shortfall.is_empty():
 		extra_panels.append({"transform": xform, "kwh_per_sol": kwh_per_sol})
@@ -425,6 +443,7 @@ func sell_solar_panel(index: int) -> Dictionary:
 ## Another copy of a repeatable producer at `xform`. Returns "" or what is short.
 func buy_structure_copy(id: String, xform: Transform3D) -> String:
 	if dashboard_state == null: return "mission"
+	if generator_limit_reached(): return "space"
 	var shortfall: String = dashboard_simulator.buy_structure_copy(dashboard_state, id)
 	if shortfall.is_empty():
 		extra_buildings.append({"id": id, "transform": xform})

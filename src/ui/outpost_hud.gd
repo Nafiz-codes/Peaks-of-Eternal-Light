@@ -17,6 +17,8 @@ var scroll: ScrollContainer
 var busy_dialog := false
 var displayed_sol := -1
 var notice: Label
+var announcement: Label
+var announcement_timer: Tween
 var help_hint: Label
 var operations: AcceptDialog
 var activity: Label
@@ -36,6 +38,20 @@ func _ready() -> void:
 	help_hint.add_theme_color_override("font_outline_color", Color.BLACK)
 	help_hint.add_theme_constant_override("outline_size", 6)
 	add_child(help_hint)
+	# Short on-screen messages (e.g. a crew member who cannot find a path).
+	announcement = UI.label("", 18, UI.AMBER)
+	announcement.name = "Announcement"
+	announcement.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	announcement.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	announcement.add_theme_color_override("font_outline_color", Color.BLACK)
+	announcement.add_theme_constant_override("outline_size", 6)
+	announcement.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	announcement.offset_left = -420
+	announcement.offset_right = 420
+	announcement.offset_top = -170
+	announcement.offset_bottom = -110
+	announcement.hide()
+	add_child(announcement)
 	panel = PanelContainer.new()
 	panel.hide()
 	panel.add_theme_stylebox_override("panel", UI.style(Color(0.04, 0.05, 0.09, 0.94), UI.PURPLE))
@@ -189,6 +205,15 @@ func _resize() -> void:
 	panel.position = Vector2(12, maxf(12, viewport_size.y - minf(285, viewport_size.y * 0.48) - 12))
 	panel.size = Vector2(maxf(240, viewport_size.x - 24), minf(285, viewport_size.y * 0.48))
 	readings.columns = 3 if viewport_size.x >= 850 else (2 if viewport_size.x >= 500 else 1)
+
+## Shows `text` above the bottom hints for `seconds`, replacing any earlier message.
+func announce(text: String, seconds := 6.0) -> void:
+	announcement.text = text
+	announcement.show()
+	if announcement_timer != null and announcement_timer.is_valid(): announcement_timer.kill()
+	announcement_timer = create_tween()
+	announcement_timer.tween_interval(seconds)
+	announcement_timer.tween_callback(announcement.hide)
 
 func refresh() -> void:
 	var state: Variant = session.dashboard_state

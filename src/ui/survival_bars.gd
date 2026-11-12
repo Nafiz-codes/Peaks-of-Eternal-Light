@@ -15,12 +15,14 @@ func _ready() -> void:
  name = "SurvivalBars"
  mouse_filter = Control.MOUSE_FILTER_IGNORE
  set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
- offset_left = -272
+ offset_left = -372 # Wide enough for each one-line caption.
  offset_right = -22
  offset_top = 150
  offset_bottom = 390
+ # Anything wider than the column grows leftwards, never off the right edge.
+ grow_horizontal = Control.GROW_DIRECTION_BEGIN
  # Shrink the entire group around its upper-right corner.
- pivot_offset = Vector2(250, 0)
+ pivot_offset = Vector2(350, 0)
  scale = Vector2(0.8, 0.8)
  var column := VBoxContainer.new()
  column.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -61,11 +63,12 @@ func _process(_delta: float) -> void:
  var goals: Dictionary = preload("res://src/simulation/mission_simulator.gd").MISSION_GOALS
  for key in RESOURCES:
   var amount := float(state.get(key))
-  # Leave headroom past the goal so its marker never sits on the bar's end.
-  maxima[key] = maxf(maxf(float(maxima.get(key, 1.0)), amount), float(goals[key]) * 1.25)
+  # A full bar is the outpost's storage (the battery for power): nothing is kept past it.
+  var cap: float = session.dashboard_simulator.capacity(state, key) if session.dashboard_simulator != null else INF
+  maxima[key] = cap if is_finite(cap) else maxf(maxf(float(maxima.get(key, 1.0)), amount), float(goals[key]) * 1.25)
   bars[key].max_value = maxima[key]
   bars[key].value = maxf(0.0, amount)
   bars[key].goal = float(goals[key])
   bars[key].queue_redraw()
   var rate: float = {"power_kwh": state.power_balance_kwh, "water_l": state.water_balance_l, "oxygen_kg": -state.oxygen_consumed_kg, "food_kg": -state.food_consumed_kg}[key]
-  captions[key].text = "%s  %d · goal %d %s  %+.1f/day" % [RESOURCES[key][0], int(amount), int(goals[key]), UNITS[key], rate]
+  captions[key].text = "%s  %d/%d %s · goal %d · %+.1f/day" % [RESOURCES[key][0], int(amount), int(maxima[key]), UNITS[key], int(goals[key]), rate]

@@ -156,7 +156,8 @@ func order_into_shelter(id: String) -> void:
 func start_wave() -> void:
 	var data: Dictionary = expeditions.data
 	if Rules.radiation(data) not in ["alert", "orders"]: return
-	var sheltered: int = data.get("radiation_told", []).size() if shelter_built() else 0
+	# Only crew who actually reached the habitat are sheltered; anyone still outside is exposed.
+	var sheltered: int = data.get("radiation_inside", []).size() if shelter_built() else 0
 	data["radiation"] = "wave"
 	data["radiation_elapsed"] = 0.0
 	session.apply_radiation_wave(Rules.RADIATION_CREW.size() - sheltered)
@@ -237,17 +238,44 @@ func _sweep_fronts(elapsed: float, intensity: float) -> void:
 		front.material_override.set_shader_parameter("opacity", intensity * fade * 0.9)
 
 ## Sheltered crew are inside the habitat: hidden, untouchable and not interactive.
-## Where someone at `from` enters the habitat: the edge of its mound facing them.
-func shelter_door(from: Vector3) -> Vector3:
+## Standable entry points around the habitat (open regolith clear of the mound, rocks and
+## other structures), nearest to `from` first. Empty only when nothing around it is open.
+func door_candidates(from: Vector3) -> Array[Vector3]:
 	var shelter: Node3D = world.construction_view.completed.get("shielding_wall")
 	var model := shelter.get_node_or_null("NASAModel")
 	var hull: Vector3 = model.get_meta("hull_size") if model != null and model.has_meta("hull_size") else Vector3(13, 4, 13)
+	var routes: RefCounted = world.get_node("CrewFieldwork").route_service
+	routes.refresh_layout()
+	var found: Array[Vector3] = []
+	for margin in [DOOR_MARGIN, DOOR_MARGIN + 1.0, DOOR_MARGIN + 2.2]:
+		for step in DOOR_DIRECTIONS:
+			var outward := Vector3(maxf(hull.x, hull.z) * 0.5 + margin, 0, 0).rotated(Vector3.UP, TAU * step / DOOR_DIRECTIONS)
+			var spot: Array = routes.standing(shelter.global_position + outward)
+			if spot[1]: found.append(spot[0])
+		if found.size() >= 4: break # Enough open sides: no need to search farther out.
+	found.sort_custom(func(a: Vector3, b: Vector3) -> bool: return a.distance_to(from) < b.distance_to(from))
+	return found
+
+## Where someone at `from` enters the habitat: the nearest standable point around it
+## (the side facing them only if that side is open ground).
+func shelter_door(from: Vector3) -> Vector3:
+	var candidates := door_candidates(from)
+	if not candidates.is_empty(): return candidates[0]
+	var shelter: Node3D = world.construction_view.completed.get("shielding_wall")
 	var outward := from - shelter.global_position
 	outward.y = 0.0
 	if outward.length() < 0.01: outward = shelter.global_basis.z
-	return shelter.global_position + outward.normalized() * (maxf(hull.x, hull.z) * 0.5 + 0.8)
+	return shelter.global_position + outward.normalized() * (6.5 + DOOR_MARGIN)
 
-## Ordered crew walk to the habitat; at its door they go inside (hidden until the wave passes).
+const DOOR_DIRECTIONS := 16
+const DOOR_MARGIN := 1.6
+const PLAYER_EXIT_EXTRA := 3.0
+const ROUTE_RETRY_SECONDS := 1.0
+var shelter_paths: Dictionary = {} # crew id -> remaining waypoints to the door
+var route_waits: Dictionary = {} # crew id -> [seconds until the next route search]
+
+## Ordered crew walk to the habitat along checked crew routes (around structures, never
+## through them); at its door they go inside (hidden until the wave passes).
 func _walk_to_shelter(delta: float) -> void:
 	var data: Dictionary = expeditions.data
 	var inside: Array = data.get("radiation_inside", []).duplicate()
@@ -255,36 +283,80 @@ func _walk_to_shelter(delta: float) -> void:
 	for id in data.get("radiation_told", []):
 		if inside.has(id): continue
 		var actor := world.get_node("Outpost/" + id) as Node3D
-		var door := shelter_door(actor.global_position)
-		var target: Vector3 = actor.get_parent().to_local(door)
-		target.y = actor.position.y
-		var gap := actor.position.distance_to(target)
-		if gap < 1.0:
+		if not shelter_paths.has(id):
+			var wait: Array = route_waits.get(id, [0.0])
+			wait[0] -= delta
+			route_waits[id] = wait
+			if wait[0] > 0.0: continue
+			fieldwork.route_service.routing_crew.clear()
+			# Nearest open entry first; if no route reaches it, try the next few round the mound.
+			var path := PackedVector3Array()
+			var tries := 0
+			for door in door_candidates(actor.global_position):
+				path = fieldwork.route_service.route(actor.position, actor.get_parent().to_local(door))
+				tries += 1
+				if not path.is_empty() or tries >= 4: break
+			if path.is_empty():
+				# No teleporting: they keep trying, and the Commander is told why they are stuck.
+				wait[0] = ROUTE_RETRY_SECONDS
+				fieldwork.path_failed(id, "to the radiation habitat")
+				continue
+			shelter_paths[id] = path
+		var waypoints: PackedVector3Array = shelter_paths[id]
+		if waypoints.is_empty():
+			shelter_paths.erase(id)
+			route_waits.erase(id)
 			inside.append(id)
 			continue
-		var after := actor.position.move_toward(target, WALK_SPEED * delta)
+		var next: Vector3 = waypoints[0]
+		var after := actor.position.move_toward(next, WALK_SPEED * delta)
 		var ground_hit: Dictionary = fieldwork.route_service.ground(after)
 		if not ground_hit.is_empty(): after.y = ground_hit.position.y
-		actor.look_at(actor.get_parent().to_global(Vector3(target.x, after.y, target.z)), Vector3.UP)
+		if Vector2(after.x - actor.position.x, after.z - actor.position.z).length() > 0.001:
+			# Face the way they walk (-Z forward), as CrewFieldwork turns walking crew.
+			actor.rotation.y = atan2(actor.position.x - next.x, actor.position.z - next.z)
 		actor.position = after
+		fieldwork.data.crew[id].position = after
 		fieldwork._update_visual(id, true)
+		if Vector2(after.x - next.x, after.z - next.z).length() < 0.05:
+			waypoints.remove_at(0)
+			shelter_paths[id] = waypoints
 	if inside.size() != data.get("radiation_inside", []).size():
 		data["radiation_inside"] = inside
 		session.capture_sol_checkpoint()
 
-## After the wave everyone steps out at the door and walks back to their work.
+## After the wave everyone steps out on the base side of the habitat, spread along its
+## edge so nobody overlaps, then walks back to their work.
 func _leave_shelter() -> void:
 	var data: Dictionary = expeditions.data
 	var fieldwork := world.get_node("CrewFieldwork")
-	for id in data.get("radiation_inside", []):
+	var leaving: Array = data.get("radiation_inside", [])
+	var shelter: Node3D = world.construction_view.completed.get("shielding_wall") if shelter_built() else null
+	for index in leaving.size():
+		var id: String = leaving[index]
 		var actor := world.get_node("Outpost/" + id) as Node3D
-		if shelter_built():
-			var door: Vector3 = actor.get_parent().to_local(shelter_door(actor.global_position))
-			var ground_hit: Dictionary = fieldwork.route_service.ground(door)
-			actor.position = ground_hit.position if not ground_hit.is_empty() else door
+		if shelter != null:
+			var spot := exit_spot(index, leaving.size())
+			var local: Vector3 = actor.get_parent().to_local(spot)
+			var ground_hit: Dictionary = fieldwork.route_service.ground(local)
+			# Never step out into a structure built beside the habitat.
+			actor.position = fieldwork.route_service.free_spot(ground_hit.position if not ground_hit.is_empty() else local)
+			fieldwork.data.crew[id].position = actor.position
 		fieldwork.return_to_base(id)
 	data["radiation_inside"] = []
+	shelter_paths.clear()
+	route_waits.clear()
 	_exit_player_shelter()
+
+## Where crew member `index` of `count` steps out: around the habitat edge facing the
+## lander, 35 degrees apart (about 4.5 m at a 13 m habitat).
+func exit_spot(index: int, count: int) -> Vector3:
+	var shelter: Node3D = world.construction_view.completed.get("shielding_wall")
+	var base: Vector3 = world.get_node("Outpost/Habitat").global_position
+	var door := shelter_door(base)
+	var offset := shelter.global_position
+	var arm := door - offset
+	return offset + arm.rotated(Vector3.UP, deg_to_rad(35.0) * (float(index) - float(count - 1) * 0.5))
 
 ## The Commander may shelter too: E at the door watches the wave through the habitat window.
 func _update_player_shelter(stage: String) -> void:
@@ -336,7 +408,16 @@ func _exit_player_shelter() -> void:
 	player_inside = false
 	var player := world.get_node("Outpost/Astronaut")
 	if shelter_built():
-		player.global_position = shelter_door(world.get_node("Outpost/Habitat").global_position) + Vector3.UP * 0.2
+		# 3 m beyond the crew's exit spots (which surround the base-side door), so the
+		# Commander never lands on a crew member.
+		var shelter: Node3D = world.construction_view.completed.get("shielding_wall")
+		var door := shelter_door(world.get_node("Outpost/Habitat").global_position)
+		var outward := door - shelter.global_position
+		outward.y = 0.0
+		var exit := door + outward.normalized() * PLAYER_EXIT_EXTRA
+		var routes: RefCounted = world.get_node("CrewFieldwork").route_service
+		var ground_hit: Dictionary = routes.ground(exit)
+		player.global_position = routes.free_spot(ground_hit.position if not ground_hit.is_empty() else exit) + Vector3.UP * 0.2
 	player.show()
 	player.ui_blocked = false
 	if is_instance_valid(previous_camera): previous_camera.make_current()

@@ -108,9 +108,11 @@ func _update_health() -> void:
 	health_bar.modulate = Color("ff6868") if health <= 25.0 else Color("83e6a0")
 	repair_label.text = "ROVER HEALTH %d / 100" % ceili(health)
 	if health < 100.0:
-		repair_label.text += "\n[E] Repair rover (on foot · costs supplies)"
+		repair_label.text += "\n[E] Repair rover with Sam beside it (costs supplies)"
 	if health <= 0.0:
 		repair_label.text += "\nDISABLED"
+
+const SAM_REPAIR_DISTANCE := 5.0
 
 func repair() -> bool:
 	var expedition := world.get_node_or_null("RoverTraining")
@@ -122,9 +124,14 @@ func repair() -> bool:
 	if player.global_position.distance_to(rover.global_position + Vector3(0, 0.8, 0)) > 3.2 or state.rover_health >= 100.0:
 		return false
 	if is_instance_valid(repair_game): return false
+	var hud := world.get_node("MissionHUD")
+	# Sam is the robotics engineer: he has to be at the rover to repair it.
+	var sam := world.get_node("Outpost/food_storage") as Node3D
+	if not sam.visible or sam.global_position.distance_to(rover.global_position) > SAM_REPAIR_DISTANCE:
+		hud.announce("Sam repairs the rover. Talk to Sam, choose Follow, and bring him to the rover.")
+		return false
 	var cost: Dictionary = session.dashboard_simulator.ROVER_REPAIR_COST
 	var missing: String = session.dashboard_simulator.missing_for(state, cost)
-	var hud := world.get_node("MissionHUD")
 	if not missing.is_empty():
 		hud.notice.text = "Not enough %s to repair the rover. Repair costs %s." % [missing, world.cost_text(cost)]
 		return false

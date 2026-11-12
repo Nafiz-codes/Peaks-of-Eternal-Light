@@ -338,6 +338,24 @@ func _block(id: String, reason: String) -> void:
 	_release(id)
 	_report(id, "Blocked", reason)
 
+## Crew follow the Commander anywhere in the build area (it grows with the outpost).
+func follow_radius() -> float:
+	var placement := world.get_node_or_null("SolarPlacement")
+	return maxf(config.survey_radius_m, placement.build_radius()) if placement != null else config.survey_radius_m
+
+const CREW_NAMES := {"crew_briefing": "Maya", "water_recycler": "Alex", "food_storage": "Sam"}
+var path_notices: Dictionary = {} # "id:where" -> elapsed time it may be shown again
+
+## Crew never teleport: when no walkable route exists they stay put and the Commander is
+## told (at most every 15 s per crew member and destination, as routes are retried).
+func path_failed(id: String, where: String) -> void:
+	var key := id + ":" + where
+	if elapsed < float(path_notices.get(key, -1.0)): return
+	path_notices[key] = elapsed + 15.0
+	var hud := world.get_node_or_null("MissionHUD")
+	if hud != null and hud.has_method("announce"):
+		hud.announce("%s can't find a path %s. Clear the way or move somewhere easier to reach." % [CREW_NAMES.get(id, id), where])
+
 func _player_near(id: String, distance: float = 3.2) -> bool:
 	var player := world.get_node("Outpost/Astronaut")
 	return not player.seated and player.global_position.distance_to(actors[id].global_position) <= distance
@@ -354,10 +372,12 @@ func request_station_arrival(id: String, restoring := false) -> void:
 
 func _tick(id: String, delta: float) -> void:
 	var c: Dictionary = data.crew[id]
-	if station_homes.has(id):
+	# A blocked return is retried for everyone (with or without a station), so crew left
+	# somewhere awkward, e.g. outside the radiation habitat, never stand there for good.
+	var retry_return: bool = c.phase == "Blocked" and c.checkpoint == "Returning"
+	if station_homes.has(id) or retry_return:
 		station_retry[id] = maxf(0.0, float(station_retry.get(id, 0.0)) - delta)
-		var relocate: bool = c.get("station_relocation", false) and c.phase != "Returning"
-		var retry_return: bool = c.phase == "Blocked" and c.checkpoint == "Returning"
+		var relocate: bool = station_homes.has(id) and c.get("station_relocation", false) and c.phase != "Returning"
 		if (relocate or retry_return) and station_retry[id] <= 0.0:
 			# A failed route search is costly: wait 1 s, 2 s, 4 s ... up to 15 s.
 			station_backoff[id] = minf(15.0, float(station_backoff.get(id, 0.5)) * 2.0)
@@ -403,15 +423,16 @@ func _tick(id: String, delta: float) -> void:
 		return
 	if c.task == "follow":
 		var player := world.get_node("Outpost/Astronaut")
-		if player.seated or player.position.length() > config.survey_radius_m:
+		if player.seated or player.position.length() > follow_radius():
 			c.checkpoint = "Traveling"
 			_wait(id, "Excursion boundary reached. I will not enter unexplored terrain alone.")
 		elif player.position.distance_to(actors[id].position) > 2.5:
 			c.target = player.position + Vector3(-1.3, 0, 0)
-			c.path = route_service.route(actors[id].position, c.target)
+			c.path = route_service.route(actors[id].position, c.target, true)
 			if c.path.is_empty():
 				c.checkpoint = "Traveling"
 				_block(id, "Your new route is obstructed. Regroup or return to base.")
+				path_failed(id, "to follow you")
 			else:
 				_report(id, "Traveling", "Following your local excursion.")
 		return
@@ -434,7 +455,7 @@ func _tick(id: String, delta: float) -> void:
 func _move(id: String, delta: float) -> void:
 	var c: Dictionary = data.crew[id]
 	# Let the equipment buddy clear the shared deployment area before Alex returns.
-	if id == "water_recycler" and c.task == "deploy" and c.phase == "Returning" and data.crew.food_storage.task == "buddy" and data.crew.food_storage.phase == "Returning":
+	if id == "water_recycler" and c.task == "deploy" and c.phase == "Returning" and data.crew.food_storage.task == "buddy" and data.crew.food_storage.phase == "Returning" and not _wants_commander("food_storage"):
 		_update_visual(id, false)
 		return
 	var actor: Node3D = actors[id]
@@ -455,9 +476,13 @@ func _move(id: String, delta: float) -> void:
 	var after := before.move_toward(next, config.walk_speed_mps * (1.1 if carry_help else 1.0) * delta)
 	var ground_hit: Dictionary = route_service.ground(after)
 	if not ground_hit.is_empty(): after = ground_hit.position
-	if ground_hit.is_empty() or not route_service.clear_segment(before, after):
+	# Someone parked on equipment (no regolith underfoot) steps straight off it to the
+	# route's first open-ground point; checks resume once they are on the regolith.
+	var on_ground: bool = not route_service.ground(before).is_empty()
+	if on_ground and (ground_hit.is_empty() or not route_service.clear_segment(before, after)):
 		c.checkpoint = c.phase
 		_block(id, "The route has become blocked. Stopped safely; assess an alternative or return.")
+		path_failed(id, "past an obstacle")
 		return
 	# Keep astronauts from overlapping even though route planning ignores their bodies.
 	for other in IDS:
@@ -566,11 +591,12 @@ func return_to_base(id: String) -> bool:
 		return false
 	var c: Dictionary = data.crew[id]
 	c.target = LOCKER + Vector3(-1.0, 0, 0) if not str(c.cargo).is_empty() else homes[id]
-	c.path = station_route(id, c.target) if station_homes.has(id) else route_service.route(actors[id].position, c.target)
+	c.path = station_route(id, c.target) if station_homes.has(id) else route_service.route(actors[id].position, c.target, true)
 	_release(id)
 	if c.path.is_empty():
 		c.checkpoint = "Returning"
 		_block(id, "Return path blocked. Holding tools and samples here; request a route assessment.")
+		path_failed(id, "back to their post")
 		return false
 	_report(id, "Returning", "Returning with carried items; nothing is transferred until arrival.")
 	if id == "water_recycler" and data.crew.food_storage.task == "buddy":
@@ -833,10 +859,12 @@ func follow(id: String) -> bool:
 	c.task = "follow"
 	c.site = ""
 	c.target = world.get_node("Outpost/Astronaut").position + Vector3(-1.3, 0, 0)
-	c.path = route_service.route(actors[id].position, c.target)
+	# Ends at the nearest open ground if that spot beside the Commander is taken.
+	c.path = route_service.route(actors[id].position, c.target, true)
 	if c.path.is_empty():
 		c.checkpoint = "Traveling"
-		_block(id, "Cannot reach you safely. Stay within the surveyed local area.")
+		_block(id, "I can't find a walkable path to you from here.")
+		path_failed(id, "to you")
 		return false
 	_report(id, "Traveling", "Accompanying you within the marked landing area.")
 	return true
@@ -936,6 +964,15 @@ func _wants_commander(id: String) -> bool:
 	var review := Expedition.debrief(d) == "pending" and Story.reached("crew_habitation", session.crew_introductions, d)
 	return not session.maya_intro_complete or Expedition.aftermath(d) in ["briefing", "alert"] or review or Expedition.radiation(d) in ["prep", "alert"] or Expedition.storm_stage(d) == "warning"
 
+## Crew walking up to the Commander follow checked routes (around structures, never through
+## them), re-planned at most once a second and only when the Commander has moved away.
+## Each stands in their own spot beside the Commander, so two arriving together never overlap.
+var approach_paths: Dictionary = {} # crew id -> waypoints toward the Commander
+var approach_goals: Dictionary = {} # crew id -> the spot the route was planned to
+var approach_retry: Dictionary = {} # crew id -> elapsed time of the next allowed plan
+const APPROACH_SLOTS := {"crew_briefing": 0.0, "food_storage": 50.0, "water_recycler": -50.0}
+const APPROACH_DISTANCE := 1.8
+
 func _approach_commander(id: String, delta: float) -> void:
 	var actor: Node3D = actors[id]
 	var player: Node3D = world.get_node("Outpost/Astronaut")
@@ -943,14 +980,40 @@ func _approach_commander(id: String, delta: float) -> void:
 	var target: Vector3 = actor.get_parent().to_local(player.global_position)
 	target.y = actor.position.y
 	var gap := actor.position.distance_to(target)
+	# Their own spot on the side they are coming from, turned by a per-crew angle.
+	var side := actor.position - target
+	side.y = 0.0
+	if side.length() < 0.01: side = Vector3(0, 0, 1)
+	var slot: Vector3 = target + side.normalized().rotated(Vector3.UP, deg_to_rad(APPROACH_SLOTS.get(id, 0.0))) * APPROACH_DISTANCE
 	var moving := false
-	if gap > 1.5:
-		var after := actor.position.move_toward(target, minf(config.walk_speed_mps * delta, gap - 1.5))
-		var ground_hit: Dictionary = route_service.ground(after)
-		if not ground_hit.is_empty(): after = ground_hit.position
-		if not ground_hit.is_empty() and route_service.clear_segment(actor.position, after):
+	if Vector2(actor.position.x - slot.x, actor.position.z - slot.z).length() > 0.3 and gap > 1.2:
+		var path: PackedVector3Array = approach_paths.get(id, PackedVector3Array())
+		var stale: bool = path.is_empty() or Vector3(approach_goals.get(id, Vector3.INF)).distance_to(slot) > 2.0
+		if stale and elapsed >= float(approach_retry.get(id, 0.0)):
+			approach_retry[id] = elapsed + 1.0
+			approach_goals[id] = slot
+			route_service.routing_crew.clear()
+			for other in IDS:
+				# Someone already beside them cannot be walked around; only farther crew are obstacles.
+				if other != id and actors[other].position.distance_to(actor.position) > 1.2:
+					route_service.routing_crew.append(actors[other].position)
+			path = route_service.route(actor.position, slot, true)
+			route_service.routing_crew.clear()
+			approach_paths[id] = path
+			if path.is_empty(): path_failed(id, "to you")
+		if not path.is_empty():
+			var next: Vector3 = path[0]
+			var after := actor.position.move_toward(next, config.walk_speed_mps * delta)
+			var ground_hit: Dictionary = route_service.ground(after)
+			if not ground_hit.is_empty(): after = ground_hit.position
+			if Vector2(after.x - next.x, after.z - next.z).length() < 0.05: path.remove_at(0)
+			approach_paths[id] = path
+			if Vector2(after.x - actor.position.x, after.z - actor.position.z).length() > 0.0001:
+				actor.rotation.y = atan2(actor.position.x - after.x, actor.position.z - after.z)
 			actor.position = after
 			data.crew[id].position = after
 			moving = true
-	if gap > 0.1: actor.look_at(actor.get_parent().to_global(target), Vector3.UP)
+	else:
+		approach_paths.erase(id)
+	if not moving and gap > 0.1: actor.look_at(actor.get_parent().to_global(target), Vector3.UP)
 	_update_visual(id, moving)

@@ -19,6 +19,22 @@ const INTRODUCTIONS := {
  "redirect_water_recycler": {"speaker": "Dr. Maya Chen", "text": "Alex has something to discuss with you, Commander. Go and find him."},
 }
 const SEQUENCES := {
+	# Maya's warning before the radiation wave: what happens to unsheltered crew and
+	# unshielded structures (the shielding choice follows straight after).
+	"radiation_alert": [
+		["crew_briefing", "concerned", "Commander, a solar radiation wave is about to hit the base!"],
+		["crew_briefing", "concerned", "Anyone caught outside will need treatment afterwards, and that uses up our water, oxygen and food. Exposed crew will also work slower for a couple of days, so the whole base produces less."],
+		["crew_briefing", "neutral", "Our solar panels, extractors and greenhouses are exposed too. If we don't shield them, their electronics will produce 40% less for two days while they recover."],
+		["player", "questioning", "What do we do?"],
+		["crew_briefing", "confident", "Shield the structures if we can spare the supplies. Then talk to each of us, me included, and order us into the radiation shielding habitat before the wave arrives."]
+	],
+	"radiation_no_shelter": [
+		["crew_briefing", "concerned", "Commander, a solar radiation wave is about to hit the base, and we have no radiation shielding habitat to hide in."],
+		["crew_briefing", "concerned", "All of us will be exposed. Treating us afterwards will use up our water, oxygen and food, and we'll work slower for a couple of days, so the whole base produces less."],
+		["crew_briefing", "neutral", "Our solar panels, extractors and greenhouses are exposed too. Unshielded, they'll produce 40% less for two days while their electronics recover."],
+		["player", "questioning", "What can we still do?"],
+		["crew_briefing", "confident", "Shield the structures if we can spare the supplies. It won't protect us, but it will keep the base running at full output."]
+	],
 	# Before the final operation: how little time is left, what is still short, then Alex.
 	"storm_lost_contact": [
 		["crew_briefing", "serious", "Commander, two things, and neither can wait. First: our mission window is almost over. After the next operation, I run the final resource check."],

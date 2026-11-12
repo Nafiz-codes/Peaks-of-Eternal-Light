@@ -145,7 +145,9 @@ func _ready() -> void:
 	lights.rotation = Vector3(deg_to_rad(-15),PI,0)
 	lights.spot_range = 35
 	lights.light_energy = 8
-	lights.shadow_enabled = true
+	# No headlight shadows: 4 km from the world origin (the expedition site) their depth
+	# precision breaks down and striped the lit rock faces, whatever the bias.
+	lights.shadow_enabled = false
 	driver.add_child(lights)
 	lights.hide()
 	sound = AudioStreamPlayer.new()
@@ -299,7 +301,10 @@ func _update_circle_visibility() -> void:
 func _update_landscape_visibility() -> void:
 	# The expedition is a separate destination, not outpost horizon scenery.
 	# Its elevated square apron otherwise appears to float above the local DEM.
-	landscape.visible = driver.active and data.get("location", "outpost") == "expedition"
+	# The rover must also physically be there: the Lifeline arrival cutscene drives it back
+	# into the outpost before the location flips, and the outpost horizon must show then.
+	var at_expedition: bool = Vector2(driver.position.x - Terrain.ORIGIN.x, driver.position.z - Terrain.ORIGIN.z).length() < Terrain.LIMIT + 100.0
+	landscape.visible = driver.active and data.get("location", "outpost") == "expedition" and at_expedition
 	# Hide the separate outpost DEM, whose raised edge floats above this basin.
 	get_parent().get_node("LunarHorizon").visible = not landscape.visible
 
