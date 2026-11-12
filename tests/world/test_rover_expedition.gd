@@ -177,9 +177,11 @@ func run():
 			check(controller.data.stabilized and controller.data.relay,"Immediate supplies and comms, no delivery animation")
 			controller.dialogue = 0
 			driver.position.z -= 20
-			check(controller.speed_limit() == 0,"Hard separation limit")
-			check(controller.speed_limit(1)>0,"At separation limit rover can close the gap")
+			check(controller.speed_limit() == driver.MAX_SPEED,"Lifeline does not restrict rover speed")
 			var before: Vector3 = controller.crew.position
+			controller._escort(1)
+			check(controller.data.get("escort_lost",false) and controller.crew.position.is_equal_approx(before),"Astronaut stops when rover gets too far ahead")
+			driver.position = before+Vector3(0,0.7,-7)
 			controller._escort(1)
 			check(controller.crew.position.distance_to(before)>0,"Astronaut follows recorded route")
 			driver.position = controller.extraction.position+Vector3.UP*0.7

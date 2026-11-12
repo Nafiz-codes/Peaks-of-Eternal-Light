@@ -50,6 +50,9 @@ var transition_tween: Tween
 var motor: AudioStreamPlayer
 var cinematic_motion := false
 var escort_link := false
+const ESCORT_WARNING_DISTANCE := 12.0
+const ESCORT_LOST_DISTANCE := 18.0
+const ESCORT_REJOIN_DISTANCE := 8.0
 var damage_dialog: DamageDialog
 var damage_mode := ""
 
@@ -228,7 +231,7 @@ func _sync() -> void:
 		data.phase = "active"
 		_place_rover(Terrain.ORIGIN+Vector3(0,0,9))
 	_restore_crew()
-	escort_link = data.stabilized and driver.position.distance_to(crew.position) < 25
+	escort_link = data.stabilized and not data.get("escort_lost", false)
 	_refresh_targets()
 
 func _restore_crew() -> void:
@@ -468,13 +471,9 @@ func _developer_on_foot(access: Node, done: Dictionary, message: String) -> bool
 	session.state_changed.emit()
 	session.capture_sol_checkpoint()
 	return true
-func speed_limit(throttle: float = 0.0) -> float:
-	if data.is_empty() or data.location != "expedition" or data.mission != 2 or not data.stabilized or not escort_link: return driver.MAX_SPEED
-	var distance := driver.global_position.distance_to(crew.global_position)
-	if distance >= 18 and throttle != 0:
-		var direction := Vector3(sin(driver.heading),0,cos(driver.heading))*signf(throttle)
-		if direction.dot((crew.position-driver.position).normalized()) > 0.25: return 0.35
-	return 0.0 if distance >= 18 else (0.35 if distance > 12 else driver.MAX_SPEED)
+func speed_limit(_throttle: float = 0.0) -> float:
+	# Lifeline uses the same speed and boost as every other operation.
+	return driver.MAX_SPEED
 
 func handle_key(key: int) -> void:
 	if not remote_ready() or data.is_empty() or damage_blocked(): return
@@ -496,6 +495,7 @@ func handle_key(key: int) -> void:
 		if feedback != "": return
 		data.stabilized = true
 		data.relay = true
+		data["escort_lost"] = false
 		escort_link = true
 		data.route = PackedVector3Array([crew.global_position,driver.global_position])
 		_stand()
@@ -586,10 +586,7 @@ func _physics_process(delta: float) -> void:
 				data.discovered = true
 				feedback = "STRANDED ASTRONAUT LOCATED\nCritical oxygen. Press E to deliver oxygen and restore communications."
 				session.capture_sol_checkpoint()
-			if data.stabilized and not escort_link and driver.position.distance_to(crew.position) < 20:
-				escort_link = true
-				data.route = PackedVector3Array([crew.position,driver.position])
-			if data.stabilized and escort_link and dialogue <= 0: _escort(delta)
+			if data.stabilized and dialogue <= 0: _escort(delta)
 		var local := driver.position - Terrain.ORIGIN
 		if maxf(absf(local.x),absf(local.z)) > 390:
 			feedback = "EXPEDITION LIMIT — turn back toward the operational zones."
@@ -597,10 +594,34 @@ func _physics_process(delta: float) -> void:
 	_publish()
 
 func _escort(delta: float) -> void:
+	var distance := Vector2(crew.global_position.x-driver.position.x,crew.global_position.z-driver.position.z).length()
+	if distance > ESCORT_LOST_DISTANCE and not data.get("escort_lost", false):
+		data["escort_lost"] = true
+		escort_link = false
+		data.route = PackedVector3Array()
+		data.crew_position = crew.global_position
+		session.capture_sol_checkpoint()
+	if data.get("escort_lost", false):
+		var rejoin := distance <= ESCORT_REJOIN_DISTANCE
+		if rejoin:
+			var ray := PhysicsRayQueryParameters3D.create(crew.global_position+Vector3.UP,driver.global_position+Vector3.UP,1,[follower.get_rid(),driver.get_rid()])
+			rejoin = get_world_3d().direct_space_state.intersect_ray(ray).is_empty()
+		if not rejoin:
+			follower.velocity = Vector3.ZERO
+			if crew_player.current_animation != "idle": crew_player.play("idle",0.3)
+			feedback = "ASTRONAUT LOST THE ROVER — return to Alex. He is waiting where you left him."
+			return
+		data["escort_lost"] = false
+		escort_link = true
+		stuck_time = 0.0
+		data.route = PackedVector3Array([crew.global_position,driver.global_position])
+		feedback = "Astronaut following again. Drive at walking pace and keep him nearby."
+		session.capture_sol_checkpoint()
+	else:
+		escort_link = true
 	var route: PackedVector3Array = data.route
 	if route.is_empty() or route[-1].distance_to(driver.position) > 2: route.append(driver.position)
-	var distance := Vector2(crew.global_position.x-driver.position.x,crew.global_position.z-driver.position.z).length()
-	if distance > 12: feedback = "WARNING: Astronaut falling behind. Reduce speed."
+	if distance > ESCORT_WARNING_DISTANCE: feedback = "WARNING: Astronaut falling behind. Reduce speed or he will lose the rover."
 	elif feedback.begins_with("WARNING:"): feedback = "Escort the astronaut to extraction."
 	# The last breadcrumb is still a destination. Requiring two points here
 	# stranded the astronaut after consuming the initial rescue position.
@@ -664,6 +685,7 @@ func _damage_confirm() -> void:
 		var fresh: Dictionary = Rules.fresh()
 		for key in ["surveys", "samples", "discovered", "stabilized", "relay", "route", "crew_position"]:
 			data[key] = fresh[key]
+		data.erase("escort_lost")
 		data.erase("damage_warning_acknowledged")
 		data.location = "outpost"
 		data.phase = "active"
@@ -748,7 +770,7 @@ func _check_circle(delta: float) -> void:
 			feedback = "Objectives remain incomplete. Progress is saved; finish the operation before extraction."
 			armed = true
 			return
-		if data.mission == 2 and crew.global_position.distance_to(extraction.position) > 9:
+		if data.mission == 2 and (data.get("escort_lost", false) or crew.global_position.distance_to(extraction.position) > 9):
 			feedback = "Extraction unavailable. Wait for the rescued astronaut."
 			armed = true
 			return
@@ -915,7 +937,7 @@ func _publish() -> void:
 			prompt = "Approach carefully. E: emergency oxygen and communications."
 			if data.stabilized:
 				objective = "Escort the astronaut on foot to extraction."
-				details = "Oxygen: stable · Radio: connected\nKeep within 12 m; stop if they fall behind."
+				details = "Oxygen: stable · Radio: connected\nDrive at walking pace. Stay within 12 m; slow down if he falls behind."
 			details += "\nLow ambient light in the ridge's shadow. Headlights improve visibility."
 			prompt = ("L: headlights for a clearer view.\n" if not lights.visible else "L: headlights ON.\n") + prompt
 		if data.mission < 2:
@@ -924,6 +946,9 @@ func _publish() -> void:
 		if Rules.ready_to_return(data):
 			objective = "Return to extraction" if data.mission < 2 else "Escort the astronaut to extraction"
 			details += "\nExtraction: %.0f m · bearing %.0f°" % [driver.position.distance_to(extraction.position),rad_to_deg(atan2(extraction.position.x-driver.position.x,extraction.position.z-driver.position.z))]
+		if data.mission == 2 and data.stabilized and data.get("escort_lost", false):
+			objective = "The astronaut has lost the rover. Return to Alex."
+			details = "Alex has stopped and is waiting. Return within 8 m with a clear line of sight, then escort him at walking pace."
 		if data.mission == 2 and not lights.visible:
 			objective = "Low light — L improves visibility.\n" + objective
 		prompt += "\nEnter: suspend expedition and recover rover."
@@ -946,7 +971,10 @@ func _navigation() -> Dictionary:
 	if data.location != "expedition": return {}
 	var destination: Vector3 = extraction.global_position
 	var label := "EXTRACTION"
-	if not Rules.ready_to_return(data):
+	if data.mission == 2 and data.stabilized and data.get("escort_lost", false):
+		destination = crew.global_position
+		label = "RETURN TO ALEX"
+	elif not Rules.ready_to_return(data):
 		if data.mission < 2:
 			var id := _nearest(data.mission == 1)
 			if id == "": return {}

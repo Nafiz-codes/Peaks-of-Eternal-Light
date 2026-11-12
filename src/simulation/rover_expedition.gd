@@ -75,6 +75,7 @@ static func ready_to_return(d: Dictionary) -> bool:
 static func valid_save(d: Variant) -> bool:
 	if not d is Dictionary: return false
 	if d.is_empty(): return true
+	if d.has("escort_lost") and not d.escort_lost is bool: return false
 	if d.has("damage_warning_acknowledged") and not d.damage_warning_acknowledged is bool: return false
 	if d.has("dust_storm_complete") and not d.dust_storm_complete is bool: return false
 	if d.has("aftermath") and d.aftermath not in ["briefing", "repairs", "alert", "done"]: return false
