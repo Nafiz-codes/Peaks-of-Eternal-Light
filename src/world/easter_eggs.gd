@@ -1,5 +1,5 @@
 extends Node3D
-## Four persistent, randomly placed expedition photographs.
+## Four persistent expedition photographs beside mission objectives.
 const Terrain = preload("res://src/world/expedition_terrain.gd")
 const TEXTS := ["RIP Margaret Hamilton", "RIP Margaret Hamilton(2)", "Hill Climb Racing to the Moon!", "Wait this is a game? Always has been."]
 const PATHS := ["res://Assets/easter_eggs/hamilton_1.png", "res://Assets/easter_eggs/hamilton_2.png", "res://Assets/easter_eggs/hill_climb.png", "res://Assets/easter_eggs/always_has_been.png"]
@@ -126,22 +126,14 @@ func _spawn() -> void:
  await get_tree().physics_frame
  if state == null or not cards.is_empty(): return
  var record: Dictionary = state.easter_eggs
- if record.is_empty():
-  var rng := RandomNumberGenerator.new()
-  rng.randomize()
+ # Migrate scattered locations without resetting collected photographs.
+ if record.get("layout", 0) != 2:
   var positions: Array[Vector3] = []
-  # Distribute photos around four different stretches of the driving routes.
-  for center in [Vector2(-45,55),Vector2(65,95),Vector2(-115,180),Vector2(160,240)]:
-   for attempt in range(80):
-    var point: Vector3 = Terrain.point(center + Vector2(rng.randf_range(-22,22),rng.randf_range(-22,22)))
-    var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(point+Vector3.UP*30,point-Vector3.UP*30))
-    if hit.is_empty() or hit.normal.y < 0.97 or hit.collider.get_parent().name != "MissionGround": continue
-    positions.append(hit.position)
-    break
-  if positions.size() != 4:
-   call_deferred("_spawn")
-   return
-  record = {"positions": positions, "collected": []}
+  for center in Terrain.PHOTO_SITES:
+   var point := Terrain.point(center)
+   var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(point+Vector3.UP*10,point-Vector3.UP*10))
+   positions.append(hit.position if not hit.is_empty() else point)
+  record = {"positions": positions, "collected": record.get("collected", []), "layout": 2}
   state.easter_eggs = record
  for index in range(4):
   var card := MeshInstance3D.new()

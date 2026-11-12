@@ -29,9 +29,11 @@ func run() -> void:
 		controller.data.location = "expedition"
 		controller._update_landscape_visibility()
 		check(controller.landscape.visible, "Expedition terrain remains available during rover missions")
+		check(not world.get_node("LunarHorizon").visible, "Outpost horizon cannot float above mission scenery")
 		controller.driver.active = false
 		controller._update_landscape_visibility()
 		check(not controller.landscape.visible, "Returning to crew view hides expedition terrain")
+		check(world.get_node("LunarHorizon").visible, "Returning restores the outpost horizon")
 		controller.data = {}
 		world.queue_free()
 		await process_frame

@@ -26,6 +26,7 @@ var crew_visual: Node3D
 var crew_player: AnimationPlayer
 var seat_pose := preload("res://src/world/astronaut_seated_pose.gd").new()
 var seated := false
+var rescue_ground_cells: Dictionary = {}
 var arm: Node3D
 var hud: CanvasLayer
 var fade: ColorRect
@@ -70,7 +71,7 @@ func _ready() -> void:
 	_label_circle(extraction,"RETURN TO OUTPOST\nStop in the circle")
 	for id in Terrain.SITES:
 		var target := Target.new()
-		target.setup(id,{"alpha":"FRACTURED PLAIN","beta":"WEST RIDGE","gamma":"CRATER RIM"}.get(id,""),Color("84dce8"))
+		target.setup(id,{"alpha":"FRACTURED PLAIN","beta":"WEST RIDGE","gamma":"SOUTHERN PLAIN"}.get(id,""),Color("84dce8"))
 		add_child(target)
 		target.position = Terrain.point(Terrain.SITES[id])
 		targets[id] = target
@@ -235,7 +236,9 @@ func _restore_crew() -> void:
 	var was_away := follower.collision_layer == 1
 	data.missing = available_assignment() == 2
 	if data.missing:
-		if data.crew_position == Vector3.ZERO: data.crew_position = Terrain.point(Vector2(65,255))
+		# Move unrescued crew in older saves too; keep an active escort's position.
+		if data.crew_position == Vector3.ZERO or not data.stabilized:
+			data.crew_position = Terrain.point(Terrain.RESCUE_SITE)
 		crew.global_position = data.crew_position
 		follower.global_position = crew.global_position
 		follower.collision_layer = 1
@@ -248,7 +251,7 @@ func _restore_crew() -> void:
 			crew_player.play("idle",0)
 			crew_player.advance(0)
 			crew_player.pause()
-			seat_pose.apply(crew_visual,crew)
+			seat_pose.apply_on_ground(crew_visual,crew,_rescue_ground_height)
 			seated = true
 	else:
 		if was_away: _stand()
@@ -264,6 +267,18 @@ func _restore_crew() -> void:
 			fieldwork.data.crew[LOST_CREW].path = PackedVector3Array()
 			fieldwork._finish(LOST_CREW)
 	targets.astronaut.position = crew.global_position
+
+func _rescue_ground_height(p: Vector3) -> float:
+	var local := Vector2(p.x-Terrain.ORIGIN.x,p.z-Terrain.ORIGIN.z)
+	var cell := (local/4.0).floor()*4.0
+	# The whole suit covers only a few terrain triangles. Cache their corners
+	# so fitting every skinned vertex does not regenerate terrain per vertex.
+	if not rescue_ground_cells.has(cell):
+		rescue_ground_cells[cell] = Vector4(Terrain.height_at(cell.x,cell.y),Terrain.height_at(cell.x+4,cell.y),Terrain.height_at(cell.x,cell.y+4),Terrain.height_at(cell.x+4,cell.y+4))
+	var h: Vector4 = rescue_ground_cells[cell]
+	var uv := (local-cell)/4.0
+	if uv.x+uv.y <= 1.0: return h.x*(1.0-uv.x-uv.y)+h.y*uv.x+h.z*uv.y
+	return h.w*(uv.x+uv.y-1.0)+h.y*(1.0-uv.y)+h.z*(1.0-uv.x)
 
 func _stand() -> void:
 	if seated:
@@ -282,6 +297,8 @@ func _update_landscape_visibility() -> void:
 	# The expedition is a separate destination, not outpost horizon scenery.
 	# Its elevated square apron otherwise appears to float above the local DEM.
 	landscape.visible = driver.active and data.get("location", "outpost") == "expedition"
+	# Hide the separate outpost DEM, whose raised edge floats above this basin.
+	get_parent().get_node("LunarHorizon").visible = not landscape.visible
 
 func remote_ready() -> bool:
 	return driver.active and driver.power_state == driver.Power.READY and not transitioning and not get_tree().paused and session.can_advance()
@@ -617,45 +634,7 @@ func _escort(delta: float) -> void:
 func damage_blocked() -> bool:
 	return damage_mode != "" or data.get("phase", "") == "failed"
 
-const FAILED_MOVE_ON_SECONDS := 5.0
-var failed_at_msec := -1
-
-func _move_on_seconds_left() -> int:
-	if failed_at_msec < 0: return ceili(FAILED_MOVE_ON_SECONDS)
-	return ceili(maxf(0.0, FAILED_MOVE_ON_SECONDS - (Time.get_ticks_msec() - failed_at_msec) / 1000.0))
-
-## After a failed operation: count it as done (and failed) and bring the wrecked rover
-## home. The next operation opens once the Commander repairs it (see rover_drive.repair).
-func _move_on_after_failure() -> void:
-	var failed_op := int(data.mission)
-	if failed_op < 0: return
-	var failures: Array = data.get("failed_operations", []).duplicate()
-	if not failures.has(failed_op): failures.append(failed_op)
-	data["failed_operations"] = failures
-	_record_completion(false) # A failed operation brings nothing back.
-	data.mission = -1
-	data.location = "outpost"
-	data.phase = "completed"
-	damage_mode = ""
-	failed_at_msec = -1
-	damage_dialog.hide()
-	driver._update_health()
-	escort_link = false
-	_place_rover(Vector3(32, ground_y(Vector3(32,0,20)), 20))
-	_restore_crew()
-	_refresh_targets()
-	armed = false
-	driver.stop_control()
-	feedback = Rules.TITLES[failed_op].to_upper() + " FAILED — the wrecked rover is back at the outpost. Repair it on foot to continue."
-	session.state_changed.emit()
-	session.capture_sol_checkpoint()
-
 func _check_damage() -> void:
-	if damage_mode == "failed" and failed_at_msec >= 0 and _move_on_seconds_left() <= 0 and not get_tree().paused:
-		_move_on_after_failure()
-		return
-	if damage_mode == "failed" and failed_at_msec < 0:
-		failed_at_msec = Time.get_ticks_msec() # A save loaded mid-failure starts the wait again.
 	if bound_state.rover_health > 10:
 		data.erase("damage_warning_acknowledged")
 	if data.location != "expedition" or transitioning: return
@@ -667,7 +646,6 @@ func _check_damage() -> void:
 	damage_mode = mode
 	if failed:
 		data.phase = "failed"
-		failed_at_msec = Time.get_ticks_msec()
 	driver.speed = 0
 	driver.velocity = Vector3.ZERO
 	busy_id = ""
@@ -677,32 +655,28 @@ func _check_damage() -> void:
 	arm.pose(0)
 	hud.extract_held = false
 	motor.volume_db = -80
-	# A destroyed rover no longer asks for a retry: the failure shows, then the story moves on.
-	if not failed:
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		damage_dialog.show_damage(failed, ceili(bound_state.rover_health))
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	damage_dialog.show_damage(failed, ceili(bound_state.rover_health))
 	session.capture_sol_checkpoint()
 
 func _damage_confirm() -> void:
 	if damage_mode == "failed":
 		var fresh: Dictionary = Rules.fresh()
-		fresh.mission = data.mission
-		fresh.completed = data.completed.duplicate()
-		fresh.location = "expedition"
-		fresh.phase = "active"
-		fresh["dust_storm_complete"] = data.get("dust_storm_complete", false)
-		data.clear()
-		data.merge(fresh)
-		bound_state.rover_health = 100.0
-		driver._update_health()
+		for key in ["surveys", "samples", "discovered", "stabilized", "relay", "route", "crew_position"]:
+			data[key] = fresh[key]
+		data.erase("damage_warning_acknowledged")
+		data.location = "outpost"
+		data.phase = "active"
 		escort_link = false
 		_stand()
 		_restore_crew()
-		_place_rover(Terrain.ORIGIN + Vector3(0,0,10))
+		_place_rover(Vector3(32,ground_y(Vector3(32,0,20)),20))
 		_refresh_targets()
 		armed = false
 		dwell = 0
-		feedback = "Mission restarted. Rover health restored; complete the objectives again."
+		driver.stop_control()
+		feedback = "Rover returned to the outpost. Exit the lander and repair it on foot, then retry the operation."
+		session.state_changed.emit()
 	else:
 		data["damage_warning_acknowledged"] = true
 	damage_mode = ""
@@ -925,7 +899,7 @@ func _publish() -> void:
 	var objective := "Drive to the violet departure circle. Stop at its center."
 	var details := "Surface Survey, then Frozen Horizon, then Lifeline.\nEach operation unlocks when the one before it is complete."
 	var prompt := "WASD: drive · Space: brake · R: lander · L: lights"
-	if bound_state.rover_health <= 0 and data.location == "expedition": prompt = "MISSION FAILED — Rover destroyed. Recovering it to the outpost in %d s." % _move_on_seconds_left()
+	if bound_state.rover_health <= 0 and data.location == "expedition": prompt = "MISSION FAILED — Select Try again to return to the outpost for repairs."
 	if data.location == "expedition":
 		if data.mission == 0:
 			objective = "Investigate three geological formations."
@@ -936,7 +910,7 @@ func _publish() -> void:
 			details = "Potential ice deposits sampled: %d / 3\nInspect the shadowed regolith. L: headlights." % data.samples.size()
 			prompt = "Brake, face a droplet within 3 m, hold E to extract."
 		else:
-			objective = "Search beyond the eastern saddle for the missing crew member."
+			objective = "Search the far southeastern plain for the missing crew member."
 			details = "Crew: Commander, Maya, Sam accounted for; Alex missing.\nCritical oxygen — locate and assist the astronaut."
 			prompt = "Approach carefully. E: emergency oxygen and communications."
 			if data.stabilized:
@@ -953,7 +927,7 @@ func _publish() -> void:
 		if data.mission == 2 and not lights.visible:
 			objective = "Low light — L improves visibility.\n" + objective
 		prompt += "\nEnter: suspend expedition and recover rover."
-	if bound_state.rover_health <= 0 and data.location == "expedition": prompt = "MISSION FAILED — Rover destroyed. Recovering it to the outpost in %d s." % _move_on_seconds_left()
+	if bound_state.rover_health <= 0 and data.location == "expedition": prompt = "MISSION FAILED — Select Try again to return to the outpost for repairs."
 	var extract_nearby := false
 	var extract_hint := "Hold E to scan"
 	if data.location == "expedition" and data.mission in [0, 1]:
@@ -979,7 +953,7 @@ func _navigation() -> Dictionary:
 			destination = targets[id].global_position
 			label = id.replace("_", " ").to_upper()
 		else:
-			destination = Terrain.point(Vector2(60, 230))
+			destination = Terrain.point(Terrain.RESCUE_SITE)
 			label = "SEARCH AREA"
 	var camera: Camera3D = driver.camera
 	var size := get_viewport().get_visible_rect().size

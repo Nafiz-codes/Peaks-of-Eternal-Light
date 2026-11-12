@@ -474,6 +474,12 @@ func _update_camera() -> void:
 	var focus := global_position + Vector3(0, 0.6, 0)
 	var desired := focus - forward * (6.5 * cos(camera_elevation)) + Vector3.UP * (6.5 * sin(camera_elevation))
 	desired -= Vector3(sin(heading), 0, cos(heading)) * camera_lag
+	var terrain = preload("res://src/world/expedition_terrain.gd")
+	var local: Vector3 = global_position - terrain.ORIGIN
+	var in_mission_zone: bool = absf(local.x) < terrain.LIMIT and absf(local.z) < terrain.LIMIT
+	if in_mission_zone:
+		# Concave terrain sweeps cannot recover a camera already below a face.
+		focus.y = maxf(focus.y, terrain.surface_height(Vector2(local.x,local.z))+0.4)
 	# Sweep a volume so the near-plane corners cannot enter ridges or rocks
 	# while the centre ray still has a clear line of sight.
 	var query := PhysicsShapeQueryParameters3D.new()
@@ -491,6 +497,10 @@ func _update_camera() -> void:
 	var retreat := camera.global_position
 	for step in range(40):
 		query.transform.origin = camera.global_position
+		if in_mission_zone:
+			var p: Vector3 = camera.global_position - terrain.ORIGIN
+			camera.global_position.y = maxf(camera.global_position.y, terrain.surface_height(Vector2(p.x,p.z))+0.4)
+			query.transform.origin = camera.global_position
 		if get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty(): break
 		camera.global_position = retreat.lerp(focus, minf((step + 1) / 20.0, 1.0)) + Vector3.UP * maxf(0.0, (step - 19) * 0.25)
 	if camera.global_position.distance_squared_to(focus) > 0.01:

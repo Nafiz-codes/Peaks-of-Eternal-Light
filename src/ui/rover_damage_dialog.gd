@@ -10,7 +10,7 @@ func _ready() -> void:
 	exclusive = true
 	unresizable = true
 	min_size = Vector2i(740, 370)
-	var panel := UI.style(Color("fafbfc"), Color("293137"))
+	var panel := UI.style(Color("454b50"), Color("293137"))
 	panel.set_border_width_all(3)
 	panel.set_corner_radius_all(10)
 	panel.content_margin_top = 12
@@ -29,14 +29,6 @@ func _ready() -> void:
 	caption.autowrap_mode = TextServer.AUTOWRAP_OFF
 	caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(caption)
-	for color in [Color("83bd32"), Color("ffbb32"), Color("e34a43")]:
-		var light := Panel.new()
-		light.custom_minimum_size = Vector2(16, 16)
-		light.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var style := UI.style(color, color.darkened(0.35))
-		style.set_corner_radius_all(8)
-		light.add_theme_stylebox_override("panel", style)
-		header.add_child(light)
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 26)
 	content.add_child(body)
@@ -44,10 +36,10 @@ func _ready() -> void:
 	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	copy.add_theme_constant_override("separation", 12)
 	body.add_child(copy)
-	heading = UI.label("WARNING!", 46, Color("252b30"))
+	heading = UI.label("WARNING!", 46, Color("f4f1e8"))
 	heading.autowrap_mode = TextServer.AUTOWRAP_OFF
 	copy.add_child(heading)
-	message = UI.label("", 16, Color("414a50"))
+	message = UI.label("", 16, Color("e3e8eb"))
 	message.custom_minimum_size = Vector2(430, 132)
 	message.size = message.custom_minimum_size
 	copy.add_child(message)
@@ -61,21 +53,31 @@ func _ready() -> void:
 	for button in [get_ok_button(), get_cancel_button()]:
 		button.custom_minimum_size = Vector2(240, 44)
 		button.add_theme_font_size_override("font_size", 16)
-		button.add_theme_color_override("font_focus_color", Color("263239"))
+		button.add_theme_color_override("font_focus_color", Color("f4f1e8"))
 		for state in ["normal", "hover", "pressed"]:
-			var fill := Color("d8e0e3") if state == "normal" else Color("b6c6cd")
+			var fill := Color("59636b") if state == "normal" else Color("707d86")
 			button.add_theme_stylebox_override(state, UI.style(fill, Color("7b8b92")))
-			button.add_theme_color_override("font_" + ("color" if state == "normal" else state + "_color"), Color("263239"))
-		var focus := UI.style(Color.TRANSPARENT, Color("b17c00"))
+			button.add_theme_color_override("font_" + ("color" if state == "normal" else state + "_color"), Color("f4f1e8"))
+		var focus := UI.style(Color.TRANSPARENT, Color("f0cc73"))
 		focus.set_border_width_all(3)
 		button.add_theme_stylebox_override("focus", focus)
 
 func show_damage(failed: bool, health: int) -> void:
 	title = "MISSION FAILED" if failed else "ROVER DAMAGE WARNING"
 	caption.text = title
-	heading.text = "ROVER LOST" if failed else "WARNING!"
-	message.text = "The rover is fully damaged and cannot be recovered or used. Retry to start a new attempt. Current mission objective progress will reset." if failed else "Commander, rover health is at %d%%. Total damage will make the rover unrecoverable and fail the mission.\n\nContinue at your own risk, or abort and call back the rover while it can still return." % health
-	ok_button_text = "Retry mission" if failed else "Continue mission"
+	heading.text = "MISSION FAILED" if failed else "WARNING!"
+	message.text = "The rover is fully damaged. Try again to return it to the outpost. Repair it on foot before sending it out again. Current mission objective progress will reset." if failed else "Commander, rover health is at %d%%. Total damage will disable the rover and fail this attempt.\n\nContinue at your own risk, or abort and call back the rover while it can still return." % health
+	ok_button_text = "Try again" if failed else "Continue mission"
 	cancel_button_text = "Abort & recall rover"
 	get_cancel_button().visible = not failed
+	popup_centered(Vector2i(760, 390))
+
+func show_choice(window_title: String, body_text: String, yes_text: String, no_text: String) -> void:
+	title = window_title
+	caption.text = window_title
+	heading.text = "RADIATION ALERT"
+	message.text = body_text
+	ok_button_text = yes_text
+	cancel_button_text = no_text
+	get_cancel_button().show()
 	popup_centered(Vector2i(760, 390))

@@ -19,6 +19,10 @@ func run():
   quit(1)
   return
  var saved_positions = session.dashboard_state.easter_eggs.positions.duplicate()
+ var terrain = preload("res://src/world/expedition_terrain.gd")
+ for index in range(4):
+  var objective: Vector2 = [terrain.SITES.alpha,terrain.SITES.gamma,terrain.SITES.ice_a,terrain.RESCUE_SITE][index]
+  check(eggs.cards[index].global_position.distance_to(terrain.point(objective)) < 6,"Photograph is discoverable beside its mission")
  var driver = world.get_node("RoverHull")
  var expedition = world.get_node("RoverTraining")
  expedition.set_physics_process(false)
@@ -69,7 +73,17 @@ func run():
  var saved: Dictionary = Save.capture(session)
  var restored: Dictionary = Save.decode(saved)
  check(not restored.is_empty() and restored.state.easter_eggs.collected.size() == 4,"Discoveries persist through save/load")
- check(not restored.is_empty() and restored.state.easter_eggs.positions == saved_positions,"Random locations persist")
+ check(not restored.is_empty() and restored.state.easter_eggs.positions == saved_positions,"Mission-adjacent locations persist")
+ # A legacy layout relocates photographs while retaining collection progress.
+ session.dashboard_state.easter_eggs.erase("layout")
+ session.dashboard_state.easter_eggs.positions[0] = Vector3(4000,0,55)
+ for card in eggs.cards: card.queue_free()
+ eggs.cards.clear()
+ eggs._spawn()
+ await physics_frame
+ await process_frame
+ check(session.dashboard_state.easter_eggs.collected.size() == 4,"Layout migration retains discoveries")
+ check(session.dashboard_state.easter_eggs.positions[0].distance_to(terrain.point(terrain.SITES.alpha)) < 6,"Legacy photograph relocates beside mission")
  saved.state.erase("easter_eggs")
  check(not Save.decode(saved).is_empty(),"Older saves remain compatible")
  print("Easter eggs: ",failures," failures")

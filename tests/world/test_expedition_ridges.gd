@@ -30,7 +30,7 @@ func run():
   for i in range(0,vertices.size(),3):
    if (vertices[i+2]-vertices[i]).cross(vertices[i+1]-vertices[i]).y <= 0: bad += 1
   check(bad == 0, name+": all triangles face upward without holes")
- for point in [Vector2(-210,170),Vector2(260,230),Vector2(20,350),Vector2(410,230)]:
+ for point in [Vector2(-210,170),Vector2(260,230),Vector2(20,350),Vector2(410,230),Vector2(-80,-190),Vector2(55,-300),Vector2(330,-310)]:
   driver.global_position = Terrain.point(point)+Vector3.UP*0.7
   for yaw in range(16):
    driver.camera_yaw = TAU*yaw/16.0
@@ -43,14 +43,21 @@ func run():
    query.transform.origin = driver.camera.global_position
    query.exclude = [driver.get_rid()]
    check(world.get_world_3d().direct_space_state.intersect_shape(query).is_empty(),"Camera clears ridge at orbit "+str(yaw))
+   var camera_local: Vector3 = driver.camera.global_position - Terrain.ORIGIN
+   check(camera_local.y >= Terrain.surface_height(Vector2(camera_local.x,camera_local.z))+0.29,"Camera stays above rendered surface")
  if DisplayServer.get_name() != "headless":
-  driver.global_position = Terrain.point(Vector2(-170,190))+Vector3.UP*0.7
-  driver.camera_yaw = 1.2
-  driver.camera_elevation = 0.38
-  driver._update_camera()
-  driver.camera.make_current()
-  await create_timer(1).timeout
-  await RenderingServer.frame_post_draw
-  root.get_texture().get_image().save_png("res://.tools/mission-ridges-fixed.png")
+  driver.active = true
+  controller.data.location = "expedition"
+  controller._update_landscape_visibility()
+  for view in [Vector2(-170,190),Vector2(-115,-230)]:
+   driver.global_position = Terrain.point(view)+Vector3.UP*0.7
+   driver._sync_visual(1)
+   driver.camera_yaw = 1.2
+   driver.camera_elevation = 0.38
+   driver._update_camera()
+   driver.camera.make_current()
+   await create_timer(1).timeout
+   await RenderingServer.frame_post_draw
+   root.get_texture().get_image().save_png("res://.tools/mission-ridges-%d.png" % int(view.y))
  print("MISSION RIDGES: %d failures" % failures)
  quit(1 if failures else 0)

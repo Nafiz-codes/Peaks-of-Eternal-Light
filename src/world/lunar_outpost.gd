@@ -673,9 +673,9 @@ func _ask_skip_repairs() -> void:
 	if not player.ui_blocked: skip_repairs_dialog.popup_centered()
 
 ## A two-way decision the Commander must make; closing the window picks `no`.
-func _ask_choice(title: String, text: String, yes_text: String, no_text: String, on_yes: Callable, on_no: Callable) -> void:
+func _ask_choice(title: String, text: String, yes_text: String, no_text: String, on_yes: Callable, on_no: Callable, themed := false) -> void:
 	var player := get_node("Outpost/Astronaut")
-	var dialog := ConfirmationDialog.new()
+	var dialog := preload("res://src/ui/rover_damage_dialog.gd").new() if themed else ConfirmationDialog.new()
 	dialog.title = title
 	dialog.dialog_text = text
 	dialog.dialog_autowrap = true
@@ -696,7 +696,10 @@ func _ask_choice(title: String, text: String, yes_text: String, no_text: String,
 	add_child(dialog)
 	player.ui_blocked = true
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-	dialog.popup_centered()
+	if themed:
+		dialog.show_choice(title,text,yes_text,no_text)
+	else:
+		dialog.popup_centered()
 
 static func cost_text(cost: Dictionary) -> String:
 	return "%d kWh · %d L water · %.1f kg oxygen · %.1f kg food" % [cost.get("power", 0.0), cost.get("water", 0.0), cost.get("oxygen", 0.0), cost.get("food", 0.0)]
@@ -709,7 +712,7 @@ func _ask_shield_choice(then: Callable) -> void:
 		"Cover the solar panels, extractors and greenhouses before the wave hits.\nCost: %s.\nUnshielded, they produce %d%% less for two days afterwards." % [cost_text(sim.STRUCTURE_SHIELD_COST), roundi((1.0 - sim.UNSHIELDED_OUTPUT_SHARE) * 100.0)],
 		"Shield them", "Leave them", func():
 			if not session.shield_structures(): get_node("MissionHUD").notice.text = "Not enough supplies to shield the structures."
-			then.call(), then)
+			then.call(), then, true)
 
 ## Maya's dust storm warning: pack producers away (paid, offline but safe) or leave them out.
 func _ask_storm_choice(expedition: Dictionary) -> void:

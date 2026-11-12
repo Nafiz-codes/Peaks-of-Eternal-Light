@@ -24,6 +24,7 @@ func run():
  c.data.location = "expedition"
  c.data.phase = "active"
  c.data.samples = ["ice_a"]
+ c.data["radiation"] = "done"
  session.dashboard_state.rover_health = 11
  c._check_damage()
  check(not c.damage_blocked(),"No warning before 90 percent damage")
@@ -37,7 +38,10 @@ func run():
  check(not c.damage_blocked(),"Continue acknowledges warning once")
  session.dashboard_state.rover_health = 0
  c._check_damage()
- check(c.data.phase == "failed" and c.damage_mode == "failed","Destroyed rover fails mission")
+ check(c.data.phase == "failed" and c.damage_mode == "failed" and c.damage_dialog.visible,"Destroyed rover shows Try again popup")
+ await create_timer(5.2).timeout
+ c._check_damage()
+ check(c.data.location == "expedition" and not c.data.completed.has(1),"Failure waits for player and does not skip the mission")
  c._recall()
  c._check_circle(2)
  check(not c.transitioning and c.data.location == "expedition","Destroyed rover cannot be recovered")
@@ -51,9 +55,17 @@ func run():
  check(c.data.phase == "failed" and c.damage_blocked(),"Reload cannot bypass mission failure")
  await capture(c, "damage-dialog")
  c._damage_confirm()
- check(session.dashboard_state.rover_health == 100 and c.data.phase == "active","Retry restores a playable attempt")
+ check(session.dashboard_state.rover_health == 0 and c.data.phase == "active","Retry requires outpost repairs")
  check(c.data.samples.is_empty() and c.data.completed == [0] and c.data.mission == 1,"Retry resets current objectives only")
- check(d.position.distance_to(Vector3(4000,0.7,10)) < 0.1,"Retry starts at mission entrance")
+ check(c.data.location == "outpost" and absf(d.position.x-32) < 0.1 and not d.active,"Try again returns the rover to the outpost")
+ check(not d.start_control(),"Wrecked rover cannot redeploy before repair")
+ check(c.data.radiation == "done","Retry preserves completed story prerequisites")
+ check(not Save.decode(Save.capture(session)).is_empty(),"Outpost recovery remains save-compatible")
+ var power_before: float = session.dashboard_state.power_kwh
+ check(session.dashboard_simulator.repair_rover(session.dashboard_state),"Outpost repair restores the rover")
+ check(session.dashboard_state.rover_health == 100 and session.dashboard_state.power_kwh < power_before,"Repair charges supplies instead of granting free health")
+ check(Rules.assigned(c.data) == 1,"Repaired rover retries the same operation")
+ c.data.location = "expedition"
  session.dashboard_state.rover_health = 5
  c._check_damage()
  check(c.damage_mode == "warning","Retry resets warning")
