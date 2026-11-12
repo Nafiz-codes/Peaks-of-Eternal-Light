@@ -57,25 +57,39 @@ func run() -> void:
 	var original_transform: Transform3D = moon.transform
 	var original_material = moon.material_override
 	click(boot.buttons[0])
-	check(boot.state == boot.State.PLAYING_OPENING, "Start plays existing cutscene")
-	boot.opening_skip_requested = true
-	await create_timer(3.6).timeout
-	check(boot.state == boot.State.SELECTING_COMMANDER, "Start opens Commander selection before the Moon")
-	check(not paused, "Registration opens without dialogue cards")
+	check(boot.state == boot.State.SELECTING_COMMANDER, "Start opens character selection first")
+	check(not is_instance_valid(boot.opening_slideshow), "Slideshow waits for character confirmation")
+	check(boot.commander_menu.busy, "Character controls wait for the menu fade")
+	await create_timer(1.0).timeout
+	check(not boot.commander_menu.busy and not boot.navigation.visible, "Character selection becomes interactive after the fade")
 	boot.commander_menu.select_appearance("commander-02", false)
+	boot.commander_menu._open_name()
 	boot.commander_menu.name_input.text = "Arham"
 	boot.commander_menu._validate()
-	boot.commander_menu._open_name()
 	boot.commander_menu._confirm()
-	await create_timer(0.6).timeout
-	var first_tween = boot.sequence
+	await create_timer(0.7).timeout
+	check(boot.state == boot.State.PLAYING_OPENING, "Start plays image opening")
+	await create_timer(2.6).timeout
+	var opening = boot.opening_slideshow
+	check(opening.slide_index == 0, "First image opens the sequence")
+	await capture("opening-first")
+	var first_tween = opening.sequence
 	boot._start_mission()
-	check(first_tween == boot.sequence, "Repeated start ignored")
-	await create_timer(1.2).timeout
-	check(boot.astronaut_departure > 0 and boot.planetary.moon_entry > 0 and boot.planetary.moon_entry < 1, "Overlapping motion")
-	await capture("exchange")
-	await create_timer(2.5).timeout
+	check(first_tween == opening.sequence, "Repeated start ignored")
+	await create_timer(7.4).timeout
+	check(opening.slide_index == 1, "Armstrong image and quote follow")
+	await capture("opening-armstrong")
+	await create_timer(9.4).timeout
+	check(opening.slide_index == 2, "Ambition image follows")
+	await capture("opening-ambition")
+	await create_timer(9.4).timeout
+	check(opening.slide_index == 3 and not opening.shade.visible, "Title image has no added caption or shading")
+	await capture("opening-title")
+	deadline = Time.get_ticks_msec() + 15000
+	while current_scene != world and Time.get_ticks_msec() < deadline:
+		await process_frame
 	check(current_scene == world, "Same world is handed off")
+	check(root.get_node("MissionSession").player_character.get("appearance_id") == "commander-02", "Slideshow preserves confirmed character")
 	check(moon.transform == original_transform and moon.material_override == original_material, "Original Moon preserved")
 	check(world.menu_layer.visible and world.process_mode == Node.PROCESS_MODE_INHERIT, "Gameplay restored")
 	check(world.navigation_controller.mode == world.navigation_controller.Mode.OVERVIEW, "Planetary overview reached")

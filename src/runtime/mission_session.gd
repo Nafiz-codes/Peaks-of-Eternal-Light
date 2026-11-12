@@ -54,9 +54,13 @@ const Commander = preload("res://src/runtime/commander_identity.gd")
 func confirm_new_commander(appearance: String, player_name: String) -> bool:
 	var identity := Commander.create(appearance, player_name)
 	if identity.is_empty(): return false
+	start_new_mission(identity)
+	return true
+
+func start_new_mission(identity: Dictionary = {}) -> void:
 	player_character = identity
-	commander_draft = {"appearance_id": appearance, "name": identity.name}
-	# Commit a fresh in-memory playthrough only after confirmation. Disk slots stay intact.
+	commander_draft = {} if identity.is_empty() else {"appearance_id": identity.appearance_id, "name": identity.name}
+	# Reset the in-memory playthrough; disk save slots stay intact.
 	selected_site_id = ""
 	maya_intro_complete = false
 	crew_introductions = {}
@@ -77,7 +81,6 @@ func confirm_new_commander(appearance: String, player_name: String) -> bool:
 	action_busy = false
 	orbital_clock = preload("res://src/world/orbital_model.gd").default_clock()
 	state_changed.emit()
-	return true
 
 func commander_name() -> String:
 	return str(player_character.get("name", "Commander"))

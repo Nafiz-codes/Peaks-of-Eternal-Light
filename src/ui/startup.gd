@@ -27,9 +27,8 @@ var reduced := false
 var menu_reveal := 0.0
 var load_failed := false
 var opening_skip_requested := false
-var opening_reveal: Tween
 var opening_finishing := false
-var opening_video: VideoStreamPlayer
+var opening_slideshow: Control
 var opening_cover: ColorRect
 var commander_menu: Control
 
@@ -233,8 +232,6 @@ func _enter_menu() -> void:
 		buttons[0].grab_focus() if ready_for_mission else buttons[1].grab_focus())
 
 func _process(delta: float) -> void:
-	if state == State.PLAYING_OPENING and is_instance_valid(opening_video) and opening_video.stream_position >= 25.3:
-		_finish_opening()
 	elapsed += delta
 	if not ready_for_mission and not load_failed and ResourceLoader.load_threaded_get_status(SELECTOR) == ResourceLoader.THREAD_LOAD_FAILED:
 		load_failed = true
@@ -262,7 +259,7 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		if state == State.PLAYING_OPENING:
 			opening_skip_requested = true
-			if is_instance_valid(opening_video): _finish_opening()
+			if is_instance_valid(opening_slideshow): opening_slideshow.skip()
 		elif state == State.INTRO: _enter_menu()
 		elif dialog.visible: _close_dialog()
 		get_viewport().set_input_as_handled()
@@ -270,10 +267,13 @@ func _input(event: InputEvent) -> void:
 func _start_mission() -> void:
 	if state != State.MENU_IDLE or not ready_for_mission or dialog.visible:
 		return
+	_show_commander_selection()
+
+func _play_opening() -> void:
 	state = State.PLAYING_OPENING
 	opening_finishing = false
 	opening_skip_requested = false
-	opening_video = null
+	opening_slideshow = null
 	opening_cover = ColorRect.new()
 	opening_cover.color = Color.BLACK
 	opening_cover.modulate.a = 0.0
@@ -282,89 +282,66 @@ func _start_mission() -> void:
 	var fade := create_tween().set_parallel(true)
 	fade.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	fade.tween_property(opening_cover, "modulate:a", 1.0, 1.2)
-	fade.tween_property(get_node("/root/MenuMusic").player, "volume_linear", 0.0, 1.2)
 	await fade.finished
-	var aspect := AspectRatioContainer.new()
-	aspect.ratio = 1920.0 / 1080.0
-	opening_cover.add_child(aspect)
-	aspect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	opening_video = VideoStreamPlayer.new()
-	opening_video.expand = true
-	opening_video.stream = preload("res://Assets/video/chapter_one_opening.ogv")
-	opening_video.modulate.a = 0.0
-	opening_video.volume = 0.0
-	aspect.add_child(opening_video)
-	opening_video.finished.connect(_finish_opening, CONNECT_ONE_SHOT)
-	opening_video.play()
+	opening_slideshow = preload("res://src/ui/mission_opening.gd").new()
+	opening_cover.add_child(opening_slideshow)
+	opening_slideshow.finished.connect(_finish_opening, CONNECT_ONE_SHOT)
+	opening_slideshow.play()
 	if opening_skip_requested:
-		_finish_opening()
-		return
-	fade = create_tween().set_parallel(true)
-	fade.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	opening_reveal = fade
-	fade.tween_property(opening_video, "modulate:a", 1.0, 1.2)
-	fade.tween_property(opening_video, "volume", 1.0, 1.2)
+		opening_slideshow.skip()
 
 func _finish_opening() -> void:
 	if state != State.PLAYING_OPENING or opening_finishing: return
 	opening_finishing = true
-	if opening_reveal != null: opening_reveal.kill()
+	state = State.STARTING_MISSION
+	navigation.hide()
+	astronaut.hide()
+	backdrop.hide()
+	world.show()
+	world.process_mode = Node.PROCESS_MODE_INHERIT
+	planetary.begin_entrance()
 	var fade := create_tween().set_parallel(true)
 	fade.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	fade.tween_property(opening_video, "modulate:a", 0.0, 1.0)
-	fade.tween_property(opening_video, "volume", 0.0, 1.0)
-	await fade.finished
-	opening_video.stop()
-	_show_commander_selection()
-	commander_menu.busy = true
-	commander_menu._validate()
-	canvas.move_child(opening_cover, -1)
-	fade = create_tween().set_parallel(true)
-	fade.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	fade.tween_property(opening_cover, "modulate:a", 0.0, 1.2)
-	fade.tween_property(get_node("/root/MenuMusic").player, "volume_linear", 1.0, 1.2)
+	fade.tween_interval(2.2)
 	await fade.finished
-	opening_cover.queue_free()
-	commander_menu.busy = false
-	commander_menu._validate()
+	_handoff()
 
 func _show_commander_selection() -> void:
 	state = State.SELECTING_COMMANDER
-	navigation.hide()
-	astronaut.hide()
+	for button in buttons: button.disabled = true
 	commander_menu = preload("res://src/ui/commander_selection.gd").new()
+	commander_menu.modulate.a = 0.0
 	canvas.add_child(commander_menu)
+	commander_menu.busy = true
+	commander_menu._validate()
 	commander_menu.back_requested.connect(func():
 		commander_menu.queue_free()
 		state = State.MENU_IDLE
+		navigation.modulate.a = 1.0
+		astronaut.modulate.a = 1.0
 		navigation.show()
 		astronaut.show()
+		for button in buttons: button.disabled = false
 		buttons[0].grab_focus())
 	commander_menu.confirmed.connect(_begin_selected_mission)
+	var fade := create_tween().set_parallel(true)
+	fade.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	var duration := 0.25 if reduced else 0.9
+	fade.tween_property(navigation, "modulate:a", 0.0, duration)
+	fade.tween_property(astronaut, "modulate:a", 0.0, duration)
+	fade.tween_property(commander_menu, "modulate:a", 1.0, duration)
+	await fade.finished
+	navigation.hide()
+	astronaut.hide()
+	commander_menu.busy = false
+	commander_menu._validate()
+	commander_menu.select_button.grab_focus()
 
 func _begin_selected_mission() -> void:
 	if state != State.SELECTING_COMMANDER: return
 	commander_menu.queue_free()
-	# Continue the established lunar-globe transition after identity confirmation.
-	navigation.show()
-	astronaut.show()
-	state = State.STARTING_MISSION
-	for button in buttons:
-		button.disabled = true
-		var highlight: Tween = button.get_meta("highlight") if button.has_meta("highlight") else null
-		if highlight: highlight.kill()
-
-	world.show()
-	world.process_mode = Node.PROCESS_MODE_INHERIT
-	planetary.begin_entrance()
-	sequence = create_tween().set_parallel(true)
-	for i in range(buttons.size()):
-		sequence.tween_property(buttons[i], "modulate:a", 0.0, 0.35).set_delay(i * 0.07)
-	sequence.tween_property(navigation, "modulate:a", 0.0, 0.6).set_delay(0.15)
-	sequence.tween_property(self, "astronaut_departure", 1.0, 2.0).set_delay(0.4).set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_IN_OUT)
-	sequence.tween_property(backdrop, "modulate:a", 0.0, 0.6).set_delay(0.3)
-	sequence.chain().tween_interval(0.4)
-	sequence.chain().tween_callback(_handoff)
+	_play_opening()
 
 func _handoff() -> void:
 	state = State.GAMEPLAY

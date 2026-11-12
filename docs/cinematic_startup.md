@@ -1,5 +1,9 @@
 # Current flow
 
+START MISSION opens character selection first. After character and name confirmation, `Assets/startup/mission/pk1.jpg` through `pk4.jpg` play using `src/ui/mission_opening.gd`, replacing video playback. Captions accompany the first three images; the fourth retains its existing title artwork. Each still fades in and out over 1.2 seconds, with holds of 5, 7, 7, and 4 seconds. Images preserve their full aspect ratio against black. Escape smoothly skips the sequence, including during its initial fade. Menu music continues.
+
+After pk4, the existing Earth–Moon outpost selector is revealed directly. Character confirmation resets in-memory mission data while preserving saved slots; the chosen identity survives the slideshow. Captions use the supplied, bundled Prevalent Sans Pro Bold in warm off-white (`#f3e8d5`). Its accompanying license is included in `Assets/fonts/PrevalentSansPro`.
+
 The Earth–Moon overview now extends this startup. See [lunar_navigation.md](lunar_navigation.md) for the current handoff, camera ownership, UI rules, and verification. The original implementation notes below describe the first startup revision.
 
 # Cinematic startup
