@@ -828,7 +828,14 @@ func _update_output_card() -> void:
 	output_card.show()
 	var bounds := get_viewport().get_visible_rect().size
 	output_card.size = output_card.get_combined_minimum_size()
-	output_card.position = Vector2(clampf(bounds.x * 0.5 + 60.0, 12.0, maxf(12.0, bounds.x - output_card.size.x - 12.0)), clampf(bounds.y * 0.5 - output_card.size.y * 0.5, 12.0, maxf(12.0, bounds.y - output_card.size.y - 12.0)))
+	# Left column, under the objective and key hints and above the build hint: clear of
+	# the centred character and the resource bars on the right.
+	var top := 200.0
+	var hud_node := get_parent().get_node_or_null("MissionHUD")
+	if hud_node != null and hud_node.help_hint.is_visible_in_tree():
+		var hint: Label = hud_node.help_hint
+		top = hint.position.y + maxf(hint.size.y, hint.get_line_count() * hint.get_line_height()) + 12.0
+	output_card.position = Vector2(22.0, clampf(top, 12.0, maxf(12.0, bounds.y - output_card.size.y - 90.0)))
 
 func _physics_process(_delta: float) -> void:
 	if not active and not destroying: return
