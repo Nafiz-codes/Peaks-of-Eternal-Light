@@ -1,0 +1,10 @@
+# AI Usage Disclaimer
+
+Team TRIARCHY used the following AI tools while developing *Peaks of Eternal Light* and preparing its demonstration materials.
+
+- **OpenAI ChatGPT and Codex** helped develop and debug GDScript in Godot 4. They assisted with intro playback and skipping, holographic building placement and landing effects, mission tracking, NPC movement and dialogue, outpost assignment, resource displays, and collectible Easter eggs. They also helped find and integrate NASA 3D assets, prepare project descriptions and demo scripts, and edit demo videos by rendering in-game cutscenes, upscaling footage, and adding synchronized subtitles. Inputs included project code, team-written requirements, screenshots, supplied assets, recorded narration, and NASA dataset information.
+- **OpenAI image generation** created the game’s app icon from a written brief and visual feedback. The final icon shows an astronaut with a black visor reflecting the lunar horizon and “PEL” in the bottom right. The YouTube thumbnail was made separately from an actual gameplay frame with a text overlay.
+- **Google Flow (Google’s Veo video model)** generated the ending cinematic, a slow camera pullback from a thriving Moon base with a sun flare. It used a text prompt describing the scene and camera movement. The clip was converted for Godot with FFmpeg.
+- **Suno AI** generated background music for the menus and lunar missions. Written prompts described the game’s setting, mood, instrumentation, and desired intensity. The generated tracks were integrated with separate menu and mission playback and volume controls.
+- **Meshy AI** generated the astronaut’s 3D model used in the game.
+- **Claude Code** helped write and fix GDScript in Godot 4.7. Its work included gameplay systems, resource simulation, construction, and procedurally modeled structures such as the water extractor, greenhouse, and radiation shielding habitat. It also helped develop dust storms, radiation wave events, the repair minigame, the save and load menu, developer tools, and the end-of-mission statistics screen.

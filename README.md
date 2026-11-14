@@ -2,6 +2,10 @@
 
 **Explore the Moon. Command an outpost. Keep your crew alive.**
 
+## Download the game
+
+[Download Peaks of Eternal Light on itch.io](https://jawadul-arham.itch.io/peaks-of-eternal-light)
+
 Peaks of Eternal Light is a 3D lunar exploration and mission-management game built with Godot by **Team TRIARCHY** for the NASA Space Apps Challenge, **“Build a Junior Astronaut Mission Trainer.”**
 
 Take command of a lunar outpost, explore the surface, manage essential resources, and guide a five-person crew through a seven-sol campaign. Every decision introduces an engineering trade-off: power generation, life support, exploration, and crew safety all compete for limited resources.
